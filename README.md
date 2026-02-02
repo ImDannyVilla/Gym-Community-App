@@ -1,6 +1,6 @@
 # Gym Community App
 
-Workout tracking and gym community platform?
+Workout tracking and gym community platform for Iron Arms Gym
 
 ## Backend Setup
 ```bash
@@ -19,5 +19,6 @@ API Docs: http://localhost:8000/docs
 - UI/Design: 
 - PM: Angel
 ```
+
 
 
