@@ -1,0 +1,17 @@
+backend/.venv/
+backend/.env
+backend/__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+
+#IDE
+.idea/
+.vscode/
+
+#OS
+.DS_Store
+Thumbs.db
+
+#Frontend her, idk probably dart tools and build goes here
+
