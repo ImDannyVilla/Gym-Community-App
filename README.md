@@ -2,6 +2,10 @@
 
 Workout tracking and gym community platform for Iron Arms Gym
 
+The website is made for gym owners to access, view, and manage customer information quickly and efficiently.
+
+The app is made for gym customers who wish to access their barcode digitally, with added features that allow for customer interactions. 
+
 ## Backend Setup
 ```bash
 cd backend
