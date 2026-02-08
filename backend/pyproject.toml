@@ -8,6 +8,7 @@ dependencies = [
     "fastapi>=0.128.0", #our endpoint framework
     "asyncpg>=0.30.0",        # ← ADD THIS
     "fastapi-users[sqlalchemy]>=15.0.3", #used for authentication and login
+    "asyncpg>=0.30.0",
     "imagekitio>=5.1.1", #handle images and vidoes
     "python-dotenv>=1.2.1",
     "uvicorn[standard]>=0.40.0", # a webserver in python that allows us to serve our fast API application
