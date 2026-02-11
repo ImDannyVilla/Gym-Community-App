@@ -1,110 +1,90 @@
-# Gym Community App - Backend
+# Database Access Guide
 
-FastAPI backend for the Gym Community social fitness app.
+## Team Roles
+- **PM:** Angel
+- **Backend:** Danny, Alberto
+- **Frontend/Backend:** Omar
 
-## Tech Stack
+## Connection Details
+**Format:**
+```
+postgresql://postgres:[PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres
+```
 
-- **Framework:** FastAPI
-- **Database:** PostgreSQL (Supabase)
-- **ORM:** SQLAlchemy (async)
-- **Authentication:** JWT with python-jose
-- **Password Hashing:** bcrypt (passlib)
-- **Deployment:** Railway
+**Credentials:**
+- Host: `db.[YOUR-REF].supabase.co`
+- Port: `5432`
+- Database: `postgres`
+- User: `postgres`
+- Password: [Contact Danny]
 
-## Setup
+---
 
-### Prerequisites
-- Python 3.13+
-- uv (package manager)
-- PostgreSQL database (or Supabase account)
+## Access Methods
 
-### Installation
+### For Angel (PM)
+Use Supabase Dashboard:
+1. Login: https://supabase.com/dashboard
+2. Select "Gym Community App"
+3. Use Table Editor (view data) or SQL Editor (run queries)
 
-1. Clone the repository:
+### For Backend Team (Danny, Alberto, Omar)
+Use database client:
+
+**Recommended:** TablePlus or DataGrip(JetBrains) (https://tableplus.com/)
+
+**Setup:**
+1. Install client
+2. New connection → PostgreSQL
+3. Enter credentials above
+4. Connect
+
+**Command line:**
 ```bash
-git clone https://github.com/ImDannyVilla/Gym-Community-App.git
-cd Gym-Community-App/backend
-```
-
-2. Install dependencies:
-```bash
-uv sync
-```
-
-3. Set up environment variables:
-```bash
-cp .env.example .env
-# Edit .env with your values
-```
-
-4. Run the server:
-```bash
-uvicorn app.main:app --reload
-```
-
-5. Visit API docs:
-```
-http://localhost:8000/docs
-```
-
-## Environment Variables
-```bash
-DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/dbname
-SECRET_KEY=your-secret-key-here
-```
-
-Generate SECRET_KEY:
-```bash
-python -c "import secrets; print(secrets.token_urlsafe(32))"
-```
-
-## API Endpoints
-
-### Authentication
-- `POST /auth/register` - Register new user
-- `POST /auth/login` - Login and get JWT token
-
-### Users (Coming Soon)
-- `GET /users/me` - Get current user profile
-- `PUT /users/me` - Update profile
-
-### Posts (Coming Soon)
-- `GET /posts` - List posts
-- `POST /posts` - Create post
-- `POST /posts/{id}/like` - Like a post
-
-## Project Structure
-```
-backend/
-├── app/
-│   ├── main.py              # FastAPI application
-│   ├── db.py                # Database connection
-│   ├── core/                # Core utilities
-│   │   ├── security.py      # JWT, password hashing
-│   │   └── config.py        # Configuration
-│   ├── models/              # SQLAlchemy models
-│   │   └── user.py
-│   ├── schemas/             # Pydantic schemas
-│   │   └── user.py
-│   └── routes/              # API endpoints
-│       └── auth.py
-├── tests/                   # Tests
-├── .env                     # Environment variables (not committed)
-└── pyproject.toml           # Dependencies
+psql "postgresql://postgres:[PASSWORD]@db.[YOUR-REF].supabase.co:5432/postgres"
 ```
 
 ## Testing
+
+**Local Development:**
 ```bash
-pytest
+uvicorn app.main:app --reload
+# Visit: http://localhost:8000/docs
 ```
+
+**Production:**
+- Live API: https://gym-community-api.up.railway.app
+- API Docs: https://gym-community-api.up.railway.app/docs
+---
 
 ## Deployment
 
-Deployed on Railway. Pushes to `main` branch auto-deploy.
+**Production:** https://gym-community-api.up.railway.app
 
-## Team
+**API Documentation:** https://gym-community-api.up.railway.app/docs
 
-- Backend: Danny, [teammate-2]
-- Mobile: [mobile-team]
-- Web: [web-dev]
-- PM: [pm-name]
+**Health Check:** https://gym-community-api.up.railway.app/health
+
+---
+
+## Current Schema (so far, lets talk about it)
+
+**Tables:**
+- `users` (email, username, hashed_password, created_at)
+
+
+
+---
+
+## Rules
+
+- Never commit credentials to Git
+- Never share passwords in public channels
+- View only - no deletes in production
+- Use `.env` for local development
+
+---
+
+## Support
+
+**Connection issues:** Contact Danny (@ImDannyVilla)
