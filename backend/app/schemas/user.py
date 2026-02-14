@@ -1,5 +1,5 @@
 #User Pydantic schemas
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
 
 
 class UserRegister(BaseModel):
@@ -15,7 +15,6 @@ class UserLogin(BaseModel):
     """
     Data coming FROM React Native during login.
     """
-
     email: EmailStr
     password: str
 
@@ -37,5 +36,4 @@ class UserResponse(BaseModel):
     email: str
     username: str
 
-    class Config:
-        from_attributes = True  # Allows SQLAlchemy model → Pydantic conversion
+    model_config = ConfigDict(from_attributes=True)  # Updated syntax for Pydantic v2
