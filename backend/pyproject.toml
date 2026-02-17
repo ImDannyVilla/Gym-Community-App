@@ -9,9 +9,9 @@ dependencies = [ # this is for interacting with database
     "imagekitio>=5.1.1", #handle images and vidoes
     "python-dotenv>=1.2.1",
     "uvicorn[standard]>=0.40.0", # a webserver in python that allows us to serve our fast API application
-    "python-jose[cryptography]>=3.5.0", #JWT tokensCreate and verify authentication tokens
-    "passlib[bcrypt]>=1.7.4", #Password hashingSecurely hash passwords
+    "python-jose[cryptography]>=3.5.0", #Password hashingSecurely hash passwords
     "python-multipart>=0.0.22", #File uploadsHandle multipart form data (images)
     "pydantic[email]>=2.12.5", #Email validationValidate email addresses
     "sqlalchemy[asyncio]>=2.0", #ORM for databaseTalk to PostgreSQL with Python objects
+    "bcrypt>=5.0.0",
 ]
