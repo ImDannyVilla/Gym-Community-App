@@ -1,5 +1,5 @@
 #User Pydantic schemas
-from pydantic import BaseModel, EmailStr, ConfigDict
+from pydantic import BaseModel, EmailStr, ConfigDict, field_validator
 
 
 class UserRegister(BaseModel):
@@ -9,6 +9,24 @@ class UserRegister(BaseModel):
     email: EmailStr
     username: str
     password: str
+    @field_validator("password")
+    def password_strength(cls, v):
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters long")
+        if not any(c.isupper() for c in v):
+            raise ValueError("Password must contain at least one uppercase letter")
+        if not any(c.isdigit() for c in v):
+            raise ValueError("Password must contain at least one digit")
+        return v
+    @field_validator("username")
+    def username_length(cls, v):
+        if len(v) < 3:
+            raise ValueError("Username must be at least 3 characters long")
+        if len(v) > 20:
+            raise ValueError("Username must be less than 20 characters long")
+        if not v.isalnum():
+            raise ValueError("Username must contain only letters and numbers")
+        return v
 
 
 class UserLogin(BaseModel):
