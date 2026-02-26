@@ -10,6 +10,24 @@ router = APIRouter(prefix="/auth", tags=["auth"]) #all routes start with /auth; 
 
 @router.post("/register")
 async def register(user_data: UserRegister, db: AsyncSession = Depends(get_db)):
+    #check if email is already taken
+    result = await db.execute(
+        select(User).where(User.email == user_data.email)
+    )
+    if result.scalars().first():
+        raise HTTPException(
+            status_code=400, detail="Email already registered"
+        )
+    #Check is username is already taken
+    result = await db.execute(
+        select(User).where(User.username == user_data.username)
+    )
+
+    if result.scalars().first():
+        raise HTTPException(
+            status_code=400, detail="Username already registered"
+        )
+
     hashed_password = get_password_hash(user_data.password)
 
     #save user to db
