@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from .db import engine, Base
 from app.routes import auth
+from app.routes import workout
 from typing import List
 from contextlib import asynccontextmanager
 
@@ -32,6 +33,7 @@ gym_app.add_middleware(
 )
 
 gym_app.include_router(auth.router)
+gym_app.include_router(workout.router)
 
 @gym_app.get("/health")
 def health_check():
