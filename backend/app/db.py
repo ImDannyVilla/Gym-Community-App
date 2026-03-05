@@ -1,5 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from sqlalchemy.orm import DeclarativeBase
 #DeclarativeBase is the parent class for all database models (User, Post, and more).
 # When we write class User(Base), you're saying "User is a database table."
 
@@ -24,7 +24,7 @@ engine = create_async_engine(
 #A session is a temporary workspace for database operations
 async_session_maker = async_sessionmaker(
     engine, # Which database to connect to
-    class_=AsyncSession,
+    #class_=AsyncSession,
     expire_on_commit=False, #After committing, objects stay in memory (otherwise they'd be "expired" and require re-fetching)
 )
 
@@ -49,10 +49,7 @@ async def get_db():
     - Closes connection after request
     """
     async with async_session_maker() as session:
-        try:
-            yield session
-        finally:
-            await session.close()
+        yield session
 
 # load_dotenv()              # Read .env file
 #DATABASE_URL = os.getenv() # Get connection string
