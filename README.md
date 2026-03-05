@@ -16,13 +16,32 @@ uv run uvicorn app.app:app --reload
 
 API Docs: http://localhost:8000/docs
 
+## Frontend Setup
+
+### Package Requirements
+Java Development Kit: Version 17
+
+React: 19.1.0
+
+React Native: 0.81.5 
+
+Expo: 54.0.33
+
+Package Manager: npm (Node Package Manager)
+
+Emulator: Android Studio
+
+### Running the app
+```bash
+cd Frontend-For-APP
+npm install (npm install --legacy-peer-deps if on later versions)
+npx expo start
+```
+
 ## Team
 
 - Backend: Danny, Omar
-- Frontend:
-- UI/Design: 
+- Frontend: Mariano, Omar, Still Ben
+- UI/Design: Mariano
+- DevOps: Alberto
 - PM: Angel
-```
-
-
-
