@@ -14,12 +14,8 @@ export default function Dashboard() {
 
       
       <View style={styles.grid}>
-        <MuscleCard title="chest" onPress={() => router.push("/programs/pushpulllegscore")} />
-        <MuscleCard title="shoulders" onPress={() => router.push("/programs/upperlower")} />
+        <MuscleCard title="Upper/Lower" onPress={() => router.push("/programs/upperlower")} />
         <MuscleCard title="back" onPress={() => router.push('/programs/cardio')} />
-        <MuscleCard title="arms" onPress={() => {}} />
-        <MuscleCard title="legs" onPress={() => {}} />
-        <MuscleCard title="core" onPress={() => {}} />
       </View>
 
       <Pressable onPress={() => router.replace("/")} style={styles.logoutButton}>

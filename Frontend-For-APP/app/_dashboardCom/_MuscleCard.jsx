@@ -26,14 +26,14 @@ export default function MuscleCard({ title, onPress }) {
 
 const styles = StyleSheet.create({
     card: {
-        //jusfifyContents: "grid",
+        jusfifyContents: "center",
         backgroundColor: "rgb(115, 2, 2)",
         height: 150,
-        width: "45%",
+        width: "100%",
         borderRadius: 20,
         //alignSelf: "center",
         marginBottom: 20,
-        padding: 16,
+        //padding: 16,
     },
 
     pressed: {
