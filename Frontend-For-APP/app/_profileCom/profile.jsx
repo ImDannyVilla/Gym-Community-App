@@ -1,5 +1,4 @@
-import { router } from "expo-router";
-import React, { useState } from "react";
+import { useState } from "react";
 import { View, Text, Image, Pressable, StyleSheet, Alert } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 
@@ -21,7 +20,7 @@ export default function Profile() {
 
     // Open gallery
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'], // Only allows images for upload
       allowsEditing: true, // lets them crop
       aspect: [1, 1], // square crop
       quality: 1,
