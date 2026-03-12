@@ -7,25 +7,78 @@ from app.db import get_db
 from app.models.program import Program, ProgramDay
 from app.schemas.program import ProgramResponse, ProgramSummary
 
-
 router = APIRouter(prefix="/programs", tags=["Programs"])
+
 
 @router.get("/", response_model=List[ProgramSummary])
 async def get_all_programs(db: AsyncSession = Depends(get_db)):
-    #Get all preset programs.
-    #returns: ["3-Day PPL", "5-Day SPlit" ..etc
+#get all preset programs
     result = await db.execute(
         select(Program)
-        .where(Program.is_preset) #only grab the ones makrked as preset
-        .order_by(Program.difficulty, Program.days_per_week) # Sort the final list so all 'beginner' programs are first'
+        .where(Program.is_preset == True)  # Only grab the ones marked as preset
+        .order_by(Program.difficulty, Program.days_per_week)  # Sort: beginner first
     )
     programs = result.scalars().all()
     return programs
 
 
-async def get_program_detail(program_id: int, db: AsyncSession):
-    #Get program with full details
+@router.get("/{program_id}", response_model=ProgramResponse)
+async def get_program_detail(
+        program_id: int,
+        db: AsyncSession = Depends(get_db)
+):
+    """
+    here you get program with full schedule.
+
     Returns:
     {
-        "name":
+        "id": 1,
+        "name": "3-Day Push/Pull/Legs",
+        "description": "Classic beginner split...",
+        "difficulty": "Beginner",
+        "days_per_week": 3,
+        "duration_weeks": 8,
+        "schedule": [
+            {
+                "day_of_week": 1,
+                "workout": {
+                    "id": 1,
+                    "name": "Chest and Triceps",
+                    "category": "Push"
+                }
+            }
+        ]
     }
+    """
+    result = await db.execute(
+        select(Program).where(Program.id == program_id)
+    )
+    program = result.scalars().first()
+
+    if not program:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Program not found"
+        )
+
+    return program
+
+
+@router.get("/difficulty/{difficulty}", response_model=List[ProgramSummary])
+async def get_programs_by_difficulty(
+        difficulty: str,
+        db: AsyncSession = Depends(get_db)
+):
+    """
+    get the programs filtered by difficulty.
+    the Options are: Beginner, Intermediate, Advanced (see models.Program)
+    """
+    result = await db.execute(
+        select(Program)
+        .where(Program.difficulty == difficulty)
+        .where(Program.is_preset == True)
+        .order_by(Program.days_per_week)
+    )
+    programs = result.scalars().all()
+
+    return programs
