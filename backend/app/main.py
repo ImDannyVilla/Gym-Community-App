@@ -17,17 +17,13 @@ async def lifespan(app: FastAPI):
 
 gym_app = FastAPI(lifespan=lifespan)
 
-origins = [
-    "http://localhost:3000", #frontend server should be here
-    "http://localhost:8081",  # React Native Metro bundler
-    "http://localhost:19006",  # Expo web
-    "exp://192.168.*.*:8081",  # Expo on physical device
-]
-
+# For mobile development (React Native), allow all origins by default.
+# React Native fetch calls from iOS/Android emulators behave differently than web browsers
+# and often lack a standard Origin header, causing silent network request failures.
 gym_app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins, #allows the origins
-    allow_credentials=True, #Will allow to send JWT tokens
+    allow_origins=["*"], # Allow all origins for mobile development
+    allow_credentials=True, # Will allow to send JWT tokens
     allow_methods=["*"],
     allow_headers=["*"],
 )

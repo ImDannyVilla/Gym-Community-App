@@ -1,16 +1,49 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
+import { View, Text, TextInput, Pressable, StyleSheet, Alert } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import * as SecureStore from "expo-secure-store";
+import { API_URL } from "../utils/api";
 
 export default function SignUp() {
   const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  const onCreateAccount = () => {
-    // TODO: add validation + real sign up logic --Mar or Still Task
-    router.replace("/dashboard");
+  const onCreateAccount = async () => {
+    if (!email || !username || !password) {
+      Alert.alert("Error", "Please fill in all fields");
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/auth/register`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, username, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        const errorMessage = data.detail
+          ? typeof data.detail === "string"
+            ? data.detail
+            : data.detail[0].msg
+          : "Registration failed";
+        Alert.alert("Registration Error", errorMessage);
+        return;
+      }
+
+      await SecureStore.setItemAsync("userToken", data.access_token);
+      router.replace("/dashboard");
+    } catch (error) {
+      console.error("Signup error:", error);
+      Alert.alert("Error", "Network error. Please check your connection.");
+    }
   };
 
   const onBackToLogin = () => {
@@ -30,6 +63,15 @@ export default function SignUp() {
           onChangeText={setEmail}
           autoCapitalize="none"
           keyboardType="email-address"
+        />
+
+        <Text style={styles.label}>Username</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Enter your username"
+          value={username}
+          onChangeText={setUsername}
+          autoCapitalize="none"
         />
 
          <Text style={styles.label}>Password</Text>

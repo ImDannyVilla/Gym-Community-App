@@ -1,15 +1,33 @@
-import { useState } from "react";
-import { router } from "expo-router";
+import React, { useState, useEffect } from "react";
+import { router, useLocalSearchParams } from "expo-router";
 import { View, Text, Image, Pressable, StyleSheet, Alert } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 
 export default function Profile() {
-    const [profilePhotoUri, setProfilePhotoUri] = useState(
-        "https://picsum.photos/800/400"
+    const params = useLocalSearchParams();
+
+    // Local state for the profile UI
+    const [profilePhotoUri, setProfilePhotoUri] = useState("https://picsum.photos/800/400");
+    const [name, setName] = useState("Name");
+    const [username, setUsername] = useState("Username");
+    const [aboutText, setAboutText] = useState(
+        "This is just a sample about paragraph for the user. This is just a sample about paragraph for the user. This is just a sample about paragraph for the user."
     );
 
+    // Update state when we navigate back from the edit screen with new parameters
+    useEffect(() => {
+        if (params.newName) {
+            setName(params.newName);
+        }
+        if (params.newUsername) {
+            setUsername(params.newUsername);
+        }
+        if (params.newAbout) {
+            setAboutText(params.newAbout);
+        }
+    }, [params.newName, params.newUsername, params.newAbout]);
+
     const changeProfilePhoto = async () => {
-        // Ask permission
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== "granted") {
             Alert.alert(
@@ -19,17 +37,27 @@ export default function Profile() {
             return;
         }
 
-        // Open gallery
         const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ['images'], // Only allows images for upload
-            allowsEditing: true, // lets them crop
-            aspect: [1, 1], // square crop
+            mediaTypes: ['images'],
+            allowsEditing: true,
+            aspect: [1, 1],
             quality: 1,
         });
 
         if (!result.canceled && result.assets?.length) {
             setProfilePhotoUri(result.assets[0].uri);
         }
+    };
+
+    const handleEditProfile = () => {
+        router.push({
+            pathname: "/_profileCom/edit/editProfile",
+            params: { 
+                currentName: name,
+                currentUsername: username,
+                currentAbout: aboutText 
+            }
+        });
     };
 
     return (
@@ -46,24 +74,21 @@ export default function Profile() {
                 </Pressable>
             </View>
 
-            <Text style={styles.name}>Name</Text>
-            <Text style={styles.userName}>@Username</Text>
+            <Text style={styles.name}>{name}</Text>
+            <Text style={styles.userName}>@{username}</Text>
 
-            <View style={styles.editProfile}>
-                <Pressable style={styles.editButton} onPress={() => router.push("/_profileCom/edit/editUsername")}>
-                    <Text style={styles.edit}>Edit Username</Text>
-                </Pressable>
-                <Pressable style={styles.editButton} onPress={() => router.push("/_profileCom/edit/editAbout")}>
-                    <Text style={styles.edit}>Edit About</Text>
+            <View style={styles.editProfileContainer}>
+                <Pressable style={styles.editButton} onPress={handleEditProfile}>
+                    <Text style={styles.editButtonText}>Edit Profile</Text>
                 </Pressable>
             </View>
 
-            <Text style={styles.aboutHeader}>About</Text>
-            <Text style={styles.about}>
-                This is just a sample about paragraph for the user. This is just a sample
-                about paragraph for the user. This is just a sample about paragraph for
-                the user.
-            </Text>
+            <View style={styles.aboutContainer}>
+                <Text style={styles.aboutHeader}>About</Text>
+                <Text style={styles.about}>
+                    {aboutText}
+                </Text>
+            </View>
         </View>
     );
 }
@@ -71,14 +96,13 @@ export default function Profile() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        justifyContent: "center",
         alignItems: "center",
+        backgroundColor: "white",
     },
 
     photoContainer: {
-        flex: 1,
-        position: "absolute",
-        top: "5%",
+        marginTop: "15%",
+        marginBottom: 10,
     },
 
     profilePhoto: {
@@ -93,66 +117,69 @@ const styles = StyleSheet.create({
         bottom: 0,
         right: 0,
         borderRadius: 18,
-        width: 28,
-        height: 28,
+        width: 32,
+        height: 32,
         backgroundColor: "#007BFF",
         alignItems: "center",
         justifyContent: "center",
+        borderWidth: 2,
+        borderColor: "white",
     },
 
     plusIcon: {
-        fontSize: 20,
+        fontSize: 22,
         fontWeight: "bold",
         color: "white",
-        lineHeight: 20,
+        lineHeight: 22,
     },
 
     name: {
-        position: "absolute",
-        top: "25%",
         fontWeight: "bold",
         fontSize: 24,
+        marginTop: 10,
     },
 
     userName: {
-        position: "absolute",
-        top: "30%",
         fontSize: 16,
+        color: "#666",
+        marginTop: 4,
     },
 
-    editProfile: {
-        position: "absolute",
-        flexDirection: "row",
-        justifyContent: "center",
-        top: "35%",
-        width: "80%",
+    editProfileContainer: {
+        width: "50%",
+        marginTop: 20,
     },
 
     editButton: {
-        borderWidth: 1,
-        borderColor: "black",
-        borderStyle: "solid",
+        borderWidth: 1.5,
+        borderColor: "#007BFF",
         borderRadius: 8,
-        width: "50%",
+        paddingVertical: 10,
+        alignItems: "center",
+        backgroundColor: "#f0f8ff", // very light blue tint
     },
 
-    edit: {
-        textAlign: "center",
+    editButtonText: {
+        fontWeight: "bold",
+        color: "#007BFF",
+    },
+
+    aboutContainer: {
+        width: "90%",
+        marginTop: 35,
+        alignItems: "flex-start",
     },
 
     aboutHeader: {
-        position: "absolute",
-        top: "40%",
         fontSize: 18,
         fontWeight: "bold",
-        width: "90%",
-        textAlign: "left",
+        marginBottom: 8,
+        color: "#333",
     },
 
     about: {
-        position: "absolute",
         fontSize: 16,
-        top: "45%",
-        width: "90%",
+        color: "#444",
+        lineHeight: 24,
     },
 });
