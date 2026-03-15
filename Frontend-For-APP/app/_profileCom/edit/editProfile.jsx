@@ -5,7 +5,8 @@ import {MaterialCommunityIcons} from "@expo/vector-icons"
 
 export default function editUsername()
 {
-    const [text, onChangeText] = useState("")
+    const [username, onChangeUsername] = useState("")
+    const [about, onChangeAbout] = useState("")
 
     const saveUsername = () => 
     {
@@ -19,16 +20,25 @@ export default function editUsername()
                     <MaterialCommunityIcons name="check-bold" size={40} color="#000" />
                 </Pressable>
 
-                <Text style={styles.text}>Edit Username: </Text>
+                <Text style={styles.text}>Username:</Text>
 
                 {/* <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"}> */}
                     <TextInput 
                         style={styles.input} 
-                        onChangeText={onChangeText}
-                        value={text} 
+                        onChangeText={onChangeUsername}
+                        value={username} 
                         placeholder="e.g. gorlockthedestroyer"
                     />
-                {/* </KeyboardAvoidingView>  */}
+                {/* </KeyboardAvoidingView> */}
+
+                <Text style={styles.text}>About:</Text>
+
+                <TextInput
+                    style={styles.input}
+                    onChangeText={onChangeAbout}
+                    value={about}
+                    placeholder="This is a a little about me!"
+                />
             </SafeAreaView>
         </SafeAreaProvider>
     );
@@ -38,23 +48,27 @@ const styles = StyleSheet.create({
     screenContainer:
     {
         flex: 1,
-        justifyContent: "center",
-        alignItems: "center"
+        rowGap: 5
     },
     save:
     {
-        position: "absolute",
-        top: 0, 
-        right: 0
+        alignItems: "flex-end",
     },
     text:
     {
-        textAlign: "left"
+        alignSelf: "center",
+        width: "90%",
+        textAlign: "left",
+        fontSize: 16
     },
     input:
     {
-        height: "10%",
+        alignSelf: "center",
+        height: "8%",
         width: "90%",
         borderWidth: 1,
+        marginBottom: 20,
+        fontSize: 16,
+        borderRadius: 10
     },
 });

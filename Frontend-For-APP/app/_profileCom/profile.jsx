@@ -50,11 +50,8 @@ export default function Profile() {
             <Text style={styles.userName}>@Username</Text>
 
             <View style={styles.editProfile}>
-                <Pressable style={styles.editButton} onPress={() => router.push("/_profileCom/edit/editUsername")}>
-                    <Text style={styles.edit}>Edit Username</Text>
-                </Pressable>
-                <Pressable style={styles.editButton} onPress={() => router.push("/_profileCom/edit/editAbout")}>
-                    <Text style={styles.edit}>Edit About</Text>
+                <Pressable style={styles.editButton} onPress={() => router.push("/_profileCom/edit/editProfile")}>
+                    <Text style={styles.edit}>Edit Profile</Text>
                 </Pressable>
             </View>
 
