@@ -1,9 +1,28 @@
-import { useState } from "react";
-import { router } from "expo-router";
+import {useState, useEffect} from "react";
+import {useRouter, useLocalSearchParams} from "expo-router";
 import { View, Text, Image, Pressable, StyleSheet, Alert } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 
 export default function Profile() {
+    // Create router for navigation to editProfile
+    const router = useRouter();
+
+    const params = useLocalSearchParams();
+
+    const [username, setUsername] = useState("Username");
+    const [about, setAbout] = useState("This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me. ");
+    
+    useEffect(() => {
+        if(params.username)
+        {
+            setUsername(params.username);
+        }
+        if(params.about)
+        {
+            setAbout(params.about);
+        }
+    }, [params.username, params.about]);
+
     const [profilePhotoUri, setProfilePhotoUri] = useState(
         "https://picsum.photos/800/400"
     );
@@ -47,20 +66,17 @@ export default function Profile() {
             </View>
 
             <Text style={styles.name}>Name</Text>
-            <Text style={styles.userName}>@Username</Text>
+            <Text style={styles.userName}>@{username}</Text>
 
             <View style={styles.editProfile}>
-                <Pressable style={styles.editButton} onPress={() => router.push("/_profileCom/edit/editProfile")}>
+                {/* Pass in username and about variables into the editProfile page */}
+                <Pressable style={styles.editButton} onPress={() => {router.push({ pathname: "/_profileCom/edit/editProfile", params: {username, about}})}}>
                     <Text style={styles.edit}>Edit Profile</Text>
                 </Pressable>
             </View>
 
             <Text style={styles.aboutHeader}>About</Text>
-            <Text style={styles.about}>
-                This is just a sample about paragraph for the user. This is just a sample
-                about paragraph for the user. This is just a sample about paragraph for
-                the user.
-            </Text>
+            <Text style={styles.about}>{about}</Text>
         </View>
     );
 }

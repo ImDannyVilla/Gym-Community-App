@@ -2,21 +2,29 @@ import {Text, TextInput, StyleSheet, Pressable, KeyboardAvoidingView, Platform} 
 import {useState} from "react"
 import {SafeAreaProvider, SafeAreaView} from "react-native-safe-area-context"
 import {MaterialCommunityIcons} from "@expo/vector-icons"
+import {useLocalSearchParams, useRouter} from "expo-router"
 
-export default function editUsername()
+export default function editProfile()
 {
-    const [username, onChangeUsername] = useState("")
-    const [about, onChangeAbout] = useState("")
+    const router = useRouter();
 
-    const saveUsername = () => 
+    const {username, about} = useLocalSearchParams();
+
+    const [newUsername, setNewUsername] = useState(username || "");
+    const [newAbout, setNewAbout] = useState(about || "");
+
+    const [inputHeight, setInputHeight] = useState(60);
+
+    const saveProfile = () => 
     {
-        // TO DO: Update the username and send the user back to the profile page
+        // TO DO: Send the username to the database backend
+        router.navigate({pathname: "/_profileCom/profile", params: {username: newUsername, about: newAbout}});
     };
 
     return (
         <SafeAreaProvider>
             <SafeAreaView style={styles.screenContainer}>
-                <Pressable onPress={saveUsername} style={styles.save}>
+                <Pressable onPress={saveProfile} style={styles.save}>
                     <MaterialCommunityIcons name="check-bold" size={40} color="#000" />
                 </Pressable>
 
@@ -25,8 +33,8 @@ export default function editUsername()
                 {/* <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"}> */}
                     <TextInput 
                         style={styles.input} 
-                        onChangeText={onChangeUsername}
-                        value={username} 
+                        onChangeText={setNewUsername}
+                        value={newUsername} 
                         placeholder="e.g. gorlockthedestroyer"
                     />
                 {/* </KeyboardAvoidingView> */}
@@ -34,10 +42,12 @@ export default function editUsername()
                 <Text style={styles.text}>About:</Text>
 
                 <TextInput
-                    style={styles.input}
-                    onChangeText={onChangeAbout}
-                    value={about}
+                    onChangeText={setNewAbout}
+                    value={newAbout}
                     placeholder="This is a a little about me!"
+                    multiline
+                    onContentSizeChange={(event) => {setInputHeight(event.nativeEvent.contentSize.height);}}
+                    style={[styles.input, {height: Math.max(60, inputHeight)}]}
                 />
             </SafeAreaView>
         </SafeAreaProvider>
@@ -52,7 +62,10 @@ const styles = StyleSheet.create({
     },
     save:
     {
-        alignItems: "flex-end",
+        width: "12%",
+        borderRadius: 10,
+        alignSelf: "flex-end",
+        borderWidth: 1
     },
     text:
     {
@@ -69,6 +82,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         marginBottom: 20,
         fontSize: 16,
-        borderRadius: 10
+        borderRadius: 10,
+        textAlignVertical: "top"
     },
 });
