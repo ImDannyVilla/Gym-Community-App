@@ -1,3 +1,8 @@
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 import asyncio
 from app.db import async_session_maker
 from app.models.workout import Workout
@@ -29,8 +34,8 @@ async def seed_chest_triceps():
                 name="Barbell Bench Press",
                 gif_url="https://v2.exercisedb.io/image/0025",
                 sets=4,
-                reps="8-12",
-                rest_seconds=90,
+                reps=8-12,
+                rest_period_seconds=90,
                 order=1,
                 notes="Focus on controlled descent, touch chest lightly"
             ),
@@ -40,8 +45,8 @@ async def seed_chest_triceps():
                 name="Incline Dumbbell Press",
                 gif_url="https://v2.exercisedb.io/image/0033",
                 sets=3,
-                reps="10-12",
-                rest_seconds=60,
+                reps=10-12,
+                rest_period_seconds=60,
                 order=2,
                 notes="45-degree angle, full range of motion"
             ),
@@ -51,8 +56,8 @@ async def seed_chest_triceps():
                 name="Cable Chest Fly",
                 gif_url="https://v2.exercisedb.io/image/0108",
                 sets=3,
-                reps="12-15",
-                rest_seconds=45,
+                reps=12-15,
+                rest_period_seconds=45,
                 order=3,
                 notes="Squeeze at peak contraction"
             ),
@@ -62,8 +67,8 @@ async def seed_chest_triceps():
                 name="Tricep Dips",
                 gif_url="https://v2.exercisedb.io/image/0456",
                 sets=3,
-                reps="10-12",
-                rest_seconds=60,
+                reps=10-12,
+                rest_period_seconds=60,
                 order=4,
                 notes="Lean forward slightly for chest, upright for triceps"
             ),
@@ -73,8 +78,8 @@ async def seed_chest_triceps():
                 name="Overhead Tricep Extension",
                 gif_url="https://v2.exercisedb.io/image/0789",
                 sets=3,
-                reps="12-15",
-                rest_seconds=45,
+                reps=12-15,
+                rest_period_seconds=45,
                 order=5,
                 notes="Keep elbows close to head"
             ),
@@ -110,8 +115,8 @@ async def seed_back_biceps():
                 name="Barbell Deadlift",
                 gif_url="https://v2.exercisedb.io/image/0027",
                 sets=4,
-                reps="6-8",
-                rest_seconds=120,
+                reps=6-8,
+                rest_period_seconds=120,
                 order=1,
                 notes="Maintain neutral spine, drive through heels"
             ),
@@ -121,8 +126,8 @@ async def seed_back_biceps():
                 name="Pull-ups",
                 gif_url="https://v2.exercisedb.io/image/0142",
                 sets=4,
-                reps="8-10",
-                rest_seconds=90,
+                reps=8-10,
+                rest_period_seconds=90,
                 order=2,
                 notes="Full extension at bottom, chin over bar at top"
             ),
@@ -132,8 +137,8 @@ async def seed_back_biceps():
                 name="Barbell Row",
                 gif_url="https://v2.exercisedb.io/image/0234",
                 sets=3,
-                reps="10-12",
-                rest_seconds=60,
+                reps=10-12,
+                rest_period_seconds=60,
                 order=3,
                 notes="Pull to lower chest, squeeze shoulder blades"
             ),
@@ -143,8 +148,8 @@ async def seed_back_biceps():
                 name="Barbell Curl",
                 gif_url="https://v2.exercisedb.io/image/0567",
                 sets=3,
-                reps="10-12",
-                rest_seconds=45,
+                reps=10-12,
+                rest_period_seconds=45,
                 order=4,
                 notes="No swinging, control the negative"
             ),
@@ -154,8 +159,8 @@ async def seed_back_biceps():
                 name="Hammer Curls",
                 gif_url="https://v2.exercisedb.io/image/0890",
                 sets=3,
-                reps="12-15",
-                rest_seconds=45,
+                reps=12-15,
+                rest_period_seconds=45,
                 order=5,
                 notes="Targets brachialis for arm thickness"
             ),
@@ -191,8 +196,8 @@ async def seed_legs():
                 name="Barbell Squat",
                 gif_url="https://v2.exercisedb.io/image/0043",
                 sets=4,
-                reps="8-10",
-                rest_seconds=120,
+                reps=8-10,
+                rest_period_seconds=120,
                 order=1,
                 notes="Depth to parallel or below, knees track over toes"
             ),
@@ -202,8 +207,8 @@ async def seed_legs():
                 name="Romanian Deadlift",
                 gif_url="https://v2.exercisedb.io/image/0345",
                 sets=3,
-                reps="10-12",
-                rest_seconds=90,
+                reps=10-12,
+                rest_period_seconds=90,
                 order=2,
                 notes="Feel the stretch in hamstrings, slight knee bend"
             ),
@@ -213,8 +218,8 @@ async def seed_legs():
                 name="Leg Press",
                 gif_url="https://v2.exercisedb.io/image/0678",
                 sets=3,
-                reps="12-15",
-                rest_seconds=60,
+                reps=12-15,
+                rest_period_seconds=60,
                 order=3,
                 notes="Full range of motion, don't lock knees"
             ),
@@ -224,8 +229,8 @@ async def seed_legs():
                 name="Leg Curl",
                 gif_url="https://v2.exercisedb.io/image/0901",
                 sets=3,
-                reps="12-15",
-                rest_seconds=45,
+                reps=12-15,
+                rest_period_seconds=45,
                 order=4,
                 notes="Squeeze hamstrings at peak"
             ),
@@ -235,8 +240,8 @@ async def seed_legs():
                 name="Calf Raises",
                 gif_url="https://v2.exercisedb.io/image/1234",
                 sets=4,
-                reps="15-20",
-                rest_seconds=45,
+                reps=15-20,
+                rest_period_seconds=45,
                 order=5,
                 notes="Full stretch at bottom, hold peak for 1 sec"
             ),
