@@ -1,4 +1,4 @@
-import {Text, TextInput, StyleSheet, Pressable, KeyboardAvoidingView, Platform} from "react-native"
+import {Text, TextInput, StyleSheet, Pressable} from "react-native"
 import {useState} from "react"
 import {SafeAreaProvider, SafeAreaView} from "react-native-safe-area-context"
 import {MaterialCommunityIcons} from "@expo/vector-icons"
@@ -15,10 +15,25 @@ export default function editProfile()
 
     const [inputHeight, setInputHeight] = useState(60);
 
-    const saveProfile = () => 
+    const saveProfile = async () => 
     {
-        // TO DO: Send the username to the database backend
-        router.navigate({pathname: "/_profileCom/profile", params: {username: newUsername, about: newAbout}});
+        try
+        {
+            const response = await fetch("The URL for the backend", {method: "PUT", body: JSON.stringify({username: newUsername, about: newAbout})});
+            
+            if(response.ok)
+            {
+                router.navigate({pathname: "/_profileCom/profile", params: {username: newUsername, about: newAbout}});
+            }
+            else
+            {
+                console.log("Server error");
+            }
+        }
+        catch(error)
+        {
+            console.log("Failed to reach server");
+        }
     };
 
     return (
@@ -30,14 +45,12 @@ export default function editProfile()
 
                 <Text style={styles.text}>Username:</Text>
 
-                {/* <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"}> */}
-                    <TextInput 
-                        style={styles.input} 
-                        onChangeText={setNewUsername}
-                        value={newUsername} 
-                        placeholder="e.g. gorlockthedestroyer"
-                    />
-                {/* </KeyboardAvoidingView> */}
+                <TextInput 
+                    style={styles.input} 
+                    onChangeText={setNewUsername}
+                    value={newUsername} 
+                    placeholder="e.g. gorlockthedestroyer"
+                />
 
                 <Text style={styles.text}>About:</Text>
 
@@ -80,7 +93,6 @@ const styles = StyleSheet.create({
         height: "8%",
         width: "90%",
         borderWidth: 1,
-        marginBottom: 20,
         fontSize: 16,
         borderRadius: 10,
         textAlignVertical: "top"

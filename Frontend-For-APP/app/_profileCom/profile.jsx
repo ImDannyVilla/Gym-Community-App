@@ -1,6 +1,6 @@
 import {useState, useEffect} from "react";
 import {useRouter, useLocalSearchParams} from "expo-router";
-import { View, Text, Image, Pressable, StyleSheet, Alert } from "react-native";
+import { ScrollView, View, Text, Image, Pressable, StyleSheet, Alert } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 
 export default function Profile() {
@@ -52,7 +52,7 @@ export default function Profile() {
     };
 
     return (
-        <View style={styles.container}>
+        <ScrollView style={styles.scrollWindow} contentContainerStyle={styles.container}>
             <View style={styles.photoContainer}>
                 <Image
                     source={{ uri: profilePhotoUri }}
@@ -75,23 +75,36 @@ export default function Profile() {
                 </Pressable>
             </View>
 
-            <Text style={styles.aboutHeader}>About</Text>
-            <Text style={styles.about}>{about}</Text>
-        </View>
+            <View style={styles.aboutContainer}>
+                <Text style={styles.aboutHeader}>About</Text>
+                <Text style={styles.about}>{about}</Text>
+            </View>
+
+            <View style={styles.cardContainer}>
+                <View style={[styles.testCard, { backgroundColor: 'tomato'}]} />
+                <View style={[styles.testCard, { backgroundColor: 'gold' }]} />
+                <View style={[styles.testCard, { backgroundColor: 'mediumseagreen' }]} />
+                <View style={[styles.testCard, { backgroundColor: 'dodgerblue' }]} />
+            </View>
+        </ScrollView>
     );
 }
 
 const styles = StyleSheet.create({
+    scrollWindow:
+    {
+        flex: 1
+    },
     container: {
-        flex: 1,
+        flexGrow: 1,
         justifyContent: "center",
         alignItems: "center",
+        paddingTop: "10%",
+        paddingBottom: "10%"
     },
 
     photoContainer: {
-        flex: 1,
-        position: "absolute",
-        top: "5%",
+        marginBottom: 16
     },
 
     profilePhoto: {
@@ -121,24 +134,20 @@ const styles = StyleSheet.create({
     },
 
     name: {
-        position: "absolute",
-        top: "25%",
         fontWeight: "bold",
         fontSize: 24,
     },
 
     userName: {
-        position: "absolute",
-        top: "30%",
-        fontSize: 16,
+        marginBottom: 20,
+        fontSize: 16
     },
 
     editProfile: {
-        position: "absolute",
         flexDirection: "row",
         justifyContent: "center",
-        top: "35%",
-        width: "80%",
+        marginBottom: 24,
+        width: "80%"
     },
 
     editButton: {
@@ -147,15 +156,18 @@ const styles = StyleSheet.create({
         borderStyle: "solid",
         borderRadius: 8,
         width: "50%",
+        paddingVertical: "2%"
     },
 
     edit: {
         textAlign: "center",
     },
 
+    aboutContainer: {
+        width: "90%",
+        marginBottom: 24
+    },
     aboutHeader: {
-        position: "absolute",
-        top: "40%",
         fontSize: 18,
         fontWeight: "bold",
         width: "90%",
@@ -163,9 +175,23 @@ const styles = StyleSheet.create({
     },
 
     about: {
-        position: "absolute",
         fontSize: 16,
-        top: "45%",
         width: "90%",
     },
+
+    cardContainer: 
+    {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        width: "90%",
+        justifyContent: "space-between",
+    },
+    testCard: {
+        width: "32%", 
+        height: 150,  
+        marginBottom: "2%", 
+        borderRadius: 10,
+        borderWidth: 1,
+        borderRadius: 10
+    }
 });
