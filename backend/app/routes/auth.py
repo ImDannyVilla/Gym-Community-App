@@ -38,12 +38,7 @@ async def register(user_data: UserRegister, db: AsyncSession = Depends(get_db)):
     )
     db.add(new_user)
     await db.commit() #SQLAlchemy puts that user object into a Session where it stages the changes to the database.
-
-    #creating jwt token
-    token = create_access_token(data={"sub": user_data.email})
-
-    #retunr token to react native
-    return Token(access_token=token, token_type="bearer")
+    return new_user
 
 @router.post("/login")
 async def login(credentials: UserLogin, db: AsyncSession = Depends(get_db)):
