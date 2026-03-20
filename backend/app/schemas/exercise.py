@@ -8,8 +8,8 @@ class ExerciseBase(BaseModel):
     name: str
     gif_url: Optional[str] = None
     sets: int
-    reps: str
-    rest_seconds: Optional[int] = 60
+    reps: int
+    rest_period_seconds: Optional[int] = 60
     order: int
     notes: Optional[str] = None
 
