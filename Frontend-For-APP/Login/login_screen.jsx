@@ -6,13 +6,44 @@ import {
   TextInput,
   Pressable,
   Image,
+  Alert,
 } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { loginUser } from "../lib/authApi";
+import { saveToken } from "../lib/tokenStorage";
+
 const LoginScreen = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const onLogin = async () => {
+    if (!email.trim() || !password.trim()) {
+      Alert.alert("Missing info", "Enter your email and password.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const data = await loginUser({
+        email: email.trim(),
+        password: password.trim(),
+      });
+
+      if (data.access_token) {
+        await saveToken(data.access_token);
+      }
+
+      router.replace("/dashboard");
+    } catch (error) {
+      Alert.alert("Login failed", error.message || "Something went wrong.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <View style={styles.safe}>
@@ -24,46 +55,49 @@ const LoginScreen = () => {
           style={styles.logo}
         />
 
-        <Text style={styles.label}>Username / Email</Text>
+        <Text style={styles.label}>Email</Text>
         <TextInput
           style={styles.input}
-          placeholder="Enter your username or email"
+          placeholder="Enter your email"
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
+          keyboardType="email-address"
         />
 
         <Text style={styles.label}>Password</Text>
 
-<View style={styles.passwordContainer}>
-  <TextInput
-    style={styles.passwordInput}
-    placeholder="Enter your password"
-    value={password}
-    onChangeText={setPassword}
-    secureTextEntry={!showPassword}
-  />
+        <View style={styles.passwordContainer}>
+          <TextInput
+            style={styles.passwordInput}
+            placeholder="Enter your password"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry={!showPassword}
+            autoCapitalize="none"
+          />
 
-  <Pressable onPress={() => setShowPassword(!showPassword)}>
-    <Ionicons
-      name={showPassword ? "eye-off" : "eye"}
-      size={22}
-      color="Black"
-    />
-  </Pressable>
-</View>
+          <Pressable onPress={() => setShowPassword(!showPassword)}>
+            <Ionicons
+              name={showPassword ? "eye-off" : "eye"}
+              size={22}
+              color="black"
+            />
+          </Pressable>
+        </View>
 
         <Pressable
-          style={styles.button}
-          onPress={() => router.replace("/dashboard")}
+          style={[styles.button, loading && styles.buttonDisabled]}
+          onPress={onLogin}
+          disabled={loading}
         >
-          <Text style={styles.buttonText}>Login</Text>
+          <Text style={styles.buttonText}>
+            {loading ? "Logging in..." : "Login"}
+          </Text>
         </Pressable>
 
         <Pressable onPress={() => router.push("/signup")}>
-          <Text style={styles.signUpText}>
-            Don't have an account? Sign Up
-          </Text>
+          <Text style={styles.signUpText}>Don't have an account? Sign Up</Text>
         </Pressable>
       </View>
     </View>
@@ -108,27 +142,20 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
 
-  /* password styles */
   passwordContainer: {
-  width: "100%",
-  flexDirection: "row",
-  alignItems: "center",
-  borderColor: "#ccc",
-  borderWidth: 1,
-  borderRadius: 5,
-  marginBottom: 15,
-  paddingHorizontal: 10,
-},
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    borderColor: "#ccc",
+    borderWidth: 1,
+    borderRadius: 5,
+    marginBottom: 15,
+    paddingHorizontal: 10,
+  },
 
-passwordInput: {
-  flex: 1,
-  height: 40,
-},
-
-  showText: {
-    color: "black",
-    fontWeight: "bold",
-    marginLeft: 10,
+  passwordInput: {
+    flex: 1,
+    height: 40,
   },
 
   button: {
@@ -139,6 +166,10 @@ passwordInput: {
     alignItems: "center",
     justifyContent: "center",
     marginTop: 10,
+  },
+
+  buttonDisabled: {
+    opacity: 0.7,
   },
 
   buttonText: {
