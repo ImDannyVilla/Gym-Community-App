@@ -1,7 +1,7 @@
 import React from "react";
 import { ScrollView, View, Text, Pressable, StyleSheet } from "react-native";
 import { router } from "expo-router";
-import WeekStrip from "./_dashboardCom/_Weekstrip";
+//import WeekStrip from "./_dashboardCom/_Weekstrip";
 import MuscleCard from "./_dashboardCom/_MuscleCard";
 
 export default function Dashboard() {
@@ -12,15 +12,10 @@ export default function Dashboard() {
     >
       <Text style={styles.title}>Welcome to the Dashboard</Text>
 
-      <WeekStrip />
-
+      
       <View style={styles.grid}>
-        <MuscleCard title="chest" onPress={() => {}} />
-        <MuscleCard title="shoulders" onPress={() => {}} />
-        <MuscleCard title="back" onPress={() => {}} />
-        <MuscleCard title="arms" onPress={() => {}} />
-        <MuscleCard title="legs" onPress={() => {}} />
-        <MuscleCard title="core" onPress={() => {}} />
+        <MuscleCard title="Upper/Lower" onPress={() => router.push("/programs/upperlower")} />
+        <MuscleCard title="back" onPress={() => router.push('/programs/cardio')} />
       </View>
 
       <Pressable onPress={() => router.replace("/")} style={styles.logoutButton}>
