@@ -19,12 +19,12 @@ API Docs: http://localhost:8000/docs
 ## Frontend Setup
 
 ### Package Requirements
-Java Development Kit: Version 17
-React: 19.1.0
-React Native: 0.81.5 
-Expo: 54.0.33
-Package Manager: npm (Node Package Manager)
-Emulator: Android Studio
+Java Development Kit: Version 17  
+React: 19.1.0  
+React Native: 0.81.5   
+Expo: 54.0.33  
+Package Manager: npm (Node Package Manager)  
+Emulator: Android Studio  
 
 ### Running the app
 
