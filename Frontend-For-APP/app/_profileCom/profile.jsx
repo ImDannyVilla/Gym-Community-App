@@ -1,6 +1,6 @@
 import {useState, useEffect} from "react";
 import {useRouter, useLocalSearchParams} from "expo-router";
-import { ScrollView, View, Text, Image, Pressable, StyleSheet, Alert } from "react-native";
+import {ScrollView, View, Text, Image, Pressable, StyleSheet, Alert} from "react-native";
 import * as ImagePicker from "expo-image-picker";
 
 export default function Profile() {
@@ -11,17 +11,31 @@ export default function Profile() {
 
     const [username, setUsername] = useState("Username");
     const [about, setAbout] = useState("This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me. ");
+    const [weight, setWeight] = useState("185 lbs");
+    const [calorieIntake, setCalorieIntake] = useState("2,500 kcal");
+    const [lastWorkout, setLastWorkout] = useState("Chest & Triceps");
+    const [currentWorkout, setCurrentWorkout] = useState("Back & Biceps");
     
     useEffect(() => {
-        if(params.username)
-        {
+        if(params.username) {
             setUsername(params.username);
         }
-        if(params.about)
-        {
+        if(params.about) {
             setAbout(params.about);
         }
-    }, [params.username, params.about]);
+        if(params.weight) {
+            setWeight(params.weight);
+        }
+        if(params.calorieIntake) {
+            setCalorieIntake(params.calorieIntake);
+        }
+        if(params.lastWorkout) {
+            setLastWorkout(params.lastWorkout);
+        }
+        if(params.currentWorkout) {
+            setCurrentWorkout(params.currentWorkout);
+        }
+    }, [params.username, params.about, params.weight, params.calorieIntake, params.lastWorkout, params.currentWorkout]);
 
     const [profilePhotoUri, setProfilePhotoUri] = useState(
         "https://picsum.photos/800/400"
@@ -70,21 +84,33 @@ export default function Profile() {
 
             <View style={styles.editProfile}>
                 {/* Pass in username and about variables into the editProfile page */}
-                <Pressable style={styles.editButton} onPress={() => {router.push({ pathname: "/_profileCom/edit/editProfile", params: {username, about}})}}>
+                <Pressable style={styles.editButton} onPress={() => {router.push({ pathname: "/_profileCom/edit/editProfile", params: {username, about, weight, calorieIntake, lastWorkout, currentWorkout}})}}>
                     <Text style={styles.edit}>Edit Profile</Text>
                 </Pressable>
+            </View>
+
+            <View style={styles.cardContainer}>
+                <View style={styles.statCard}>
+                    <Text style={styles.cardTitle} adjustsFontSizeToFit numberOfLines={1}>Weight</Text>
+                    <Text style={styles.cardValue} adjustsFontSizeToFit numberOfLines={1}>{weight}</Text>
+                </View>
+                <View style={styles.statCard}>
+                    <Text style={styles.cardTitle} adjustsFontSizeToFit numberOfLines={1}>Daily Calorie Intake</Text>
+                    <Text style={styles.cardValue} adjustsFontSizeToFit numberOfLines={1}>{calorieIntake}</Text>
+                </View>
+                <View style={styles.statCard}>
+                    <Text style={styles.cardTitle} adjustsFontSizeToFit numberOfLines={1}>Last Workout</Text>
+                    <Text style={styles.cardValue} adjustsFontSizeToFit numberOfLines={1}>{lastWorkout}</Text>
+                </View>
+                <View style={styles.statCard}>
+                    <Text style={styles.cardTitle} adjustsFontSizeToFit numberOfLines={1}>Current Workout</Text>
+                    <Text style={styles.cardValue} adjustsFontSizeToFit numberOfLines={1}>{currentWorkout}</Text>
+                </View>
             </View>
 
             <View style={styles.aboutContainer}>
                 <Text style={styles.aboutHeader}>About</Text>
                 <Text style={styles.about}>{about}</Text>
-            </View>
-
-            <View style={styles.cardContainer}>
-                <View style={[styles.testCard, { backgroundColor: 'tomato'}]} />
-                <View style={[styles.testCard, { backgroundColor: 'gold' }]} />
-                <View style={[styles.testCard, { backgroundColor: 'mediumseagreen' }]} />
-                <View style={[styles.testCard, { backgroundColor: 'dodgerblue' }]} />
             </View>
         </ScrollView>
     );
@@ -99,7 +125,7 @@ const styles = StyleSheet.create({
         flexGrow: 1,
         justifyContent: "center",
         alignItems: "center",
-        paddingTop: "10%",
+        paddingTop: "5%",
         paddingBottom: "10%"
     },
 
@@ -184,14 +210,33 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         flexWrap: "wrap",
         width: "90%",
-        justifyContent: "space-between",
+        borderTopWidth: 1,
+        borderLeftWidth: 1,
+        borderColor: "#E0E0E0",
+        borderRadius: 12,
+        overflow: "hidden",
+        marginBottom: 24
     },
-    testCard: {
-        width: "32%", 
-        height: 150,  
-        marginBottom: "2%", 
-        borderRadius: 10,
-        borderWidth: 1,
-        borderRadius: 10
+    statCard: {
+        width: "50%", 
+        backgroundColor: "#FFFFFF",
+        padding: 16,
+        justifyContent: "center",
+        alignItems: "center",
+        borderBottomWidth: 1,
+        borderRightWidth: 1,
+        borderColor: "#E0E0E0",
+    },
+    cardTitle: {
+        fontSize: 14,
+        color: "#666666",
+        marginBottom: 8,
+        textAlign: "center",
+    },
+    cardValue: {
+        fontSize: 18,
+        fontWeight: "bold",
+        color: "#000000",
+        textAlign: "center",
     }
 });
