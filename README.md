@@ -20,21 +20,23 @@ API Docs: http://localhost:8000/docs
 
 ### Package Requirements
 Java Development Kit: Version 17
-
 React: 19.1.0
-
 React Native: 0.81.5 
-
 Expo: 54.0.33
-
 Package Manager: npm (Node Package Manager)
-
 Emulator: Android Studio
 
 ### Running the app
+
+1. Open Android Studio
+2. Click the "Device Manager" icon on the right
+3. Click the "+" -> "Create Virtual Device"
+4. Choose Phone Model
+5. Finish
+
 ```bash
 cd Frontend-For-APP
-npm install (npm install --legacy-peer-deps if on later versions)
+npm install
 npx expo start
 ```
 
