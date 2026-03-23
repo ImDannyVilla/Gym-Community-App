@@ -2,6 +2,7 @@ import {useState, useEffect} from "react";
 import {useRouter, useLocalSearchParams} from "expo-router";
 import {ScrollView, View, Text, Image, Pressable, StyleSheet, Alert} from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import Modal from "react-native-modal";
 
 export default function Profile() {
     // Create router for navigation to editProfile
@@ -15,7 +16,29 @@ export default function Profile() {
     const [calorieIntake, setCalorieIntake] = useState("2,500 kcal");
     const [lastWorkout, setLastWorkout] = useState("Chest & Triceps");
     const [currentWorkout, setCurrentWorkout] = useState("Back & Biceps");
-    
+
+    const [totalWorkouts, setTotalWorkouts] = useState("847");
+    const [dayStreak, setDayStreak] = useState("45");
+    const [totalCalories, setTotalCalories] = useState("18k");
+
+    const [isStreakModalVisible, setStreakModalVisible] = useState(false);
+
+    const currentDate = new Date();
+    const currentMonth = currentDate.toLocaleString('default', { month: 'long' });
+    const currentYear = currentDate.getFullYear();
+    const todayNum = currentDate.getDate();
+
+    const daysInMonth = new Date(currentYear, currentDate.getMonth() + 1, 0).getDate();
+    const firstDayOfMonth = new Date(currentYear, currentDate.getMonth(), 1).getDay();
+
+    const daysArray = [];
+    for (let i = 0; i < firstDayOfMonth; i++) {
+        daysArray.push(null);
+    }
+    for (let i = 1; i <= daysInMonth; i++) {
+        daysArray.push(i);
+    }
+
     useEffect(() => {
         if(params.username) {
             setUsername(params.username);
@@ -82,6 +105,21 @@ export default function Profile() {
             <Text style={styles.name}>Name</Text>
             <Text style={styles.userName}>@{username}</Text>
 
+            <View style={styles.topStatsContainer}>
+                <View style={styles.topStatItem}>
+                    <Text style={styles.topStatValue} adjustsFontSizeToFit numberOfLines={1}>{totalWorkouts}</Text>
+                    <Text style={styles.topStatLabel} adjustsFontSizeToFit numberOfLines={1}>Workouts</Text>
+                </View>
+                <Pressable style={styles.topStatItem} onPress={() => setStreakModalVisible(true)}>
+                    <Text style={styles.topStatValue} adjustsFontSizeToFit numberOfLines={1}>{dayStreak}</Text>
+                    <Text style={styles.topStatLabel} adjustsFontSizeToFit numberOfLines={1}>Day Streak</Text>
+                </Pressable>
+                <View style={styles.topStatItem}>
+                    <Text style={styles.topStatValue} adjustsFontSizeToFit numberOfLines={1}>{totalCalories}</Text>
+                    <Text style={styles.topStatLabel} adjustsFontSizeToFit numberOfLines={1}>Calories</Text>
+                </View>
+            </View>
+
             <View style={styles.editProfile}>
                 {/* Pass in username and about variables into the editProfile page */}
                 <Pressable style={styles.editButton} onPress={() => {router.push({ pathname: "/_profileCom/edit/editProfile", params: {username, about, weight, calorieIntake, lastWorkout, currentWorkout}})}}>
@@ -112,6 +150,43 @@ export default function Profile() {
                 <Text style={styles.aboutHeader}>About</Text>
                 <Text style={styles.about}>{about}</Text>
             </View>
+
+            <Modal
+                isVisible={isStreakModalVisible}
+                onSwipeComplete={() => setStreakModalVisible(false)}
+                swipeDirection="down"
+                onBackdropPress={() => setStreakModalVisible(false)}
+                style={styles.bottomModal}
+            >
+                <View style={styles.modalContent}>
+                    <View style={styles.dragHandle} />
+
+                    <View style={styles.calendarContainer}>
+                        <Text style={styles.monthTitle}>{currentMonth} {currentYear}</Text>
+
+                        <View style={styles.weekDaysRow}>
+                            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
+                                <Text key={index} style={styles.weekDayText}>{day}</Text>
+                            ))}
+                        </View>
+
+                        <View style={styles.daysGrid}>
+                            {daysArray.map((day, index) => {
+                                const isToday = day === todayNum;
+                                return (
+                                    <View key={index} style={styles.dayCell}>
+                                        <View style={[styles.dayCircle, isToday && styles.currentDayCircle]}>
+                                            <Text style={[styles.dayText, isToday && styles.currentDayText]}>
+                                                {day !== null ? day : ''}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                );
+                            })}
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </ScrollView>
     );
 }
@@ -167,6 +242,30 @@ const styles = StyleSheet.create({
     userName: {
         marginBottom: 20,
         fontSize: 16
+    },
+
+    topStatsContainer: {
+        flexDirection: "row",
+        justifyContent: "center",
+        gap: 32,
+        width: "90%",
+        marginBottom: 24,
+    },
+    topStatItem: {
+        alignItems: "center",
+        maxWidth: 90,
+    },
+    topStatValue: {
+        fontSize: 18,
+        fontWeight: "bold",
+        color: "#0F172A",
+        marginBottom: 2,
+        textAlign: "center",
+    },
+    topStatLabel: {
+        fontSize: 12,
+        color: "#64748B",
+        textAlign: "center",
     },
 
     editProfile: {
@@ -238,5 +337,78 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
         color: "#000000",
         textAlign: "center",
+    },
+
+    bottomModal: {
+        justifyContent: "flex-end",
+        margin: 0,
+    },
+    modalContent: {
+        backgroundColor: "white",
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        paddingHorizontal: 24,
+        paddingTop: 16,
+        paddingBottom: 40,
+        height: "50%",
+        alignItems: "center",
+    },
+    dragHandle: {
+        width: 40,
+        height: 5,
+        borderRadius: 2.5,
+        backgroundColor: "#ccc",
+        marginBottom: 24,
+    },
+    calendarContainer: {
+        width: "100%",
+        marginTop: 10,
+    },
+    monthTitle: {
+        fontSize: 18,
+        fontWeight: "bold",
+        color: "#0F172A",
+        textAlign: "center",
+        marginBottom: 16,
+    },
+    weekDaysRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        marginBottom: 10,
+    },
+    weekDayText: {
+        width: "14.28%", // 100% / 7
+        textAlign: "center",
+        color: "#64748B",
+        fontSize: 14,
+        fontWeight: "600",
+    },
+    daysGrid: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+    },
+    dayCell: {
+        width: "14.28%",
+        aspectRatio: 1, // Keeps the cells perfectly square
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    dayCircle: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    currentDayCircle: {
+        backgroundColor: "#007BFF", // Blue highlight
+    },
+    dayText: {
+        fontSize: 16,
+        color: "#0F172A",
+    },
+    currentDayText: {
+        color: "white",
+        fontWeight: "bold",
     }
 });
