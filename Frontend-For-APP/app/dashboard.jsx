@@ -41,7 +41,7 @@ export default function Dashboard() {
 
         <Pressable
           style={styles.navButton}
-          onPress={() => router.push("/_profileCom/profile")}
+          onPress={() => router.push("_profileCom/")}
         >
           <Text style={styles.buttonText}>Profile</Text>
         </Pressable>

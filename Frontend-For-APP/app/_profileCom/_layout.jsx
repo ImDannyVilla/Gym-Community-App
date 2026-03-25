@@ -1,14 +1,17 @@
 import {useState, useEffect} from "react";
 import {useRouter, useLocalSearchParams} from "expo-router";
-import {ScrollView, View, Text, Image, Pressable, StyleSheet, Alert} from "react-native";
+import {ScrollView, View, Text, Image, Pressable, StyleSheet, Alert, useWindowDimensions} from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import Modal from "react-native-modal";
+import {MaterialTopTabs} from "../../components/TopBar";
 
 export default function Profile() {
     // Create router for navigation to editProfile
     const router = useRouter();
 
     const params = useLocalSearchParams();
+
+    const {height: windowHeight} = useWindowDimensions();
 
     const [username, setUsername] = useState("Username");
     const [about, setAbout] = useState("This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me. ");
@@ -89,104 +92,125 @@ export default function Profile() {
     };
 
     return (
-        <ScrollView style={styles.scrollWindow} contentContainerStyle={styles.container}>
-            <View style={styles.photoContainer}>
-                <Image
-                    source={{ uri: profilePhotoUri }}
-                    style={styles.profilePhoto}
-                    resizeMode="cover"
-                />
+        <ScrollView style={styles.scrollWindow} contentContainerStyle={styles.container} nestedScrollEnabled={true} stickyHeaderIndices={[1]}>
+            <View style={{width: "100%", alignItems: "center"}}>
+                <View style={styles.photoContainer}>
+                    <Image
+                        source={{ uri: profilePhotoUri }}
+                        style={styles.profilePhoto}
+                        resizeMode="cover"
+                    />
 
-                <Pressable style={styles.editProfilePhoto} onPress={changeProfilePhoto}>
-                    <Text style={styles.plusIcon}>+</Text>
-                </Pressable>
-            </View>
-
-            <Text style={styles.name}>Name</Text>
-            <Text style={styles.userName}>@{username}</Text>
-
-            <View style={styles.topStatsContainer}>
-                <View style={styles.topStatItem}>
-                    <Text style={styles.topStatValue} adjustsFontSizeToFit numberOfLines={1}>{totalWorkouts}</Text>
-                    <Text style={styles.topStatLabel} adjustsFontSizeToFit numberOfLines={1}>Workouts</Text>
+                    <Pressable style={styles.editProfilePhoto} onPress={changeProfilePhoto}>
+                        <Text style={styles.plusIcon}>+</Text>
+                    </Pressable>
                 </View>
-                <Pressable style={styles.topStatItem} onPress={() => setStreakModalVisible(true)}>
-                    <Text style={styles.topStatValue} adjustsFontSizeToFit numberOfLines={1}>{dayStreak}</Text>
-                    <Text style={styles.topStatLabel} adjustsFontSizeToFit numberOfLines={1}>Day Streak</Text>
-                </Pressable>
-                <View style={styles.topStatItem}>
-                    <Text style={styles.topStatValue} adjustsFontSizeToFit numberOfLines={1}>{totalCalories}</Text>
-                    <Text style={styles.topStatLabel} adjustsFontSizeToFit numberOfLines={1}>Calories</Text>
-                </View>
-            </View>
 
-            <View style={styles.editProfile}>
-                {/* Pass in username and about variables into the editProfile page */}
-                <Pressable style={styles.editButton} onPress={() => {router.push({ pathname: "/_profileCom/edit/editProfile", params: {username, about, weight, calorieIntake, lastWorkout, currentWorkout}})}}>
-                    <Text style={styles.edit}>Edit Profile</Text>
-                </Pressable>
-            </View>
+                <Text style={styles.name}>Name</Text>
+                <Text style={styles.userName}>@{username}</Text>
 
-            <View style={styles.cardContainer}>
-                <View style={styles.statCard}>
-                    <Text style={styles.cardTitle} adjustsFontSizeToFit numberOfLines={1}>Weight</Text>
-                    <Text style={styles.cardValue} adjustsFontSizeToFit numberOfLines={1}>{weight}</Text>
-                </View>
-                <View style={styles.statCard}>
-                    <Text style={styles.cardTitle} adjustsFontSizeToFit numberOfLines={1}>Daily Calorie Intake</Text>
-                    <Text style={styles.cardValue} adjustsFontSizeToFit numberOfLines={1}>{calorieIntake}</Text>
-                </View>
-                <View style={styles.statCard}>
-                    <Text style={styles.cardTitle} adjustsFontSizeToFit numberOfLines={1}>Last Workout</Text>
-                    <Text style={styles.cardValue} adjustsFontSizeToFit numberOfLines={1}>{lastWorkout}</Text>
-                </View>
-                <View style={styles.statCard}>
-                    <Text style={styles.cardTitle} adjustsFontSizeToFit numberOfLines={1}>Current Workout</Text>
-                    <Text style={styles.cardValue} adjustsFontSizeToFit numberOfLines={1}>{currentWorkout}</Text>
-                </View>
-            </View>
-
-            <View style={styles.aboutContainer}>
-                <Text style={styles.aboutHeader}>About</Text>
-                <Text style={styles.about}>{about}</Text>
-            </View>
-
-            <Modal
-                isVisible={isStreakModalVisible}
-                onSwipeComplete={() => setStreakModalVisible(false)}
-                swipeDirection="down"
-                onBackdropPress={() => setStreakModalVisible(false)}
-                style={styles.bottomModal}
-            >
-                <View style={styles.modalContent}>
-                    <View style={styles.dragHandle} />
-
-                    <View style={styles.calendarContainer}>
-                        <Text style={styles.monthTitle}>{currentMonth} {currentYear}</Text>
-
-                        <View style={styles.weekDaysRow}>
-                            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
-                                <Text key={index} style={styles.weekDayText}>{day}</Text>
-                            ))}
-                        </View>
-
-                        <View style={styles.daysGrid}>
-                            {daysArray.map((day, index) => {
-                                const isToday = day === todayNum;
-                                return (
-                                    <View key={index} style={styles.dayCell}>
-                                        <View style={[styles.dayCircle, isToday && styles.currentDayCircle]}>
-                                            <Text style={[styles.dayText, isToday && styles.currentDayText]}>
-                                                {day !== null ? day : ''}
-                                            </Text>
-                                        </View>
-                                    </View>
-                                );
-                            })}
-                        </View>
+                <View style={styles.topStatsContainer}>
+                    <View style={styles.topStatItem}>
+                        <Text style={styles.topStatValue} adjustsFontSizeToFit numberOfLines={1}>{totalWorkouts}</Text>
+                        <Text style={styles.topStatLabel} adjustsFontSizeToFit numberOfLines={1}>Workouts</Text>
+                    </View>
+                    <Pressable style={styles.topStatItem} onPress={() => setStreakModalVisible(true)}>
+                        <Text style={styles.topStatValue} adjustsFontSizeToFit numberOfLines={1}>{dayStreak}</Text>
+                        <Text style={styles.topStatLabel} adjustsFontSizeToFit numberOfLines={1}>Day Streak</Text>
+                    </Pressable>
+                    <View style={styles.topStatItem}>
+                        <Text style={styles.topStatValue} adjustsFontSizeToFit numberOfLines={1}>{totalCalories}</Text>
+                        <Text style={styles.topStatLabel} adjustsFontSizeToFit numberOfLines={1}>Calories</Text>
                     </View>
                 </View>
-            </Modal>
+
+                <View style={styles.editProfile}>
+                    {/* Pass in username and about variables into the editProfile page */}
+                    <Pressable style={styles.editButton} onPress={() => {router.push({ pathname: "/edit/editProfile", params: {username, about, weight, calorieIntake, lastWorkout, currentWorkout}})}}>
+                        <Text style={styles.edit}>Edit Profile</Text>
+                    </Pressable>
+                </View>
+
+                <View style={styles.cardContainer}>
+                    <View style={styles.statCard}>
+                        <Text style={styles.cardTitle} adjustsFontSizeToFit numberOfLines={1}>Weight</Text>
+                        <Text style={styles.cardValue} adjustsFontSizeToFit numberOfLines={1}>{weight}</Text>
+                    </View>
+                    <View style={styles.statCard}>
+                        <Text style={styles.cardTitle} adjustsFontSizeToFit numberOfLines={1}>Daily Calorie Intake</Text>
+                        <Text style={styles.cardValue} adjustsFontSizeToFit numberOfLines={1}>{calorieIntake}</Text>
+                    </View>
+                    <View style={styles.statCard}>
+                        <Text style={styles.cardTitle} adjustsFontSizeToFit numberOfLines={1}>Last Workout</Text>
+                        <Text style={styles.cardValue} adjustsFontSizeToFit numberOfLines={1}>{lastWorkout}</Text>
+                    </View>
+                    <View style={styles.statCard}>
+                        <Text style={styles.cardTitle} adjustsFontSizeToFit numberOfLines={1}>Current Workout</Text>
+                        <Text style={styles.cardValue} adjustsFontSizeToFit numberOfLines={1}>{currentWorkout}</Text>
+                    </View>
+                </View>
+
+                <View style={styles.aboutContainer}>
+                    <Text style={styles.aboutHeader}>About</Text>
+                    <Text style={styles.about}>{about}</Text>
+                </View>
+
+                <Modal
+                    isVisible={isStreakModalVisible}
+                    onSwipeComplete={() => setStreakModalVisible(false)}
+                    swipeDirection="down"
+                    onBackdropPress={() => setStreakModalVisible(false)}
+                    style={styles.bottomModal}
+                >
+                    <View style={styles.modalContent}>
+                        <View style={styles.dragHandle} />
+
+                        <View style={styles.calendarContainer}>
+                            <Text style={styles.monthTitle}>{currentMonth} {currentYear}</Text>
+
+                            <View style={styles.weekDaysRow}>
+                                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
+                                    <Text key={index} style={styles.weekDayText}>{day}</Text>
+                                ))}
+                            </View>
+
+                            <View style={styles.daysGrid}>
+                                {daysArray.map((day, index) => {
+                                    const isToday = day === todayNum;
+                                    return (
+                                        <View key={index} style={styles.dayCell}>
+                                            <View style={[styles.dayCircle, isToday && styles.currentDayCircle]}>
+                                                <Text style={[styles.dayText, isToday && styles.currentDayText]}>
+                                                    {day !== null ? day : ''}
+                                                </Text>
+                                            </View>
+                                        </View>
+                                    );
+                                })}
+                            </View>
+                        </View>
+                    </View>
+                </Modal>
+            </View>
+
+            <View style={{height: windowHeight, width: "100%"}}>
+                <MaterialTopTabs 
+                    screenOptions={{
+                        tabBarIndicatorStyle:
+                        {
+                            backgroundColor: "#007BFF",
+                            borderRadius: 5
+                        },
+                        tabBarItemStyle:
+                        {
+                            paddingVertical: 10
+                        }
+                    }}
+                    >
+                    <MaterialTopTabs.Screen name="posts" options={{title: "Posts"}}/>
+                    <MaterialTopTabs.Screen name="workouts" options={{title: "Workouts"}}/>
+                </MaterialTopTabs>
+            </View>
         </ScrollView>
     );
 }
@@ -201,7 +225,8 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
         paddingTop: "5%",
-        paddingBottom: "10%"
+        paddingBottom: "10%",
+        backgroundColor: "#FFFFFF"
     },
 
     photoContainer: {
@@ -235,6 +260,7 @@ const styles = StyleSheet.create({
     },
 
     name: {
+        fontColor: "#000000",
         fontWeight: "bold",
         fontSize: 24,
     },
@@ -258,13 +284,13 @@ const styles = StyleSheet.create({
     topStatValue: {
         fontSize: 18,
         fontWeight: "bold",
-        color: "#0F172A",
+        color: "#000000",
         marginBottom: 2,
         textAlign: "center",
     },
     topStatLabel: {
         fontSize: 12,
-        color: "#64748B",
+        color: "#666666",
         textAlign: "center",
     },
 
@@ -377,7 +403,7 @@ const styles = StyleSheet.create({
         marginBottom: 10,
     },
     weekDayText: {
-        width: "14.28%", // 100% / 7
+        width: "14.28%",
         textAlign: "center",
         color: "#64748B",
         fontSize: 14,
@@ -389,7 +415,7 @@ const styles = StyleSheet.create({
     },
     dayCell: {
         width: "14.28%",
-        aspectRatio: 1, // Keeps the cells perfectly square
+        aspectRatio: 1,
         justifyContent: "center",
         alignItems: "center",
     },
@@ -401,7 +427,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
     currentDayCircle: {
-        backgroundColor: "#007BFF", // Blue highlight
+        backgroundColor: "#007BFF",
     },
     dayText: {
         fontSize: 16,
@@ -410,5 +436,5 @@ const styles = StyleSheet.create({
     currentDayText: {
         color: "white",
         fontWeight: "bold",
-    }
+    },
 });
