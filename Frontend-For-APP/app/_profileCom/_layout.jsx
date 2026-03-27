@@ -1,17 +1,15 @@
 import {useState, useEffect} from "react";
 import {useRouter, useLocalSearchParams} from "expo-router";
-import {ScrollView, View, Text, Image, Pressable, StyleSheet, Alert, useWindowDimensions} from "react-native";
+import {View, Text, Image, Pressable, StyleSheet, Alert} from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import Modal from "react-native-modal";
-import {MaterialTopTabs} from "../../components/TopBar";
+import {Tabs} from "react-native-collapsible-tab-view";
 
 export default function Profile() {
     // Create router for navigation to editProfile
     const router = useRouter();
 
     const params = useLocalSearchParams();
-
-    const {height: windowHeight} = useWindowDimensions();
 
     const [username, setUsername] = useState("Username");
     const [about, setAbout] = useState("This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me. ");
@@ -91,8 +89,8 @@ export default function Profile() {
         }
     };
 
-    return (
-        <ScrollView style={styles.scrollWindow} contentContainerStyle={styles.container} nestedScrollEnabled={true} stickyHeaderIndices={[1]}>
+    const profileHeader = () => {
+        return (
             <View style={{width: "100%", alignItems: "center"}}>
                 <View style={styles.photoContainer}>
                     <Image
@@ -154,64 +152,74 @@ export default function Profile() {
                     <Text style={styles.aboutHeader}>About</Text>
                     <Text style={styles.about}>{about}</Text>
                 </View>
+            </View>
+        );
+    };
 
-                <Modal
-                    isVisible={isStreakModalVisible}
-                    onSwipeComplete={() => setStreakModalVisible(false)}
-                    swipeDirection="down"
-                    onBackdropPress={() => setStreakModalVisible(false)}
-                    style={styles.bottomModal}
-                >
-                    <View style={styles.modalContent}>
-                        <View style={styles.dragHandle} />
-
-                        <View style={styles.calendarContainer}>
-                            <Text style={styles.monthTitle}>{currentMonth} {currentYear}</Text>
-
-                            <View style={styles.weekDaysRow}>
-                                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
-                                    <Text key={index} style={styles.weekDayText}>{day}</Text>
-                                ))}
+    return (
+        <View style={styles.scrollWindow}>
+            <Tabs.Container
+                renderHeader={profileHeader}
+                headerContainerStyle={{paddingTop: "5%"}}
+            >
+                <Tabs.Tab name="posts" label="Posts">
+                    <Tabs.ScrollView>
+                        {Array.from({length: 50}).map((_, i) => (
+                            <View key={i}>
+                                <Text>User Post #{i + 1}</Text>
                             </View>
+                        ))}
+                    </Tabs.ScrollView>
+                </Tabs.Tab>
 
-                            <View style={styles.daysGrid}>
-                                {daysArray.map((day, index) => {
-                                    const isToday = day === todayNum;
-                                    return (
-                                        <View key={index} style={styles.dayCell}>
-                                            <View style={[styles.dayCircle, isToday && styles.currentDayCircle]}>
-                                                <Text style={[styles.dayText, isToday && styles.currentDayText]}>
-                                                    {day !== null ? day : ''}
-                                                </Text>
-                                            </View>
+                <Tabs.Tab name="workouts" label="Workouts">
+                    <Tabs.ScrollView>
+                        {Array.from({length: 50}).map((_, i) => (
+                            <View key={i}>
+                                <Text>User Post #{i + 1}</Text>
+                            </View>
+                        ))}
+                    </Tabs.ScrollView>
+                </Tabs.Tab>
+            </Tabs.Container>
+
+            <Modal
+                isVisible={isStreakModalVisible}
+                onSwipeComplete={() => setStreakModalVisible(false)}
+                swipeDirection="down"
+                onBackdropPress={() => setStreakModalVisible(false)}
+                style={styles.bottomModal}
+            >
+                <View style={styles.modalContent}>
+                    <View style={styles.dragHandle} />
+
+                    <View style={styles.calendarContainer}>
+                        <Text style={styles.monthTitle}>{currentMonth} {currentYear}</Text>
+
+                        <View style={styles.weekDaysRow}>
+                            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
+                                <Text key={index} style={styles.weekDayText}>{day}</Text>
+                            ))}
+                        </View>
+
+                        <View style={styles.daysGrid}>
+                            {daysArray.map((day, index) => {
+                                const isToday = day === todayNum;
+                                return (
+                                    <View key={index} style={styles.dayCell}>
+                                        <View style={[styles.dayCircle, isToday && styles.currentDayCircle]}>
+                                            <Text style={[styles.dayText, isToday && styles.currentDayText]}>
+                                                {day !== null ? day : ''}
+                                            </Text>
                                         </View>
-                                    );
-                                })}
-                            </View>
+                                    </View>
+                                );
+                            })}
                         </View>
                     </View>
-                </Modal>
-            </View>
-
-            <View style={{height: windowHeight, width: "100%"}}>
-                <MaterialTopTabs 
-                    screenOptions={{
-                        tabBarIndicatorStyle:
-                        {
-                            backgroundColor: "#007BFF",
-                            borderRadius: 5
-                        },
-                        tabBarItemStyle:
-                        {
-                            paddingVertical: 10
-                        }
-                    }}
-                    >
-                    <MaterialTopTabs.Screen name="posts" options={{title: "Posts"}}/>
-                    <MaterialTopTabs.Screen name="workouts" options={{title: "Workouts"}}/>
-                </MaterialTopTabs>
-            </View>
-        </ScrollView>
+                </View>
+            </Modal>
+        </View>
     );
 }
 
@@ -222,7 +230,7 @@ const styles = StyleSheet.create({
     },
     container: {
         flexGrow: 1,
-        justifyContent: "center",
+        // justifyContent: "center",
         alignItems: "center",
         paddingTop: "5%",
         paddingBottom: "10%",
