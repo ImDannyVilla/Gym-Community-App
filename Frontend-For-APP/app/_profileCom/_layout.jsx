@@ -4,6 +4,8 @@ import {View, Text, Image, Pressable, StyleSheet, Alert} from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import Modal from "react-native-modal";
 import {Tabs} from "react-native-collapsible-tab-view";
+import Posts from "./posts";
+import Workouts from "./workouts"
 
 export default function Profile() {
     // Create router for navigation to editProfile
@@ -12,7 +14,7 @@ export default function Profile() {
     const params = useLocalSearchParams();
 
     const [username, setUsername] = useState("Username");
-    const [about, setAbout] = useState("This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me. ");
+    const [about, setAbout] = useState("This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me.");
     const [weight, setWeight] = useState("185 lbs");
     const [calorieIntake, setCalorieIntake] = useState("2,500 kcal");
     const [lastWorkout, setLastWorkout] = useState("Chest & Triceps");
@@ -163,23 +165,11 @@ export default function Profile() {
                 headerContainerStyle={{paddingTop: "5%"}}
             >
                 <Tabs.Tab name="posts" label="Posts">
-                    <Tabs.ScrollView>
-                        {Array.from({length: 50}).map((_, i) => (
-                            <View key={i}>
-                                <Text>User Post #{i + 1}</Text>
-                            </View>
-                        ))}
-                    </Tabs.ScrollView>
+                    <Posts/>
                 </Tabs.Tab>
 
                 <Tabs.Tab name="workouts" label="Workouts">
-                    <Tabs.ScrollView>
-                        {Array.from({length: 50}).map((_, i) => (
-                            <View key={i}>
-                                <Text>User Post #{i + 1}</Text>
-                            </View>
-                        ))}
-                    </Tabs.ScrollView>
+                    <Workouts/>
                 </Tabs.Tab>
             </Tabs.Container>
 
