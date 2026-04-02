@@ -14,7 +14,7 @@ export default function Profile() {
     const params = useLocalSearchParams();
 
     const [username, setUsername] = useState("Username");
-    const [about, setAbout] = useState("This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me. This is a little about me.");
+    const [about, setAbout] = useState("This is a little about me.");
     const [weight, setWeight] = useState("185 lbs");
     const [calorieIntake, setCalorieIntake] = useState("2,500 kcal");
     const [lastWorkout, setLastWorkout] = useState("Chest & Triceps");
@@ -162,7 +162,7 @@ export default function Profile() {
         <View style={styles.scrollWindow}>
             <Tabs.Container
                 renderHeader={profileHeader}
-                headerContainerStyle={{paddingTop: "5%"}}
+                headerContainerStyle={{paddingTop: 10}}
             >
                 <Tabs.Tab name="posts" label="Posts">
                     <Posts/>
@@ -228,13 +228,13 @@ const styles = StyleSheet.create({
     },
 
     photoContainer: {
-        marginBottom: 16
+        marginBottom: 8
     },
 
     profilePhoto: {
-        width: 120,
-        height: 120,
-        borderRadius: 60,
+        width: 80,
+        height: 80,
+        borderRadius: 40,
         backgroundColor: "#ccc",
     },
 
@@ -242,9 +242,9 @@ const styles = StyleSheet.create({
         position: "absolute",
         bottom: 0,
         right: 0,
-        borderRadius: 18,
-        width: 28,
-        height: 28,
+        borderRadius: 12,
+        width: 24,
+        height: 24,
         backgroundColor: "#007BFF",
         alignItems: "center",
         justifyContent: "center",
@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
     },
 
     userName: {
-        marginBottom: 20,
+        marginBottom: 8,
         fontSize: 16
     },
 
@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         gap: 32,
         width: "90%",
-        marginBottom: 24,
+        marginBottom: 12,
     },
     topStatItem: {
         alignItems: "center",
@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
     editProfile: {
         flexDirection: "row",
         justifyContent: "center",
-        marginBottom: 24,
+        marginBottom: 12,
         width: "80%"
     },
 
@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
 
     aboutContainer: {
         width: "90%",
-        marginBottom: 24
+        marginBottom: 12
     },
     aboutHeader: {
         fontSize: 18,
@@ -333,17 +333,18 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         flexWrap: "wrap",
         width: "90%",
-        borderTopWidth: 1,
-        borderLeftWidth: 1,
-        borderColor: "#E0E0E0",
+        /* borderTopWidth: 1,
+        borderLeftWidth: 1, */
+        borderWidth: 1,
+        borderColor: "black",
         borderRadius: 12,
         overflow: "hidden",
-        marginBottom: 24
+        marginBottom: 12
     },
     statCard: {
         width: "50%", 
         backgroundColor: "#FFFFFF",
-        padding: 16,
+        padding: 10,
         justifyContent: "center",
         alignItems: "center",
         borderBottomWidth: 1,
@@ -351,13 +352,13 @@ const styles = StyleSheet.create({
         borderColor: "#E0E0E0",
     },
     cardTitle: {
-        fontSize: 14,
+        fontSize: 12,
         color: "#666666",
-        marginBottom: 8,
+        marginBottom: 4,
         textAlign: "center",
     },
     cardValue: {
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: "bold",
         color: "#000000",
         textAlign: "center",
