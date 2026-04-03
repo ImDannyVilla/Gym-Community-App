@@ -3,7 +3,7 @@ import {useRouter, useLocalSearchParams} from "expo-router";
 import {View, Text, Image, Pressable, StyleSheet, Alert} from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import Modal from "react-native-modal";
-import {Tabs} from "react-native-collapsible-tab-view";
+import {Tabs, MaterialTabBar} from "react-native-collapsible-tab-view";
 import Posts from "./posts";
 import Workouts from "./workouts"
 
@@ -131,7 +131,7 @@ export default function Profile() {
                     </Pressable>
                 </View>
 
-                <View style={styles.cardContainer}>
+                <View style={styles.cardContainer} pointerEvents="none">
                     <View style={styles.statCard}>
                         <Text style={styles.cardTitle} adjustsFontSizeToFit numberOfLines={1}>Weight</Text>
                         <Text style={styles.cardValue} adjustsFontSizeToFit numberOfLines={1}>{weight}</Text>
@@ -163,6 +163,18 @@ export default function Profile() {
             <Tabs.Container
                 renderHeader={profileHeader}
                 headerContainerStyle={{paddingTop: 10}}
+                renderTabBar={(props) => (
+                    <MaterialTabBar
+                        {...props}
+                        activeColor="#000000"
+                        inactiveColor="#64748B"
+                        indicatorStyle={{
+                            backgroundColor: "#000000",
+                            height: 3,
+                            borderRadius: 4,
+                        }}
+                    />
+                )}
             >
                 <Tabs.Tab name="posts" label="Posts">
                     <Posts/>
@@ -245,7 +257,7 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         width: 24,
         height: 24,
-        backgroundColor: "#007BFF",
+        backgroundColor: "#000000",
         alignItems: "center",
         justifyContent: "center",
     },
@@ -260,12 +272,12 @@ const styles = StyleSheet.create({
     name: {
         fontColor: "#000000",
         fontWeight: "bold",
-        fontSize: 24,
+        fontSize: 20,
     },
 
     userName: {
         marginBottom: 8,
-        fontSize: 16
+        fontSize: 14
     },
 
     topStatsContainer: {
