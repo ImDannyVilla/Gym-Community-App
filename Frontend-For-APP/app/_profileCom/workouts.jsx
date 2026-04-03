@@ -1,22 +1,47 @@
-import {Image, View, StyleSheet, Pressable} from "react-native"
-import {Tabs} from "react-native-collapsible-tab-view"
+import {Image, View, StyleSheet, Pressable} from "react-native";
+import {Tabs} from "react-native-collapsible-tab-view";
 
 export default function Workouts()
 {
-    // Specify the amount of workouts the user has
-    let amountOfWorkouts = 5;
-
-    // Specify Workout Images
-    const workoutImage = require("../../assets/workoutImage.jpg");
+    // Specify Workout Images 
+    // (TO DO: BASE THE WORKOUT IMAGES BASED OFF HOW MANY AND WHAT WORKOUTS THE USER HAS)
+    const workoutImages = 
+    [
+        {
+            id: "1",
+            name: "Chest",
+            image: require("../../assets/chest.jpg")
+        },
+        {
+            id: "2",
+            name: "Shoulder",
+            image: require("../../assets/shoulder.jpg")
+        },
+        {
+            id: "3",
+            name: "Back",
+            image: require("../../assets/back.jpg")
+        },
+        {
+            id: "4",
+            name: "Legs",
+            image: require("../../assets/legs.jpeg")
+        },
+        {
+            id: "5",
+            name: "Arms",
+            image: require("../../assets/arms.jpg")
+        },
+    ];
 
     return (
         <Tabs.ScrollView>
-            {Array.from({length: amountOfWorkouts}).map((_, i) => (
-                <Pressable key={i} style={[styles.workoutCard, i === 0 && {marginTop: 16}]} onPress={() => {
-                    console.log("Clicked Workout Card");
+            {workoutImages.map((workout, index) => (
+                <Pressable key={workout.id} style={[styles.workoutCard, index === 0 && {marginTop: 16}]} onPress={() => {
+                    console.log("Clicked", workout.name, "Card");
                 }}>
                     <Image
-                        source={workoutImage}
+                        source={workout.image}
                         style={styles.Image}
                         resizeMode="cover"
                     />
