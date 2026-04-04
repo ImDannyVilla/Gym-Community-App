@@ -1,8 +1,11 @@
 import {Image, View, StyleSheet, Pressable} from "react-native";
 import {Tabs} from "react-native-collapsible-tab-view";
+import {useRouter} from "expo-router";
 
 export default function Workouts()
 {
+    const router = useRouter();
+
     // Specify Workout Images 
     // (TO DO: BASE THE WORKOUT IMAGES BASED OFF HOW MANY AND WHAT WORKOUTS THE USER HAS)
     const workoutImages = 
@@ -10,27 +13,32 @@ export default function Workouts()
         {
             id: "1",
             name: "Chest",
-            image: require("../../assets/chest.jpg")
+            image: require("../../assets/chest.jpg"),
+            route: "/userWorkouts/chest"
         },
         {
             id: "2",
             name: "Shoulder",
-            image: require("../../assets/shoulder.jpg")
+            image: require("../../assets/shoulder.jpg"),
+            route: "/userWorkouts/shoulder"
         },
         {
             id: "3",
             name: "Back",
-            image: require("../../assets/back.jpg")
+            image: require("../../assets/back.jpg"),
+            route: "/userWorkouts/back"
         },
         {
             id: "4",
             name: "Legs",
-            image: require("../../assets/legs.jpeg")
+            image: require("../../assets/legs.jpeg"),
+            route: "/userWorkouts/legs"
         },
         {
             id: "5",
             name: "Arms",
-            image: require("../../assets/arms.jpg")
+            image: require("../../assets/arms.jpg"),
+            route: "/userWorkouts/arms"
         },
     ];
 
@@ -38,7 +46,7 @@ export default function Workouts()
         <Tabs.ScrollView>
             {workoutImages.map((workout, index) => (
                 <Pressable key={workout.id} style={[styles.workoutCard, index === 0 && {marginTop: 16}]} onPress={() => {
-                    console.log("Clicked", workout.name, "Card");
+                    router.push(workout.route);
                 }}>
                     <Image
                         source={workout.image}
