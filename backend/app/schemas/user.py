@@ -1,6 +1,10 @@
 #User Pydantic schemas
 from pydantic import BaseModel, EmailStr, ConfigDict, field_validator
+from datetime import datetime
+from typing import Optional
 
+
+#INPUT SCHEMAS
 
 class UserRegister(BaseModel):
     """
@@ -9,6 +13,7 @@ class UserRegister(BaseModel):
     email: EmailStr
     username: str
     password: str
+    gym_name: str
     @field_validator("password")
     def password_strength(cls, v):
         if len(v) < 8:
@@ -36,6 +41,50 @@ class UserLogin(BaseModel):
     email: EmailStr
     password: str
 
+class ProfileUpdate(BaseModel):
+    full_name: Optional[str] = None
+    gym_name: Optional[str] = None
+    gym_level: Optional[str] = None
+    bio: Optional[str] = None
+    avatar_url: Optional[str] = None
+
+
+
+# OUTPUT SCHEMAS
+
+class UserResponse(BaseModel):
+    """
+    User data going TO React Native (safe - no password).
+    """
+    id: int
+    email: EmailStr
+    username: str
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+class ProfileResponse(BaseModel):
+    """"profile data"""
+    id: int
+    full_name: Optional[str]
+    gym_name: Optional[str]
+    gym_level: Optional[str]
+    bio: Optional[str]
+    avatar_url: Optional[str]
+    followers_count: int
+    following_count: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+class UserwithProfile(BaseModel):
+    """the user with profile data"""
+    id: int
+    email: EmailStr
+    username: str
+    created_at: datetime
+    profile: Optional[ProfileResponse]
+
+    model_config = ConfigDict(from_attributes=True)
 
 class Token(BaseModel):
     """
@@ -44,14 +93,3 @@ class Token(BaseModel):
     """
     access_token: str
     token_type: str
-
-
-class UserResponse(BaseModel):
-    """
-    User data going TO React Native (safe - no password).
-    """
-    id: int
-    email: str
-    username: str
-
-    model_config = ConfigDict(from_attributes=True)  # Updated syntax for Pydantic v2

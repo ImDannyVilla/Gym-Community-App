@@ -1,22 +1,27 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.core.security import get_password_hash, verify_password, create_access_token
 from app.db import get_db
-from app.models.user import User
-from app.schemas.user import UserRegister, UserLogin, Token
+from app.models.user import User, UserProfile
+from app.schemas.user import UserRegister, UserLogin, Token, UserResponse
+from app.dependencies import AsyncSessionDep
 
 router = APIRouter(prefix="/auth", tags=["auth"]) #all routes start with /auth; in API they are grouped under auth
 
-@router.post("/register")
-async def register(user_data: UserRegister, db: AsyncSession = Depends(get_db)):
+@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+async def register(
+        user_data: UserRegister,
+        db: AsyncSessionDep
+):
     #check if email is already taken
     result = await db.execute(
         select(User).where(User.email == user_data.email)
     )
     if result.scalars().first():
         raise HTTPException(
-            status_code=400, detail="Email already registered"
+            status_code=400,
+            detail="Email already registered"
         )
     #Check is username is already taken
     result = await db.execute(
@@ -37,12 +42,27 @@ async def register(user_data: UserRegister, db: AsyncSession = Depends(get_db)):
         hashed_password=hashed_password
     )
     db.add(new_user)
+    await db.flush()
+
+    new_profile = UserProfile(
+        user_id = new_user.id,
+        gym_name = user_data.gym_name
+    )
+    db.add(new_profile)
+
     await db.commit() #SQLAlchemy puts that user object into a Session where it stages the changes to the database.
+    await db.refresh(new_user)
+
     return new_user
 
-@router.post("/login")
-async def login(credentials: UserLogin, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User).where(User.email == credentials.email))
+@router.post("/login", response_model=Token)
+async def login(
+        credentials: UserLogin,
+        db: AsyncSessionDep
+):
+    result = await db.execute(
+        select(User).where(User.email == credentials.email)
+    )
     user = result.scalars().first() #.scalars() unwraps the database result so you get the actual User object instead of a wrapped Row object.
 
     if not user:

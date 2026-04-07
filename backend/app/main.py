@@ -3,17 +3,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from .db import engine, Base
-from app.routes import auth
-from app.routes import workout
+from app.routes import auth, workout, users
 from typing import List
 from contextlib import asynccontextmanager
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # This runs when the server starts
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    yield # This tells FastAPI to keep running
+    async with engine.begin() as conn: #starts db connection
+        await conn.run_sync(Base.metadata.create_all) #creates tabeles in Supabase if not created already from models.py
+    yield # This tells FastAPI that setup is done, start the server, handle user requests, etc.
 
 gym_app = FastAPI(lifespan=lifespan)
 
@@ -34,6 +33,7 @@ gym_app.add_middleware(
 
 gym_app.include_router(auth.router)
 gym_app.include_router(workout.router)
+gym_app.include_router(users.router)
 
 @gym_app.get("/health")
 def health_check():

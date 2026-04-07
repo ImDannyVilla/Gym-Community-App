@@ -8,6 +8,7 @@ from app.db import get_db
 from app.models.workout import Workout
 from app.models.exercise import Exercise
 from app.schemas.workout import WorkoutResponse, WorkoutSummary
+from app.dependencies import AsyncSessionDep
 
 router = APIRouter(prefix="/workouts", tags=["Workouts"])
 
@@ -32,8 +33,8 @@ async def get_workouts_by_category(
 
 @router.get("/", response_model=List[WorkoutSummary])
 async def get_all_workouts(
-        category: str | None = None,
-        db: AsyncSession = Depends(get_db)
+        db: AsyncSessionDep,
+        category: str | None = None
 ):
 
 #   Get all preset workouts.

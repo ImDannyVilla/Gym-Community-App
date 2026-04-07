@@ -14,6 +14,8 @@ dependencies = [
     "pydantic[email]>=2.12.5", #Email validationValidate email addresses
     "sqlalchemy[asyncio]>=2.0", #ORM for databaseTalk to PostgreSQL with Python objects
     "bcrypt>=5.0.0",
+    "alembic>=1.18.4",
+    "psycopg2-binary>=2.9.11",
 ]
 
 #Tools that the programmer need to build, test, and debug the app on your machine, not needed for production code
