@@ -14,10 +14,10 @@ const exercises = [
   "Exercise 6",
 ];
 
-export default function Cardio() {
+export default function Arms() {
   return (
     <View style={styles.container}>
-      <Header title="Cardio Workouts" />
+      <Header title="Arms Workouts" />
       
       <ScrollView
         style={styles.scrollView}

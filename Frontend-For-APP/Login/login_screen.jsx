@@ -35,9 +35,10 @@ const LoginScreen = () => {
 
       if (data.access_token) {
         await saveToken(data.access_token);
+        router.replace("/dashboard");
+      } else {
+        Alert.alert("Login failed", "No access token received.");
       }
-
-      router.replace("/dashboard");
     } catch (error) {
       Alert.alert("Login failed", error.message || "Something went wrong.");
     } finally {
@@ -48,12 +49,6 @@ const LoginScreen = () => {
   return (
     <View style={styles.safe}>
       <View style={styles.container}>
-        <Image
-          source={{
-            uri: "https://reactnative.dev/img/tiny_logo.png",
-          }}
-          style={styles.logo}
-        />
 
         <Text style={styles.label}>Email</Text>
         <TextInput
