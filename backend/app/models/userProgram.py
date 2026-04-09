@@ -6,7 +6,7 @@ from ..db import Base
 class UserProgram(Base):
     __tablename__ = "user_programs"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     name = Column(String)  # "Shoulder Focused", "Chest Focused", "Glute Focused", etc..."
     description = Column(Text)

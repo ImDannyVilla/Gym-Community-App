@@ -1,146 +1,229 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  StyleSheet,
+  ActivityIndicator,
+  Alert,
+} from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { typography, colors, layout, spacing, iconSizes } from "../lib/theme";
+import { registerUser } from "../lib/authApi";
+import ScreenContainer from "./_components/ScreenContainer";
+
+const FORM_MAX_WIDTH = 400;
 
 export default function SignUp() {
   const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const onCreateAccount = () => {
-    // TODO: add validation + real sign up logic --Mar or Still Task
-    router.replace("/dashboard");
-  };
+  const handleCreateAccount = async () => {
+    if (!email.trim() || !username.trim() || !password.trim()) {
+      Alert.alert("Missing Info", "Please enter your email, username, and password.");
+      return;
+    }
 
-  const onBackToLogin = () => {
-    router.back(); // or: router.replace("/")
+    try {
+      setLoading(true);
+      await registerUser({
+        email: email.trim(),
+        username: username.trim(),
+        password: password.trim(),
+      });
+      Alert.alert("Success", "Account created. Please log in.");
+      router.replace("/");
+    } catch (error) {
+      Alert.alert("Sign Up Failed", error.message || "Something went wrong.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <View style={styles.safe}>
-      <View style={styles.container}>
-        <Text style={styles.title}>Sign Up</Text>
+    <ScreenContainer scrollable={false} keyboardAvoid={true}>
+      <View style={styles.content}>
+        <View style={styles.header}>
+          <Text style={styles.title}>
+            Create Account
+          </Text>
+          <Text style={styles.subtitle}>
+            Sign up to get started
+          </Text>
+        </View>
 
-        <Text style={styles.label}>Email</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter your email"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-        />
+        <View style={styles.form}>
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>
+              Email
+            </Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your email"
+              placeholderTextColor={colors.textTertiary}
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+            />
+          </View>
 
-         <Text style={styles.label}>Password</Text>
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>
+              Username
+            </Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your username"
+              placeholderTextColor={colors.textTertiary}
+              value={username}
+              onChangeText={setUsername}
+              autoCapitalize="none"
+            />
+          </View>
 
-    <View style={styles.passwordContainer}>
-     <TextInput
-    style={styles.passwordInput}
-    placeholder="Enter your password"
-    value={password}
-    onChangeText={setPassword}
-    secureTextEntry={!showPassword}
-     />
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>
+              Password
+            </Text>
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="Enter your password"
+                placeholderTextColor={colors.textTertiary}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+              />
+              <Pressable onPress={() => setShowPassword(!showPassword)}>
+                <Ionicons
+                  name={showPassword ? "eye-off" : "eye"}
+                  size={iconSizes.navIcon}
+                  color={colors.textTertiary}
+                />
+              </Pressable>
+            </View>
+          </View>
 
-    <Pressable onPress={() => setShowPassword(!showPassword)}>
-    <Ionicons
-      name={showPassword ? "eye-off" : "eye"}
-      size={22}
-      color="Black"
-    />
-    </Pressable>
+          <Pressable
+            style={[styles.button, loading && styles.buttonDisabled]}
+            onPress={handleCreateAccount}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color={colors.text} />
+            ) : (
+              <Text style={styles.buttonText}>
+                Create Account
+              </Text>
+            )}
+          </Pressable>
+
+          <Pressable style={styles.linkButton} onPress={() => router.back()}>
+            <Text style={styles.linkText}>
+              Already have an account? Login
+            </Text>
+          </Pressable>
+        </View>
       </View>
-
-        <Pressable style={styles.primaryButton} onPress={onCreateAccount}>
-          <Text style={styles.primaryButtonText}>Create Account</Text>
-        </Pressable>
-
-        <Pressable style={styles.linkButton} onPress={onBackToLogin}>
-          <Text style={styles.linkText}>Back to Login</Text>
-        </Pressable>
-      </View>
-    </View>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: {
+  content: {
     flex: 1,
-    backgroundColor: "White",
     alignItems: "center",
     justifyContent: "center",
+    paddingHorizontal: layout.screenPadding,
   },
-
-  container: {
-    width: "80%",
-    backgroundColor: "white",
-    borderRadius: 12,
-    padding: 18,
+  header: {
+    alignItems: "center",
+    marginBottom: spacing.xl,
   },
-
   title: {
-    fontSize: 22,
     fontWeight: "bold",
-    marginBottom: 18,
-    textAlign: "center",
+    fontSize: typography.h1.fontSize,
+    lineHeight: typography.h1.lineHeight,
+    color: colors.text,
+    marginBottom: spacing.xs,
   },
-
-  label: {
-    fontSize: 14,
-    fontWeight: "700",
-    marginBottom: 6,
+  subtitle: {
+    fontSize: typography.body.fontSize,
+    lineHeight: typography.body.lineHeight,
+    color: colors.textSecondary,
   },
-
-  input: {
+  form: {
     width: "100%",
-    height: 44,
-    borderColor: "#ccc",
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    marginBottom: 14,
+    maxWidth: FORM_MAX_WIDTH,
+    alignItems: "center",
   },
-
-   /* password styles */
+  inputContainer: {
+    width: "100%",
+    marginBottom: spacing.md,
+  },
+  label: {
+    fontWeight: "600",
+    fontSize: typography.label.fontSize,
+    lineHeight: typography.label.lineHeight,
+    color: colors.text,
+    marginBottom: spacing.xs,
+  },
+  input: {
+    backgroundColor: colors.surface,
+    color: colors.text,
+    fontSize: typography.body.fontSize,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   passwordContainer: {
-  width: "100%",
-  flexDirection: "row",
-  alignItems: "center",
-  borderColor: "#ccc",
-  borderWidth: 1,
-  borderRadius: 8,
-  marginBottom: 14,
-  paddingHorizontal: 12,
-},
-
-passwordInput: {
-  flex: 1,
-  height: 40,
-},
-
-  primaryButton: {
-    height: 44,
-    borderRadius: 8,
-    backgroundColor: "#007BFF",
+    backgroundColor: colors.surface,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: spacing.md,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  passwordInput: {
+    flex: 1,
+    color: colors.text,
+    fontSize: typography.body.fontSize,
+  },
+  button: {
+    backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 6,
+    width: "100%",
+    paddingVertical: spacing.md,
+    borderRadius: 12,
+    marginTop: spacing.sm,
   },
-
-  primaryButtonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "700",
+  buttonDisabled: {
+    opacity: 0.7,
   },
-
+  buttonText: {
+    fontWeight: "bold",
+    fontSize: typography.body.fontSize,
+    color: colors.text,
+  },
   linkButton: {
-    marginTop: 14,
     alignItems: "center",
+    marginTop: spacing.md,
   },
-
   linkText: {
-    color: "#007BFF",
-    fontWeight: "700",
+    color: colors.primary,
+    fontSize: typography.bodySmall.fontSize,
+    fontWeight: "600",
   },
 });

@@ -6,7 +6,7 @@ from ..db import Base
 class Exercise(Base):
     __tablename__ = "exercises"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, index=True)
     workout_id = Column(Integer, ForeignKey("workouts.id"), nullable=False)
 
     # From ExerciseDB API

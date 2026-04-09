@@ -22,10 +22,10 @@ const muscles = [
   { id: 6, title: "Workouts", image: workoutsImage, route: "/programs/workouts" },
 ];
 
-export default function UpperLower() {
+export default function Workouts() {
   return (
     <View style={styles.container}>
-      <Header title="My Workouts" />
+      <Header title="Workouts" />
       
       <ScrollView
         style={styles.scrollView}
