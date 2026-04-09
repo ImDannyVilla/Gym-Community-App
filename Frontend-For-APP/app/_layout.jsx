@@ -7,7 +7,7 @@ export default function Layout() {
       <Stack.Screen name="index" />
       <Stack.Screen name="dashboard" />
       <Stack.Screen name="signup" />
-      <Stack.Screen name="profile" />
+      <Stack.Screen name="profile1" />
       <Stack.Screen name="community" />
       <Stack.Screen name="programs/chest" />
       <Stack.Screen name="programs/arms" />
