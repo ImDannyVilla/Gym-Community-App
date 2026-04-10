@@ -12,8 +12,8 @@ export default function TabLayout() {
         tabBar={(props) => <BottomNav {...props} />} 
         screenOptions={{ swipeEnabled: true }}
     >
-      <SwipeableTabs.Screen name="dashboard" />
       <SwipeableTabs.Screen name="community" />
+      <SwipeableTabs.Screen name="dashboard" />
       <SwipeableTabs.Screen name="workouts" />
       <SwipeableTabs.Screen name="profile" />
     </SwipeableTabs>
