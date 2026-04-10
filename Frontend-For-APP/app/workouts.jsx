@@ -1,6 +1,7 @@
 import {Image, View, StyleSheet, Pressable} from "react-native";
 import {Tabs} from "react-native-collapsible-tab-view";
 import {useRouter} from "expo-router";
+import { colors } from "../lib/theme";
 
 export default function Workouts()
 {
@@ -43,7 +44,7 @@ export default function Workouts()
     ];
 
     return (
-        <Tabs.ScrollView>
+        <Tabs.ScrollView style={{ backgroundColor: colors.background }}>
             {workoutImages.map((workout, index) => (
                 <Pressable key={workout.id} style={[styles.workoutCard, index === 0 && {marginTop: 16}]} onPress={() => {
                     router.push(workout.route);
@@ -63,12 +64,12 @@ const styles = StyleSheet.create({
     workoutCard:
     {
         height: 150,
-        backgroundColor: "#FFFFFF",
+        backgroundColor: colors.surface,
         marginHorizontal: 16,
         marginBottom: 16,
         borderRadius: 12,
         borderWidth: 2,
-        borderColor: "black",
+        borderColor: colors.border,
         overflow: "hidden"
     },
     Image:

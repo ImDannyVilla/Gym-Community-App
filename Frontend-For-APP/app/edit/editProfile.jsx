@@ -3,6 +3,7 @@ import {useState} from "react"
 import {SafeAreaProvider, SafeAreaView} from "react-native-safe-area-context"
 import {MaterialCommunityIcons} from "@expo/vector-icons"
 import {useLocalSearchParams, useRouter} from "expo-router"
+import { colors } from "../../lib/theme"
 
 export default function editProfile()
 {
@@ -57,9 +58,9 @@ export default function editProfile()
 
     return (
         <SafeAreaProvider>
-            <SafeAreaView style={styles.screenContainer}>
+            <SafeAreaView style={[styles.screenContainer, { backgroundColor: colors.background }]}>
                 <Pressable onPress={saveProfile} style={styles.save}>
-                    <MaterialCommunityIcons name="check-bold" size={40} color="#000" />
+                    <MaterialCommunityIcons name="check-bold" size={40} color={colors.primary} />
                 </Pressable>
 
                 <ScrollView contentContainerStyle={styles.scrollContainer}>
@@ -69,6 +70,7 @@ export default function editProfile()
                         onChangeText={setNewUsername}
                         value={newUsername} 
                         placeholder="e.g. gorlockthedestroyer"
+                        placeholderTextColor={colors.textSecondary}
                     />
 
                     <Text style={styles.text}>About:</Text>
@@ -76,6 +78,7 @@ export default function editProfile()
                         onChangeText={setNewAbout}
                         value={newAbout}
                         placeholder="This is a a little about me!"
+                        placeholderTextColor={colors.textSecondary}
                         multiline
                         onContentSizeChange={(event) => {setInputHeight(event.nativeEvent.contentSize.height);}}
                         style={[styles.input, {height: Math.max(60, inputHeight)}]}
@@ -87,6 +90,7 @@ export default function editProfile()
                         onChangeText={setNewWeight}
                         value={newWeight} 
                         placeholder="e.g. 185 lbs"
+                        placeholderTextColor={colors.textSecondary}
                     />
 
                     <Text style={styles.text}>Daily Calorie Intake:</Text>
@@ -95,6 +99,7 @@ export default function editProfile()
                         onChangeText={setNewCalorieIntake}
                         value={newCalorieIntake} 
                         placeholder="e.g. 2,500 kcal"
+                        placeholderTextColor={colors.textSecondary}
                     />
 
                     <Text style={styles.text}>Last Workout:</Text>
@@ -103,6 +108,7 @@ export default function editProfile()
                         onChangeText={setNewLastWorkout}
                         value={newLastWorkout} 
                         placeholder="e.g. Chest & Triceps"
+                        placeholderTextColor={colors.textSecondary}
                     />
 
                     <Text style={styles.text}>Current Workout:</Text>
@@ -111,6 +117,7 @@ export default function editProfile()
                         onChangeText={setNewCurrentWorkout}
                         value={newCurrentWorkout} 
                         placeholder="e.g. Back & Biceps"
+                        placeholderTextColor={colors.textSecondary}
                     />
                 </ScrollView>
             </SafeAreaView>
@@ -145,7 +152,8 @@ const styles = StyleSheet.create({
         width: "90%",
         textAlign: "left",
         fontSize: 16,
-        marginTop: 5
+        marginTop: 5,
+        color: colors.text
     },
     input:
     {
@@ -153,6 +161,9 @@ const styles = StyleSheet.create({
         height: 50, 
         width: "90%",
         borderWidth: 1,
+        borderColor: colors.border,
+        backgroundColor: colors.surface,
+        color: colors.text,
         fontSize: 16,
         borderRadius: 10,
         textAlignVertical: "top",

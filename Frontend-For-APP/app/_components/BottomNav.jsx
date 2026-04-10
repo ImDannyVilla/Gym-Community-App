@@ -9,7 +9,7 @@ export default function BottomNav({ active }) {
     { key: "community", label: "Community", route: "/community", icon: "people" },
     { key: "dashboard", label: "Dashboard", route: "/dashboard", icon: "home" },
     { key: "workouts", label: "My Workouts", route: "/programs/upperlower", icon: "barbell" },
-    { key: "profile", label: "Profile", route: "/profile1", icon: "person" },
+    { key: "profile", label: "Profile", route: "/profile", icon: "person" },
   ];
 
   return (
