@@ -1,44 +1,113 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { router } from 'expo-router';
 import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing, iconSizes, layout } from '../../lib/theme';
 
-export default function BottomNav({ active }) {
-  const navItems = [
-    { key: "community", label: "Community", route: "/community", icon: "people" },
-    { key: "dashboard", label: "Dashboard", route: "/dashboard", icon: "home" },
-    { key: "workouts", label: "My Workouts", route: "/programs/upperlower", icon: "barbell" },
-    { key: "profile", label: "Profile", route: "/profile", icon: "person" },
-  ];
+export default function BottomNav({ state, descriptors, navigation, active }) {
+  // If no state is passed (fallback usage), behave like before
+  if (!state) {
+    const navItems = [
+      { key: "community", label: "Community", route: "/community", icon: "people" },
+      { key: "dashboard", label: "Dashboard", route: "/dashboard", icon: "home" },
+      { key: "workouts", label: "My Workouts", route: "/workouts", icon: "barbell" },
+      { key: "profile", label: "Profile", route: "/profile", icon: "person" },
+    ];
+
+    return (
+      <View style={[styles.navRow, { paddingVertical: spacing.sm, borderTopColor: colors.divider }]}>
+        {navItems.map((item) => (
+          <Pressable
+            key={item.key}
+            style={({ pressed }) => [
+              styles.navButton,
+              active === item.key && styles.navButtonActive,
+              pressed && styles.navButtonPressed,
+            ]}
+            // fallback uses global router push 
+            onPress={() => {}}
+          >
+            <Ionicons
+              name={item.icon}
+              size={iconSizes.navIcon}
+              color={active === item.key ? colors.text : colors.textTertiary}
+            />
+            <Text 
+              style={[
+                styles.buttonText, 
+                active === item.key && styles.buttonTextActive
+              ]}
+            >
+              {item.label}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.navRow, { paddingVertical: spacing.sm, borderTopColor: colors.divider }]}>
-      {navItems.map((item) => (
-        <Pressable
-          key={item.key}
-          style={({ pressed }) => [
-            styles.navButton,
-            active === item.key && styles.navButtonActive,
-            pressed && styles.navButtonPressed,
-          ]}
-          onPress={() => router.push(item.route)}
-        >
-          <Ionicons
-            name={item.icon}
-            size={iconSizes.navIcon}
-            color={active === item.key ? colors.text : colors.textTertiary}
-          />
-          <Text 
-            style={[
-              styles.buttonText, 
-              active === item.key && styles.buttonTextActive
+      {state.routes.map((route, index) => {
+        const { options } = descriptors[route.key];
+        const label =
+          options.tabBarLabel !== undefined
+            ? options.tabBarLabel
+            : options.title !== undefined
+            ? options.title
+            : route.name;
+
+        const isFocused = state.index === index;
+
+        const onPress = () => {
+          const event = navigation.emit({
+            type: 'tabPress',
+            target: route.key,
+            canPreventDefault: true,
+          });
+
+          if (!isFocused && !event.defaultPrevented) {
+            navigation.navigate(route.name, route.params);
+          }
+        };
+
+        let iconName = "home";
+        if (route.name === "community") iconName = "people";
+        if (route.name === "dashboard") iconName = "home";
+        if (route.name === "workouts") iconName = "barbell";
+        if (route.name === "profile") iconName = "person";
+
+        const mappedLabel = 
+          route.name === "workouts" ? "My Workouts" : 
+          route.name === "community" ? "Community" :
+          route.name === "dashboard" ? "Dashboard" :
+          route.name === "profile" ? "Profile" : label;
+
+        return (
+          <Pressable
+            key={route.key}
+            style={({ pressed }) => [
+              styles.navButton,
+              isFocused && styles.navButtonActive,
+              pressed && styles.navButtonPressed,
             ]}
+            onPress={onPress}
           >
-            {item.label}
-          </Text>
-        </Pressable>
-      ))}
+            <Ionicons
+              name={iconName}
+              size={iconSizes.navIcon}
+              color={isFocused ? colors.text : colors.textTertiary}
+            />
+            <Text 
+              style={[
+                styles.buttonText, 
+                isFocused && styles.buttonTextActive
+              ]}
+            >
+              {mappedLabel}
+            </Text>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }

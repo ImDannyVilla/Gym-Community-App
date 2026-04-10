@@ -1,17 +1,16 @@
 import React from "react";
-import { View, Text, StyleSheet, ScrollView } from "react-native";
+import { View, StyleSheet, ScrollView } from "react-native";
 import { router } from "expo-router";
-import { colors, layout } from "../lib/theme";
-import MuscleCard from "./_dashboardCom/_MuscleCard";
-import BottomNav from "./_components/BottomNav";
-import Header from "./_components/Header";
+import { colors, layout } from "../../lib/theme";
+import MuscleCard from "../_dashboardCom/_MuscleCard";
+import Header from "../_components/Header";
 
-const chestImage = require("../assets/Chest.png");
-const armsImage = require("../assets/Arms.png");
-const legsImage = require("../assets/Legs.png");
-const shouldersImage = require("../assets/Shoulders.png");
-const cardioImage = require("../assets/Cardio.png");
-const workoutsImage = require("../assets/workouts_clean.png");
+const chestImage = require("../../assets/Chest.png");
+const armsImage = require("../../assets/Arms.png");
+const legsImage = require("../../assets/Legs.png");
+const shouldersImage = require("../../assets/Shoulders.png");
+const cardioImage = require("../../assets/Cardio.png");
+const workoutsImage = require("../../assets/workouts_clean.png");
 
 const muscles = [
   { id: 1, title: "Chest", image: chestImage, route: "/programs/chest" },
@@ -22,11 +21,11 @@ const muscles = [
   { id: 6, title: "Workouts", image: workoutsImage, route: "/programs/workouts" },
 ];
 
-export default function Dashboard() {
+export default function UpperLower() {
   return (
     <View style={styles.container}>
-      <Header title="Muscle Groups" />
-
+      <Header title="My Workouts" />
+      
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -43,8 +42,6 @@ export default function Dashboard() {
           ))}
         </View>
       </ScrollView>
-
-      <BottomNav active="dashboard" />
     </View>
   );
 }

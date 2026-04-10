@@ -6,10 +6,9 @@ import * as ImagePicker from "expo-image-picker";
 import * as NavigationBar from "expo-navigation-bar";
 import Modal from "react-native-modal";
 import {Tabs, MaterialTabBar} from "react-native-collapsible-tab-view";
-import Posts from "./posts";
-import Workouts from "./workouts"
-import BottomNav from "./_components/BottomNav";
-import { colors } from "../lib/theme";
+import Posts from "../posts";
+import Workouts from "../workouts"
+import { colors } from "../../lib/theme";
 
 export default function Profile() {
     // Create router for navigation to editProfile
@@ -138,7 +137,7 @@ export default function Profile() {
 
                 <View style={styles.editProfile}>
                     {/* Pass in username and about variables into the editProfile page */}
-                    <Pressable style={styles.editButton} onPress={() => {router.push({ pathname: "/edit/editProfile", params: {username, about, weight, calorieIntake, lastWorkout, currentWorkout}})}}>
+                    <Pressable style={styles.editButton} onPress={() => {router.push({ pathname: "../edit/editProfile", params: {username, about, weight, calorieIntake, lastWorkout, currentWorkout}})}}>
                         <Text style={styles.edit}>Edit Profile</Text>
                     </Pressable>
                 </View>
@@ -234,8 +233,6 @@ export default function Profile() {
                     </View>
                 </View>
             </Modal>
-            
-            <BottomNav active="profile" />
         </SafeAreaView>
     );
 }
