@@ -31,6 +31,8 @@ export default function ActiveWorkout() {
   const [timer, setTimer] = useState(0);
   const [exercises, setExercises] = useState([]);
   const [isModalVisible, setModalVisible] = useState(false);
+  const [showCancelAlert, setShowCancelAlert] = useState(false);
+  const [showEmptyAlert, setShowEmptyAlert] = useState(false);
 
   // Timer logic
   useEffect(() => {
@@ -108,10 +110,7 @@ export default function ActiveWorkout() {
     })).filter(ex => ex.sets.length > 0);
 
     if (completedExercises.length === 0) {
-      Alert.alert("Empty Workout", "You haven't completed any sets! Are you sure you want to finish without saving?", [
-        { text: "Cancel", style: "cancel" },
-        { text: "Discard Workout", style: "destructive", onPress: () => router.back() }
-      ]);
+      setShowEmptyAlert(true);
       return;
     }
 
@@ -135,10 +134,7 @@ export default function ActiveWorkout() {
   };
 
   const handleCancel = () => {
-    Alert.alert("Cancel Workout", "Are you sure you want to cancel? This workout will not be saved.", [
-      { text: "Keep Going", style: "cancel" },
-      { text: "Cancel Workout", style: "destructive", onPress: () => router.back() }
-    ]);
+    setShowCancelAlert(true);
   };
 
   return (
@@ -247,6 +243,58 @@ export default function ActiveWorkout() {
               </Pressable>
             ))}
           </ScrollView>
+        </View>
+      </Modal>
+
+      {/* Cancel Workout Alert Modal */}
+      <Modal
+        isVisible={showCancelAlert}
+        backdropOpacity={0.6}
+        animationIn="fadeIn"
+        animationOut="fadeOut"
+        useNativeDriver={true}
+        onBackdropPress={() => setShowCancelAlert(false)}
+      >
+        <View style={styles.alertBox}>
+          <Text style={styles.alertTitle}>Cancel Workout</Text>
+          <Text style={styles.alertMessage}>Are you sure you want to cancel? This workout will not be saved.</Text>
+          <View style={styles.alertButtonRow}>
+            <Pressable style={styles.alertCancelBtn} onPress={() => setShowCancelAlert(false)}>
+              <Text style={styles.alertCancelBtnText}>Keep Going</Text>
+            </Pressable>
+            <Pressable style={styles.alertDestructiveBtn} onPress={() => {
+              setShowCancelAlert(false);
+              router.back();
+            }}>
+              <Text style={styles.alertDestructiveBtnText}>Discard</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Empty Workout Alert Modal */}
+      <Modal
+        isVisible={showEmptyAlert}
+        backdropOpacity={0.6}
+        animationIn="fadeIn"
+        animationOut="fadeOut"
+        useNativeDriver={true}
+        onBackdropPress={() => setShowEmptyAlert(false)}
+      >
+        <View style={styles.alertBox}>
+          <Text style={styles.alertTitle}>Empty Workout</Text>
+          <Text style={styles.alertMessage}>You haven't completed any sets! Are you sure you want to finish without saving?</Text>
+          <View style={styles.alertButtonRow}>
+            <Pressable style={styles.alertCancelBtn} onPress={() => setShowEmptyAlert(false)}>
+              <Text style={styles.alertCancelBtnText}>Cancel</Text>
+            </Pressable>
+            <Pressable style={styles.alertDestructiveBtn} onPress={() => {
+              setShowEmptyAlert(false);
+              router.back();
+            }}>
+              <Text style={styles.alertDestructiveBtnText}>Discard</Text>
+            </Pressable>
+          </View>
         </View>
       </Modal>
     </SafeAreaView>
@@ -449,5 +497,56 @@ const styles = StyleSheet.create({
   modalExerciseCategory: {
     fontSize: 12,
     color: colors.textSecondary,
+  },
+  alertBox: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: 24,
+    alignItems: "center",
+  },
+  alertTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: colors.text,
+    marginBottom: 12,
+  },
+  alertMessage: {
+    fontSize: 16,
+    color: colors.textSecondary,
+    textAlign: "center",
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  alertButtonRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
+  },
+  alertCancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    marginRight: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: "center",
+  },
+  alertCancelBtnText: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  alertDestructiveBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    marginLeft: 8,
+    borderRadius: 8,
+    backgroundColor: colors.primary,
+    alignItems: "center",
+  },
+  alertDestructiveBtnText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "bold",
   },
 });
