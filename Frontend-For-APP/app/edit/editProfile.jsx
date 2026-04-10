@@ -1,4 +1,4 @@
-import {Text, TextInput, StyleSheet, Pressable, ScrollView} from "react-native"
+import {View, Text, TextInput, StyleSheet, Pressable, ScrollView} from "react-native"
 import {useState} from "react"
 import {SafeAreaProvider, SafeAreaView} from "react-native-safe-area-context"
 import {MaterialCommunityIcons} from "@expo/vector-icons"
@@ -59,9 +59,15 @@ export default function editProfile()
     return (
         <SafeAreaProvider>
             <SafeAreaView style={[styles.screenContainer, { backgroundColor: colors.background }]}>
-                <Pressable onPress={saveProfile} style={styles.save}>
-                    <MaterialCommunityIcons name="check-bold" size={40} color={colors.primary} />
-                </Pressable>
+                <View style={styles.headerRow}>
+                    <Pressable onPress={() => router.back()} style={styles.iconButton}>
+                        <MaterialCommunityIcons name="arrow-left-bold" size={40} color={colors.primary} />
+                    </Pressable>
+
+                    <Pressable onPress={saveProfile} style={styles.iconButton}>
+                        <MaterialCommunityIcons name="check-bold" size={40} color={colors.primary} />
+                    </Pressable>
+                </View>
 
                 <ScrollView contentContainerStyle={styles.scrollContainer}>
                     <Text style={styles.text}>Username:</Text>
@@ -136,15 +142,20 @@ const styles = StyleSheet.create({
         paddingBottom: 40,
         rowGap: 10,
     },
-    save:
-    {
+    headerRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        width: "100%",
+        paddingHorizontal: "5%",
+        marginTop: 5,
+        marginBottom: 10,
+    },
+    iconButton: {
         width: 45,
         height: 45,
         justifyContent: "center",
         alignItems: "center",
-        alignSelf: "flex-end",
-        marginTop: 5,
-        marginBottom: 10,
     },
     text:
     {
