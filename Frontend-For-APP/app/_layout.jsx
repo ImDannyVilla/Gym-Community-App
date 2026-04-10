@@ -13,6 +13,7 @@ export default function Layout() {
       <Stack.Screen name="programs/shoulders" />
       <Stack.Screen name="programs/cardio" />
       <Stack.Screen name="programs/workouts" />
+      <Stack.Screen name="activeWorkout" />
     </Stack>
   );
 }
