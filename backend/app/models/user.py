@@ -50,7 +50,7 @@ class UserProfile(Base):
         Integer, ForeignKey("users.id", ondelete="CASCADE"), unique=True
     )
 
-    gym_name: Mapped[str] = mapped_column(String(100), nullable = False)#required at signup
+    #gym_name: Mapped[str] = mapped_column(String(100), nullable = False)#required at signup
 
     # user fills these later
     full_name: Mapped[Optional[str]] = mapped_column(String(100))
@@ -87,7 +87,6 @@ class Follow(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
-
     #relationships
     follower_user: Mapped["User"] = relationship(
         "User", foreign_keys=[follower_id], back_populates="following"

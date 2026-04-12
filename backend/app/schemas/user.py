@@ -13,15 +13,28 @@ class UserRegister(BaseModel):
     email: EmailStr
     username: str
     password: str
-    gym_name: str
     @field_validator("password")
     def password_strength(cls, v):
+        if len(v) == 0:
+            raise ValueError("Password cannot be empty")
         if len(v) < 8:
             raise ValueError("Password must be at least 8 characters long")
+        if len(v) > 20:
+            raise ValueError("Password must be less than 20 characters long")
         if not any(c.isupper() for c in v):
             raise ValueError("Password must contain at least one uppercase letter")
         if not any(c.isdigit() for c in v):
             raise ValueError("Password must contain at least one digit")
+        if not any(c.islower() for c in v):
+            raise ValueError("Password must contain at least one lowercase letter")
+        if not any(c.isalpha() for c in v):
+            raise ValueError("Password must contain at least one letter")
+        if not any(not c.isalnum() for c in v):
+            raise ValueError("Password must contain at least one special character")
+        if any(c.isspace() for c in v):
+            raise ValueError(
+                "Password must not contain any spaces"
+            )
         return v
     @field_validator("username")
     def username_length(cls, v):

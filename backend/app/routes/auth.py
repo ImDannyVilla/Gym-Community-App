@@ -46,7 +46,6 @@ async def register(
 
     new_profile = UserProfile(
         user_id = new_user.id,
-        gym_name = user_data.gym_name
     )
     db.add(new_profile)
 
