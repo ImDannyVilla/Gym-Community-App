@@ -106,3 +106,21 @@ class Token(BaseModel):
     """
     access_token: str
     token_type: str
+
+class UserUpdate(BaseModel):
+    """
+    Data for updating user profile.
+    """
+    username: str | None = None
+    email: EmailStr | None = None
+    
+    @field_validator("username")
+    def username_length(cls, v):
+        if v is not None:
+            if len(v) < 3:
+                raise ValueError("Username must be at least 3 characters long")
+            if len(v) > 20:
+                raise ValueError("Username must be less than 20 characters long")
+            if not v.isalnum():
+                raise ValueError("Username must contain only letters and numbers")
+        return v
