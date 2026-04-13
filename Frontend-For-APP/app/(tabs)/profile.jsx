@@ -325,17 +325,18 @@ const styles = StyleSheet.create({
     },
 
     editButton: {
-        borderWidth: 1,
-        borderColor: colors.text,
-        borderStyle: "solid",
+        backgroundColor: colors.primary,
         borderRadius: 8,
-        width: "50%",
-        paddingVertical: "2%"
+        width: "45%",
+        paddingVertical: "2%",
+        alignItems: "center",
     },
 
     edit: {
         textAlign: "center",
-        color: colors.text,
+        color: "white",
+        fontWeight: "bold",
+        fontSize: 13,
     },
 
     aboutContainer: {
