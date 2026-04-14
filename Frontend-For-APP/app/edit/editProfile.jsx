@@ -9,8 +9,9 @@ export default function editProfile()
 {
     const router = useRouter();
 
-    const {username, about, weight, calorieIntake, lastWorkout, currentWorkout} = useLocalSearchParams();
+    const {name, username, about, weight, calorieIntake, lastWorkout, currentWorkout} = useLocalSearchParams();
 
+    const [newName, setNewName] = useState(name || "");
     const [newUsername, setNewUsername] = useState(username || "");
     const [newAbout, setNewAbout] = useState(about || "");
     const [newWeight, setNewWeight] = useState(weight || "");
@@ -25,6 +26,7 @@ export default function editProfile()
         try
         {
             const payload = {
+                name: newName,
                 username: newUsername, 
                 about: newAbout,
                 weight: newWeight,
@@ -70,6 +72,15 @@ export default function editProfile()
                 </View>
 
                 <ScrollView contentContainerStyle={styles.scrollContainer}>
+                    <Text style={styles.text}>Name:</Text>
+                    <TextInput 
+                        style={styles.input} 
+                        onChangeText={setNewName}
+                        value={newName} 
+                        placeholder="e.g. FUCK YOU"
+                        placeholderTextColor={colors.textSecondary}
+                    />
+
                     <Text style={styles.text}>Username:</Text>
                     <TextInput 
                         style={styles.input} 

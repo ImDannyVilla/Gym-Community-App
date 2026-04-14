@@ -16,6 +16,7 @@ export default function Profile() {
 
     const params = useLocalSearchParams();
 
+    const [name, setName] = useState("Name")
     const [username, setUsername] = useState("Username");
     const [about, setAbout] = useState("This is a little about me.");
     const [weight, setWeight] = useState("185 lbs");
@@ -46,6 +47,9 @@ export default function Profile() {
     }
 
     useEffect(() => {
+        if(params.name) {
+            setName(params.name);
+        }
         if(params.username) {
             setUsername(params.username);
         }
@@ -64,7 +68,7 @@ export default function Profile() {
         if(params.currentWorkout) {
             setCurrentWorkout(params.currentWorkout);
         }
-    }, [params.username, params.about, params.weight, params.calorieIntake, params.lastWorkout, params.currentWorkout]);
+    }, [params.name, params.username, params.about, params.weight, params.calorieIntake, params.lastWorkout, params.currentWorkout]);
 
     // Force navigation bar to be dark
     useEffect(() => {
@@ -117,7 +121,7 @@ export default function Profile() {
                     </Pressable>
                 </View>
 
-                <Text style={styles.name}>Name</Text>
+                <Text style={styles.name}>{name}</Text>
                 <Text style={styles.userName}>@{username}</Text>
 
                 <View style={styles.topStatsContainer}>
@@ -137,7 +141,7 @@ export default function Profile() {
 
                 <View style={styles.editProfile}>
                     {/* Pass in username and about variables into the editProfile page */}
-                    <Pressable style={styles.editButton} onPress={() => {router.push({ pathname: "../edit/editProfile", params: {username, about, weight, calorieIntake, lastWorkout, currentWorkout}})}}>
+                    <Pressable style={styles.editButton} onPress={() => {router.push({ pathname: "../edit/editProfile", params: {name, username, about, weight, calorieIntake, lastWorkout, currentWorkout}})}}>
                         <Text style={styles.edit}>Edit Profile</Text>
                     </Pressable>
                 </View>
