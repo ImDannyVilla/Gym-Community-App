@@ -5,33 +5,46 @@ from sqlalchemy.orm import selectinload
 from app.dependencies import AsyncSessionDep, CurrentUser
 
 from app.db import get_db
-from app.dependencies import get_current_user
+from app.dependencies import get_current_user, AsyncSessionDep
 from app.models.user import User, UserProfile
 from app.schemas.user import UserResponse, UserwithProfile, ProfileUpdate, ProfileResponse
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
+#(.get, .put, .post, .delete)
 @router.get("/me", response_model=UserwithProfile)
 async def get_my_profile(
         db: AsyncSessionDep,
         current_user: CurrentUser
 ):
-    #get current users profile
+    #get current users profile(query)
     result = await db.execute(
         select(User)
         .options(selectinload(User.profile))
         .where(User.id == current_user.id)
     )
+
     user = result.scalars().first()
     return user
 
 
 @router.put("/me/profile", response_model=ProfileResponse)
 async def update_my_profile(
+        db: AsyncSessionDep,
         profile_data: ProfileUpdate,
-        current_user: User = Depends(get_current_user),
-        db: AsyncSession = Depends(get_db)
+        current_user: User = Depends(get_current_user)
 ):
+
+    if profile_data.username is not None:
+        result = await db.execute(
+            select(User).where(User.username == profile_data.username)
+        )
+        if result.scalars().first():
+            raise HTTPException(
+                status_code=400, detail="Username already taken"
+            )
+        current_user.username = profile_data.username
+
     # Get or create profile
     result = await db.execute(
         select(UserProfile).where(UserProfile.user_id == current_user.id)
@@ -64,7 +77,7 @@ async def update_my_profile(
 @router.get("/{username}", response_model=UserwithProfile)
 async def get_user_by_username(
         username: str,
-        db: AsyncSession = Depends(get_db)
+        db: AsyncSessionDep
 ):
     """Get any user's profile by username"""
     result = await db.execute(

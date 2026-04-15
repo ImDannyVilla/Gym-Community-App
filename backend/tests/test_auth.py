@@ -28,6 +28,16 @@ async def test_password_validation(test_client, bad_password, expected_error):
         assert response.status_code == 422
         assert expected_error in response.text
 
+@pytest.mark.asyncio
+async def test_gym_level_validation(test_client):
+    response = await test_client.post("/auth/register", json={
+        "email": "test@test.com",
+        "username": "testuser",
+        "password": "Password123!",
+        "gym_level": "invalid_level"
+    })
+    assert response.status_code == 422
+    assert "Gym level must be one of the following: Beginner, Intermediate, Advanced" in response.text
 
 @pytest.mark.asyncio
 async def test_username_too_short(test_client):

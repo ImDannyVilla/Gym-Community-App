@@ -13,6 +13,7 @@ class UserRegister(BaseModel):
     email: EmailStr
     username: str
     password: str
+    gym_level: Optional[str] = "Beginner"
     @field_validator("password")
     def password_strength(cls, v):
         if len(v) == 0:
@@ -45,6 +46,12 @@ class UserRegister(BaseModel):
         if not v.isalnum():
             raise ValueError("Username must contain only letters and numbers")
         return v
+    @field_validator("gym_level")
+    def gym_level_length(cls, v):
+        cases = ["Beginner", "Intermediate", "Advanced"]
+        if v not in cases:
+            raise ValueError("Gym level must be one of the following: Beginner, Intermediate, Advanced")
+
 
 
 class UserLogin(BaseModel):
@@ -56,7 +63,8 @@ class UserLogin(BaseModel):
 
 class ProfileUpdate(BaseModel):
     full_name: Optional[str] = None
-    gym_name: Optional[str] = None
+    username: Optional[str] = None
+    #gym_name: Optional[str] = None
     gym_level: Optional[str] = None
     bio: Optional[str] = None
     avatar_url: Optional[str] = None

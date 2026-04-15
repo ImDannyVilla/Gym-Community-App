@@ -54,6 +54,7 @@ class UserProfile(Base):
 
     # user fills these later
     full_name: Mapped[Optional[str]] = mapped_column(String(100))
+    user_name: Mapped[Optional[str]] = mapped_column(String(100))
     gym_level: Mapped[Optional[str]] = mapped_column(String(20))  # Beginner/Intermediate/Advanced
     bio: Mapped[Optional[str]] = mapped_column(Text)
     avatar_url: Mapped[Optional[str]] = mapped_column(String)

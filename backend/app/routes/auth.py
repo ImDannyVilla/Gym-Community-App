@@ -36,7 +36,7 @@ async def register(
 
     hashed_password = get_password_hash(user_data.password)
 
-    #save user to db
+    #save user to User Table
     new_user = User(
         email=user_data.email,
         username=user_data.username,
@@ -47,6 +47,7 @@ async def register(
 
     new_profile = UserProfile(
         user_id = new_user.id,
+        gym_level=user_data.gym_level
     )
     db.add(new_profile)
 
