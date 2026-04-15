@@ -45,6 +45,8 @@ export default function SignUp() {
     }
   };
 
+
+
   return (
     <ScreenContainer scrollable={false} keyboardAvoid={true}>
       <View style={styles.content}>
