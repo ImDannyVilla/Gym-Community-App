@@ -53,21 +53,28 @@ async def register(
     await db.refresh(new_user)
 
     return new_user
-
+        
 @router.post("/login", response_model=Token)
 async def login(
-        credentials: UserLogin,
-        db: AsyncSessionDep
+        db: AsyncSessionDep,
+        form_data: OAuth2PasswordRequestForm = Depends()
 ):
     result = await db.execute(
-        select(User).where(User.email == credentials.email)
+        select(User).where(
+            or_(
+                User.username == form_data.username,
+                User.email == form_data.username
+            )
+        )
     )
     user = result.scalars().first() #.scalars() unwraps the database result so you get the actual User object instead of a wrapped Row object.
 
-    if not user:
-        raise HTTPException(status_code=401, detail="Invalid email or password")
-    if not verify_password(credentials.password, user.hashed_password):
-        raise HTTPException(status_code=401, detail="Invalid email or password")
+    if not user or not verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     token = create_access_token(data={"sub": user.email})
     return Token(access_token=token, token_type="bearer")
