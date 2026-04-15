@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from app.core.security import get_password_hash, verify_password, create_access_token
 from app.db import get_db
 from app.models.user import User, UserProfile
@@ -56,18 +57,25 @@ async def register(
 
 @router.post("/login", response_model=Token)
 async def login(
-        credentials: UserLogin,
-        db: AsyncSessionDep
+        db: AsyncSessionDep,
+        form_data: OAuth2PasswordRequestForm = Depends()
 ):
     result = await db.execute(
-        select(User).where(User.email == credentials.email)
+        select(User).where(
+            or_(
+                User.username == form_data.username,
+                User.email == form_data.username
+            )
+        )
     )
     user = result.scalars().first() #.scalars() unwraps the database result so you get the actual User object instead of a wrapped Row object.
 
-    if not user:
-        raise HTTPException(status_code=401, detail="Invalid email or password")
-    if not verify_password(credentials.password, user.hashed_password):
-        raise HTTPException(status_code=401, detail="Invalid email or password")
+    if not user or not verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     token = create_access_token(data={"sub": user.email})
     return Token(access_token=token, token_type="bearer")
