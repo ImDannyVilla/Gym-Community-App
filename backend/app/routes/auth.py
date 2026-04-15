@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from app.core.security import get_password_hash, verify_password, create_access_token
 from app.db import get_db
 from app.models.user import User, UserProfile
@@ -53,7 +54,7 @@ async def register(
     await db.refresh(new_user)
 
     return new_user
-        
+
 @router.post("/login", response_model=Token)
 async def login(
         db: AsyncSessionDep,
