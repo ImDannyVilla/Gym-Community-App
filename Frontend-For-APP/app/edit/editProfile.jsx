@@ -77,7 +77,7 @@ export default function editProfile()
                         style={styles.input} 
                         onChangeText={setNewName}
                         value={newName} 
-                        placeholder="e.g. FUCK YOU"
+                        placeholder="e.g. Angel"
                         placeholderTextColor={colors.textSecondary}
                     />
 
