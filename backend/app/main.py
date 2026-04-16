@@ -20,6 +20,7 @@ origins = [
     "http://localhost:8081",
     "http://localhost:19006",
     "exp://192.168.*.*:8081",
+    "exp://192.168.*.*:8082",
 ]
 
 gym_app.add_middleware(
@@ -32,7 +33,7 @@ gym_app.add_middleware(
 
 gym_app.include_router(auth.router)
 gym_app.include_router(workout.router)
-gym_app.include_router(programs.router)
+#gym_app.include_router(programs.router)
 gym_app.include_router(users.router)
 
 @gym_app.get("/health")
