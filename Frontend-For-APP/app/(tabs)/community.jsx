@@ -1,9 +1,8 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet, FlatList, KeyboardAvoidingView, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, layout, typography, spacing } from "../lib/theme";
-import BottomNav from "./_components/BottomNav";
-import Header from "./_components/Header";
+import { colors, layout, typography, spacing } from "../../lib/theme";
+import Header from "../_components/Header";
 
 export default function Community() {
   const [text, setText] = useState("");
@@ -56,8 +55,6 @@ export default function Community() {
           showsVerticalScrollIndicator={false}
         />
       </KeyboardAvoidingView>
-
-      <BottomNav active="community" />
     </View>
   );
 }

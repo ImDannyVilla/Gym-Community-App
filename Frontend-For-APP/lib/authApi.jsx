@@ -22,6 +22,7 @@ export async function registerUser({ email, username, password }) {
   return data;
 }
 
+/*
 export async function loginUser({ email, password }) {
   const response = await fetch(`${API_BASE_URL}/auth/login`, {
     method: "POST",
@@ -40,5 +41,29 @@ export async function loginUser({ email, password }) {
     throw new Error(data.detail || "Login failed");
   }
 
+  return data;
+}*/
+
+export async function loginUser({ email, password }) {
+  // OAuth2 standard requires "username" and "password" as form fields instead of the JSON I had - DV
+  const formData = new URLSearchParams();
+  formData.append("username", email);
+  formData.append("password", password);
+
+  const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: formData.toString(),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.detail || "Login failed");
+  }
+
+  // Returns { access_token: "...", token_type: "bearer" }
   return data;
 }

@@ -1,17 +1,12 @@
 {
   "expo": {
-    "scheme": "Gym-app",
-    "name": "Gym Community App",
-    "slug": "Gym-Community-App",
+    "scheme": "gymcommunityapp",
+    "name": "Frontend-For-APP",
+    "slug": "Frontend-For-APP",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "newArchEnabled": true,
-    "viewport": {
-      "width": "device-width",
-      "height": "device-height",
-      "fit": "contain"
-    },
     "splash": {
       "resizeMode": "contain",
       "backgroundColor": "#1a1a1a"
@@ -20,16 +15,21 @@
       "supportsTablet": true
     },
     "android": {
-      "edgeToEdgeEnabled": true
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1a1a1a"
+      }
+    },
+    "androidNavigationBar": {
+      "backgroundColor": "#1a1a1a",
+      "barStyle": "light-content"
     },
     "web": {
       "bundler": "metro"
     },
     "plugins": [
-      "expo-router"
-    ],
-    "experiments": {
-      "typedRoutes": true
-    }
+      "expo-router",
+      "expo-font"
+    ]
   }
 }

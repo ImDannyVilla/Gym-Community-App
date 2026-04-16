@@ -1,81 +1,83 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
+from app.dependencies import AsyncSessionDep, CurrentUser
+
 from app.db import get_db
-from app.models.user import User
-from app.schemas.user import UserResponse, UserUpdate
-from app.core.security import verify_token
-from typing import List
+from app.dependencies import get_current_user
+from app.models.user import User, UserProfile
+from app.schemas.user import UserResponse, UserwithProfile, ProfileUpdate, ProfileResponse
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
-async def get_current_user(
-    db: AsyncSession = Depends(get_db),
-    token: str = None
-) -> User:
-    if not token:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    
-    payload = verify_token(token)
-    if not payload:
-        raise HTTPException(status_code=401, detail="Invalid token")
-    
+@router.get("/me", response_model=UserwithProfile)
+async def get_my_profile(
+        db: AsyncSessionDep,
+        current_user: CurrentUser
+):
+    #get current users profile
     result = await db.execute(
-        select(User).where(User.email == payload.get("sub"))
+        select(User)
+        .options(selectinload(User.profile))
+        .where(User.id == current_user.id)
     )
     user = result.scalars().first()
-    
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
     return user
 
 
-@router.get("/me", response_model=UserResponse)
-async def get_me(db: AsyncSession = Depends(get_db)):
-    """
-    Get current user info (requires authentication).
-    Note: For now, returns a placeholder. Implement JWT auth when ready.
-    """
-    result = await db.execute(select(User).limit(1))
-    user = result.scalars().first()
-    
-    if not user:
-        raise HTTPException(status_code=404, detail="No users found")
-    
-    return user
-
-
-@router.get("/", response_model=List[UserResponse])
-async def get_users(
-    skip: int = 0,
-    limit: int = 100,
-    db: AsyncSession = Depends(get_db)
+@router.put("/me/profile", response_model=ProfileResponse)
+async def update_my_profile(
+        profile_data: ProfileUpdate,
+        current_user: User = Depends(get_current_user),
+        db: AsyncSession = Depends(get_db)
 ):
-    """
-    Get all users (admin endpoint).
-    """
+    # Get or create profile
     result = await db.execute(
-        select(User).offset(skip).limit(limit)
+        select(UserProfile).where(UserProfile.user_id == current_user.id)
     )
-    users = result.scalars().all()
-    return users
+    profile = result.scalars().first()
+
+    if not profile:
+        # Create profile if doesn't exist
+        profile = UserProfile(user_id=current_user.id)
+        db.add(profile)
+
+    # Update fields
+    if profile_data.full_name is not None:
+        profile.full_name = profile_data.full_name
+    if profile_data.gym_name is not None:
+        profile.gym_name = profile_data.gym_name
+    if profile_data.gym_level is not None:
+        profile.gym_level = profile_data.gym_level
+    if profile_data.bio is not None:
+        profile.bio = profile_data.bio
+    if profile_data.avatar_url is not None:
+        profile.avatar_url = profile_data.avatar_url
+
+    await db.commit()
+    await db.refresh(profile)
+
+    return profile
 
 
-@router.get("/{user_id}", response_model=UserResponse)
-async def get_user(
-    user_id: int,
-    db: AsyncSession = Depends(get_db)
+@router.get("/{username}", response_model=UserwithProfile)
+async def get_user_by_username(
+        username: str,
+        db: AsyncSession = Depends(get_db)
 ):
-    """
-    Get user by ID.
-    """
+    """Get any user's profile by username"""
     result = await db.execute(
-        select(User).where(User.id == user_id)
+        select(User)
+        .options(selectinload(User.profile))
+        .where(User.username == username)
     )
     user = result.scalars().first()
-    
+
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
     return user

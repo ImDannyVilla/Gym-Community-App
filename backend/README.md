@@ -238,7 +238,15 @@ Render free tier: First request after 15 minutes of inactivity takes 30-60 secon
 **Database Access:** Contact Danny for credentials
 
 
+### For Backend Work:
+cd ~/PycharmProjects/Gym-Community-App/backend
+source .venv/bin/activate  # or: uv venv (if using uv)
+uvicorn app.main:gym_app --reload
 
+### For Frontend Work:
+deactivate  # Exit Python venv
+cd ~/PycharmProjects/Gym-Community-App/Frontend-For-APP
+npm start
 
 
 ---

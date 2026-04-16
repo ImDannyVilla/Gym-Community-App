@@ -6,12 +6,13 @@ from typing import List
 from app.db import get_db
 from app.models.program import Program, ProgramDay
 from app.schemas.program import ProgramResponse, ProgramSummary
+from app.dependencies import AsyncSessionDep
 
 router = APIRouter(prefix="/programs", tags=["Programs"])
 
 
 @router.get("/", response_model=List[ProgramSummary])
-async def get_all_programs(db: AsyncSession = Depends(get_db)):
+async def get_all_programs(db: AsyncSessionDep):
 #get all preset programs
     result = await db.execute(
         select(Program)
@@ -25,7 +26,7 @@ async def get_all_programs(db: AsyncSession = Depends(get_db)):
 @router.get("/{program_id}", response_model=ProgramResponse)
 async def get_program_detail(
         program_id: int,
-        db: AsyncSession = Depends(get_db)
+        db: AsyncSessionDep
 ):
     """
     here you get program with full schedule.
@@ -67,7 +68,7 @@ async def get_program_detail(
 @router.get("/difficulty/{difficulty}", response_model=List[ProgramSummary])
 async def get_programs_by_difficulty(
         difficulty: str,
-        db: AsyncSession = Depends(get_db)
+        db: AsyncSessionDep
 ):
     """
     get the programs filtered by difficulty.

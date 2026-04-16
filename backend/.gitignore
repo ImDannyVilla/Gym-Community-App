@@ -40,3 +40,6 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
+
+#Sandbox
+sandbox

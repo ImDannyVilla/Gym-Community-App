@@ -1,9 +1,8 @@
 import React from "react";
-import { View, StyleSheet, ScrollView } from "react-native";
+import { View, Text, StyleSheet, ScrollView } from "react-native";
 import { router } from "expo-router";
 import { colors, layout } from "../../lib/theme";
 import MuscleCard from "../_dashboardCom/_MuscleCard";
-import BottomNav from "../_components/BottomNav";
 import Header from "../_components/Header";
 
 const chestImage = require("../../assets/Chest.png");
@@ -22,11 +21,11 @@ const muscles = [
   { id: 6, title: "Workouts", image: workoutsImage, route: "/programs/workouts" },
 ];
 
-export default function UpperLower() {
+export default function Dashboard() {
   return (
     <View style={styles.container}>
-      <Header title="My Workouts" />
-      
+      <Header title="Muscle Groups" />
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -43,8 +42,6 @@ export default function UpperLower() {
           ))}
         </View>
       </ScrollView>
-
-      <BottomNav active="workouts" />
     </View>
   );
 }

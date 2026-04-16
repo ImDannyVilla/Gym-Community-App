@@ -10,7 +10,7 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise ValueError("DATABASE_URL is not set in the .env file")
 
-# Create the async database engine
+#the async database engine
 engine = create_async_engine(
     DATABASE_URL,
     echo=True,
@@ -28,7 +28,7 @@ async_session_maker = async_sessionmaker(
 class Base(DeclarativeBase):
     pass
 
-# Dependency for FastAPI routes
+# Dependency for FastAPI routes(automatic openings and closing sessions)
 async def get_db():
     async with async_session_maker() as session:
         yield session
