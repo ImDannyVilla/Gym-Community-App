@@ -20,11 +20,17 @@ const APP_ICON_SIZE = 120;
 const ICON_BORDER_RADIUS = 24;
 const FORM_MAX_WIDTH = 400;
 
-const validateEmail = (email) => {
+const validateLoginInput = (value) => {
+  if (!value.trim()) return "Email or username is required";
+  return "";
+};
+
+/* const validateEmail = (email) => {
   if (!email.trim()) return "Email is required";
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "Invalid email format";
   return "";
-};
+}; */
+
 
 const validatePassword = (password) => {
   if (!password) return "Password is required";
@@ -40,11 +46,18 @@ export default function LoginScreen() {
   const [passwordError, setPasswordError] = useState("");
 
   const handleLogin = async () => {
-    const emailErr = validateEmail(email);
+    const emailErr = validateLoginInput(email);
     const passwordErr = validatePassword(password);
 
     setEmailError(emailErr);
     setPasswordError(passwordErr);
+
+    /*const emailErr = validateEmail(email);
+    const passwordErr = validatePassword(password);
+
+    setEmailError(emailErr);
+    setPasswordError(passwordErr); */
+
 
     if (emailErr || passwordErr) return;
 
@@ -91,11 +104,11 @@ export default function LoginScreen() {
         <View style={styles.form}>
           <View style={styles.inputContainer}>
             <Text style={styles.label}>
-              Email
+              Email or Username
             </Text>
             <TextInput
               style={[styles.input, emailError && styles.inputError]}
-              placeholder="Enter your email"
+              placeholder="Enter your email or Username"
               placeholderTextColor={colors.textTertiary}
               value={email}
               onChangeText={(text) => {
@@ -103,7 +116,7 @@ export default function LoginScreen() {
                 if (emailError) setEmailError("");
               }}
               autoCapitalize="none"
-              keyboardType="email-address"
+              //keyboardType="email-address"
             />
             {emailError && <Text style={styles.errorText}>{emailError}</Text>}
           </View>
