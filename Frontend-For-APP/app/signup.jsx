@@ -29,6 +29,25 @@ export default function SignUp() {
       return;
     }
 
+    // Mariano's code starts here -----------------------------------------
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    
+    if (!emailRegex.test(email.trim())) {
+      Alert.alert("Invalid Email", "Please enter a valid email address.");
+      return;
+    }
+
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9])[^\s]{8,}$/;
+    if (!passwordRegex.test(password)) {
+      Alert.alert(
+        "Invalid Password",
+        "Password must be at least 8 characters and include uppercase, lowercase, number, special character, and no spaces."
+      );
+      return;
+    }
+    
+    // Mariano's code ends here --------------------------------------------
+
     try {
       setLoading(true);
       await registerUser({
