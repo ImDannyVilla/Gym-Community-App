@@ -18,6 +18,7 @@ class WorkoutCreate(WorkoutBase):
 #wokout data going to front end
 class WorkoutResponse(WorkoutBase):
     id: int
+    category:str
     is_preset: bool
     created_at: datetime
     exercises: List[ExerciseResponse] = []

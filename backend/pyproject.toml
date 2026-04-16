@@ -14,12 +14,15 @@ dependencies = [
     "pydantic[email]>=2.12.5", #Email validationValidate email addresses
     "sqlalchemy[asyncio]>=2.0", #ORM for databaseTalk to PostgreSQL with Python objects
     "bcrypt>=5.0.0",
+    "alembic>=1.18.4",
+    "psycopg2-binary>=2.9.11",
 ]
 
 #Tools that the programmer need to build, test, and debug the app on your machine, not needed for production code
 #Used:  uv add --dev pytest pytest-asyncio httpx
 [dependency-groups]
 dev = [
+    "aiosqlite>=0.22.1",
     "httpx>=0.28.1",
     "pytest>=9.0.2",
     "pytest-asyncio>=1.3.0",

@@ -1,22 +1,28 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from app.core.security import get_password_hash, verify_password, create_access_token
 from app.db import get_db
-from app.models.user import User
-from app.schemas.user import UserRegister, UserLogin, Token
+from app.models.user import User, UserProfile
+from app.schemas.user import UserRegister, UserLogin, Token, UserResponse
+from app.dependencies import AsyncSessionDep
 
 router = APIRouter(prefix="/auth", tags=["auth"]) #all routes start with /auth; in API they are grouped under auth
 
-@router.post("/register")
-async def register(user_data: UserRegister, db: AsyncSession = Depends(get_db)):
+@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+async def register(
+        user_data: UserRegister,
+        db: AsyncSessionDep
+):
     #check if email is already taken
     result = await db.execute(
         select(User).where(User.email == user_data.email)
     )
     if result.scalars().first():
         raise HTTPException(
-            status_code=400, detail="Email already registered"
+            status_code=400,
+            detail="Email already registered"
         )
     #Check is username is already taken
     result = await db.execute(
@@ -37,23 +43,39 @@ async def register(user_data: UserRegister, db: AsyncSession = Depends(get_db)):
         hashed_password=hashed_password
     )
     db.add(new_user)
+    await db.flush()
+
+    new_profile = UserProfile(
+        user_id = new_user.id,
+    )
+    db.add(new_profile)
+
     await db.commit() #SQLAlchemy puts that user object into a Session where it stages the changes to the database.
+    await db.refresh(new_user)
 
-    #creating jwt token
-    token = create_access_token(data={"sub": user_data.email})
+    return new_user
 
-    #retunr token to react native
-    return Token(access_token=token, token_type="bearer")
-
-@router.post("/login")
-async def login(credentials: UserLogin, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User).where(User.email == credentials.email))
+@router.post("/login", response_model=Token)
+async def login(
+        db: AsyncSessionDep,
+        form_data: OAuth2PasswordRequestForm = Depends()
+):
+    result = await db.execute(
+        select(User).where(
+            or_(
+                User.username == form_data.username,
+                User.email == form_data.username
+            )
+        )
+    )
     user = result.scalars().first() #.scalars() unwraps the database result so you get the actual User object instead of a wrapped Row object.
 
-    if not user:
-        raise HTTPException(status_code=401, detail="Invalid email or password")
-    if not verify_password(credentials.password, user.hashed_password):
-        raise HTTPException(status_code=401, detail="Invalid email or password")
+    if not user or not verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     token = create_access_token(data={"sub": user.email})
     return Token(access_token=token, token_type="bearer")

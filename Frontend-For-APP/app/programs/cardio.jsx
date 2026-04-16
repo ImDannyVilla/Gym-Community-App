@@ -1,25 +1,57 @@
-import { View, Text, StyleSheet } from "react-native";
-import { Stack } from "expo-router";
+import React from "react";
+import { View, StyleSheet, ScrollView } from "react-native";
+import { colors, layout } from "../../lib/theme";
+import BottomNav from "../_components/BottomNav";
+import Header from "../_components/Header";
+import PlaceholderCard from "../_dashboardCom/_PlaceholderCard";
 
-export default function Chest() {
+const exercises = [
+  "Exercise 1",
+  "Exercise 2",
+  "Exercise 3",
+  "Exercise 4",
+  "Exercise 5",
+  "Exercise 6",
+];
+
+export default function Cardio() {
   return (
-    <>
-      <Stack.Screen options={{ title: "Cardio" }} />
+    <View style={styles.container}>
+      <Header title="Cardio Workouts" />
+      
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.grid}>
+          {exercises.map((exercise, index) => (
+            <PlaceholderCard key={index} title={exercise} />
+          ))}
+        </View>
+      </ScrollView>
 
-      <View style={styles.container}>
-        <Text style={styles.text}>Cardio Page</Text>
-      </View>
-    </>
+      <BottomNav active="workouts" />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: colors.background,
   },
-  text: {
-    fontSize: 24,
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: layout.screenPadding,
+    paddingBottom: layout.bottomSafeArea,
+  },
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-around",
   },
 });
