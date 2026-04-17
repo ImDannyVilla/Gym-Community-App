@@ -68,7 +68,7 @@ export default function Profile() {
         if(params.currentWorkout) {
             setCurrentWorkout(params.currentWorkout);
         }
-    }, [params.name, params.username, params.about, params.weight, params.calorieIntake, params.lastWorkout, params.currentWorkout]);
+    }, [params.name, params.username, params.about, params.weight, params.lastWorkout, params.currentWorkout]);
 
     // Force navigation bar to be dark
     useEffect(() => {
@@ -133,33 +133,25 @@ export default function Profile() {
                         <Text style={styles.topStatValue} adjustsFontSizeToFit numberOfLines={1}>{dayStreak}</Text>
                         <Text style={styles.topStatLabel} adjustsFontSizeToFit numberOfLines={1}>Day Streak</Text>
                     </Pressable>
-                    <View style={styles.topStatItem}>
-                        <Text style={styles.topStatValue} adjustsFontSizeToFit numberOfLines={1}>{totalCalories}</Text>
-                        <Text style={styles.topStatLabel} adjustsFontSizeToFit numberOfLines={1}>Calories</Text>
-                    </View>
                 </View>
 
                 <View style={styles.editProfile}>
                     {/* Pass in username and about variables into the editProfile page */}
-                    <Pressable style={styles.editButton} onPress={() => {router.push({ pathname: "../edit/editProfile", params: {name, username, about, weight, calorieIntake, lastWorkout, currentWorkout}})}}>
+                    <Pressable style={styles.editButton} onPress={() => {router.push({ pathname: "../edit/editProfile", params: {name, username, about, weight, lastWorkout, currentWorkout}})}}>
                         <Text style={styles.edit}>Edit Profile</Text>
                     </Pressable>
                 </View>
 
                 <View style={styles.cardContainer} pointerEvents="none">
-                    <View style={styles.statCard}>
+                    <View style={[styles.statCard, { width: "100%", borderBottomWidth: 1, borderRightWidth: 0 }]}>
                         <Text style={styles.cardTitle} adjustsFontSizeToFit numberOfLines={1}>Weight</Text>
                         <Text style={styles.cardValue} adjustsFontSizeToFit numberOfLines={1}>{weight}</Text>
                     </View>
-                    <View style={styles.statCard}>
-                        <Text style={styles.cardTitle} adjustsFontSizeToFit numberOfLines={1}>Daily Calorie Intake</Text>
-                        <Text style={styles.cardValue} adjustsFontSizeToFit numberOfLines={1}>{calorieIntake}</Text>
-                    </View>
-                    <View style={styles.statCard}>
+                    <View style={[styles.statCard, { borderBottomWidth: 0 }]}>
                         <Text style={styles.cardTitle} adjustsFontSizeToFit numberOfLines={1}>Last Workout</Text>
                         <Text style={styles.cardValue} adjustsFontSizeToFit numberOfLines={1}>{lastWorkout}</Text>
                     </View>
-                    <View style={styles.statCard}>
+                    <View style={[styles.statCard, { borderBottomWidth: 0, borderRightWidth: 0 }]}>
                         <Text style={styles.cardTitle} adjustsFontSizeToFit numberOfLines={1}>Current Workout</Text>
                         <Text style={styles.cardValue} adjustsFontSizeToFit numberOfLines={1}>{currentWorkout}</Text>
                     </View>
@@ -300,7 +292,7 @@ const styles = StyleSheet.create({
     topStatsContainer: {
         flexDirection: "row",
         justifyContent: "center",
-        gap: 32,
+        gap: 64,
         width: "90%",
         marginBottom: 12,
     },

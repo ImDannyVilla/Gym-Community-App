@@ -30,7 +30,6 @@ export default function editProfile()
                 username: newUsername, 
                 about: newAbout,
                 weight: newWeight,
-                calorieIntake: newCalorieIntake,
                 lastWorkout: newLastWorkout,
                 currentWorkout: newCurrentWorkout
             };
@@ -107,15 +106,6 @@ export default function editProfile()
                         onChangeText={setNewWeight}
                         value={newWeight} 
                         placeholder="e.g. 185 lbs"
-                        placeholderTextColor={colors.textSecondary}
-                    />
-
-                    <Text style={styles.text}>Daily Calorie Intake:</Text>
-                    <TextInput 
-                        style={styles.input} 
-                        onChangeText={setNewCalorieIntake}
-                        value={newCalorieIntake} 
-                        placeholder="e.g. 2,500 kcal"
                         placeholderTextColor={colors.textSecondary}
                     />
 
