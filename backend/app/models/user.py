@@ -53,10 +53,19 @@ class UserProfile(Base):
     #gym_name: Mapped[str] = mapped_column(String(100), nullable = False)#required at signup
 
     # user fills these later
-    full_name: Mapped[Optional[str]] = mapped_column(String(100))
+    name: Mapped[Optional[str]] = mapped_column(String(100))
     gym_level: Mapped[Optional[str]] = mapped_column(String(20))  # Beginner/Intermediate/Advanced
-    bio: Mapped[Optional[str]] = mapped_column(Text)
+    about: Mapped[Optional[str]] = mapped_column(Text)
     avatar_url: Mapped[Optional[str]] = mapped_column(String)
+    
+    # New fitness fields
+    weight: Mapped[Optional[int]] = mapped_column(Integer)
+    last_workout: Mapped[Optional[str]] = mapped_column(String)
+    current_workout: Mapped[Optional[str]] = mapped_column(String)
+    
+    # Read-only top stats
+    total_workouts: Mapped[int] = mapped_column(Integer, default=0)
+    day_streak: Mapped[int] = mapped_column(Integer, default=0)
 
     # Cached counts
     followers_count: Mapped[int] = mapped_column(Integer, default=0)

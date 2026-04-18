@@ -22,12 +22,18 @@ async def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        # Decode the JWT
+        print(f"RAW TOKEN RECEIVED: {token}") # Is it null?
+        
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        print(f"DECODED PAYLOAD: {payload}") # What is actually inside 'sub'?
+        
         email: str = payload.get("sub")
         if email is None:
+            print("FAILED: 'sub' claim is missing from payload")
             raise credentials_exception
-    except JWTError:
+            
+    except JWTError as e:
+        print(f"JWT DECODE FAILED: {e}") # Why did it fail?
         raise credentials_exception
 
     # Find the user in the database

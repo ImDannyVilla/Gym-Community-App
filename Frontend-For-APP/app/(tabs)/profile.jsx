@@ -1,14 +1,16 @@
-import {useState, useEffect} from "react";
-import {useRouter, useLocalSearchParams} from "expo-router";
+import {useState, useEffect, useCallback} from "react";
+import {useRouter, useLocalSearchParams, useFocusEffect} from "expo-router";
 import {View, Text, Image, Pressable, StyleSheet, Alert, Platform} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import * as NavigationBar from "expo-navigation-bar";
 import Modal from "react-native-modal";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {Tabs, MaterialTabBar} from "react-native-collapsible-tab-view";
 import Posts from "../posts";
 import Workouts from "../workouts"
 import { colors } from "../../lib/theme";
+import { API_BASE_URL } from "../../lib/api";
 
 export default function Profile() {
     // Create router for navigation to editProfile
@@ -20,13 +22,11 @@ export default function Profile() {
     const [username, setUsername] = useState("Username");
     const [about, setAbout] = useState("This is a little about me.");
     const [weight, setWeight] = useState("185 lbs");
-    const [calorieIntake, setCalorieIntake] = useState("2,500 kcal");
     const [lastWorkout, setLastWorkout] = useState("Chest & Triceps");
     const [currentWorkout, setCurrentWorkout] = useState("Back & Biceps");
 
-    const [totalWorkouts, setTotalWorkouts] = useState("847");
-    const [dayStreak, setDayStreak] = useState("45");
-    const [totalCalories, setTotalCalories] = useState("18k");
+    const [totalWorkouts, setTotalWorkouts] = useState("0");
+    const [dayStreak, setDayStreak] = useState("0");
 
     const [isStreakModalVisible, setStreakModalVisible] = useState(false);
 
@@ -59,9 +59,6 @@ export default function Profile() {
         if(params.weight) {
             setWeight(params.weight);
         }
-        if(params.calorieIntake) {
-            setCalorieIntake(params.calorieIntake);
-        }
         if(params.lastWorkout) {
             setLastWorkout(params.lastWorkout);
         }
@@ -69,6 +66,45 @@ export default function Profile() {
             setCurrentWorkout(params.currentWorkout);
         }
     }, [params.name, params.username, params.about, params.weight, params.lastWorkout, params.currentWorkout]);
+
+    const loadProfileData = async () => {
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            if (!token) return;
+
+            const response = await fetch(`${API_BASE_URL}/users/me`, {
+                method: "GET",
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setUsername(data.username || "Username");
+                
+                if (data.profile) {
+                    setName(data.profile.name || "Name");
+                    setAbout(data.profile.about || "This is a little about me.");
+                    setWeight(data.profile.weight ? `${data.profile.weight} lbs` : "--");
+                    setLastWorkout(data.profile.last_workout || "--");
+                    setCurrentWorkout(data.profile.current_workout || "--");
+                    setTotalWorkouts(data.profile.total_workouts?.toString() || "0");
+                    setDayStreak(data.profile.day_streak?.toString() || "0");
+                }
+            } else {
+                console.log("Failed to fetch profile", response.status);
+            }
+        } catch (error) {
+            console.log("Failed to load profile data (Network error)", error);
+        }
+    };
+
+    useFocusEffect(
+        useCallback(() => {
+            loadProfileData();
+        }, [])
+    );
 
     // Force navigation bar to be dark
     useEffect(() => {

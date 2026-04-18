@@ -55,13 +55,14 @@ class UserLogin(BaseModel):
     password: str
 
 class ProfileUpdate(BaseModel):
-    full_name: Optional[str] = None
-    gym_name: Optional[str] = None
+    name: Optional[str] = None
+    username: Optional[str] = None
     gym_level: Optional[str] = None
-    bio: Optional[str] = None
+    about: Optional[str] = None
     avatar_url: Optional[str] = None
-
-
+    weight: Optional[int] = None
+    last_workout: Optional[str] = None
+    current_workout: Optional[str] = None
 
 # OUTPUT SCHEMAS
 
@@ -79,11 +80,15 @@ class UserResponse(BaseModel):
 class ProfileResponse(BaseModel):
     """"profile data"""
     id: int
-    full_name: Optional[str]
-    gym_name: Optional[str]
+    name: Optional[str]
     gym_level: Optional[str]
-    bio: Optional[str]
+    about: Optional[str]
     avatar_url: Optional[str]
+    weight: Optional[int]
+    last_workout: Optional[str]
+    current_workout: Optional[str]
+    total_workouts: int
+    day_streak: int
     followers_count: int
     following_count: int
 
