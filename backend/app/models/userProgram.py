@@ -1,3 +1,4 @@
+"""
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -12,3 +13,4 @@ class UserProgram(Base):
     description = Column(Text)
     is_public = Column(Boolean, default=False)  # can other userrrs see it?
     created_at = Column(DateTime)
+"""
