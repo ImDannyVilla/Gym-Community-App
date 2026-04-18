@@ -16,6 +16,7 @@ dependencies = [
     "bcrypt>=5.0.0",
     "alembic>=1.18.4",
     "psycopg2-binary>=2.9.11",
+    "supabase>=2.28.3",
 ]
 
 #Tools that the programmer need to build, test, and debug the app on your machine, not needed for production code

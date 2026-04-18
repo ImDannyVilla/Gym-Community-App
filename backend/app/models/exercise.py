@@ -4,12 +4,23 @@ from sqlalchemy.sql import func
 from app.models.workout import Workout
 from ..db import Base
 from typing import Optional
+from uuid import UUID, uuid4
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
+
 
 class Exercise(Base):
     __tablename__ = "exercises"
 
-    id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    workout_id: Mapped[int] = mapped_column(ForeignKey("workouts.id"), nullable=False)
+    id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        primary_key=True,
+        default=uuid4,
+        index=True
+    )
+    workout_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("workouts.id"),
+        nullable=False)
 
     # From ExerciseDB API
     exercise_id: Mapped[Optional[str]] = mapped_column(String) # ExerciseDB ID like "0025"

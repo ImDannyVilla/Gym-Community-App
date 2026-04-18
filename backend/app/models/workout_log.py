@@ -4,14 +4,25 @@ from sqlalchemy.sql import func
 from ..db import Base
 from typing import Optional, List
 from datetime import datetime
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
+from uuid import UUID, uuid4
 
 class WorkoutLog(Base):
     """user workout session performed"""
     __tablename__ = "workout_logs"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
-    routine_id: Mapped[Optional[int]] = mapped_column(
+    id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        primary_key=True,
+        default=uuid4,
+        index=True
+    )
+    user_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE")
+    )
+    routine_id: Mapped[Optional[UUID]] = mapped_column(
+        PGUUID(as_uuid=True),
         ForeignKey("routines.id", ondelete="SET NULL")
     )
     name: Mapped[str]
@@ -27,8 +38,15 @@ class WorkoutLogExercise(Base):
     """many to many relationship between workout logs and exercises"""
     __tablename__ = "workout_log_exercises"
 
-    id: Mapped[int] = mapped_column( Integer, primary_key=True )
-    workout_log_id: Mapped[int] = mapped_column( Integer, ForeignKey("workout_logs.id", ondelete="CASCADE") )
+    id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        primary_key=True,
+        default=uuid4
+    )
+    workout_log_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("workout_logs.id", ondelete="CASCADE")
+    )
     #ExerciseDB reference
     exercise_id: Mapped[str]  # "0001"
     name: Mapped[str]  # "Barbell Bench Press"
@@ -49,8 +67,15 @@ class WorkoutLogSet(Base):
     """many to many relationship between workout logs and exercises"""
     __tablename__ = "workout_log_sets"
 
-    id: Mapped[int] = mapped_column( Integer, primary_key=True )
-    workout_log_exercise_id: Mapped[int] = mapped_column(ForeignKey("workout_log_exercises.id") )
+    id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        primary_key=True,
+        default=uuid4
+    )
+    workout_log_exercise_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("workout_log_exercises.id")
+    )
     set_number: Mapped[int]
     reps: Mapped[int] #Actual reps done
     weight_lbs: Mapped[float] #Actual weight done

@@ -1,4 +1,6 @@
 #User Pydantic schemas
+from uuid import UUID
+
 from pydantic import BaseModel, EmailStr, ConfigDict, field_validator
 from datetime import datetime
 from typing import Optional
@@ -11,9 +13,7 @@ class UserRegister(BaseModel):
     Data coming FROM React Native during registration.
     """
     email: EmailStr
-    username: str
     password: str
-    gym_level: Optional[str] = "Beginner"
     @field_validator("password")
     def password_strength(cls, v):
         if len(v) == 0:
@@ -37,6 +37,17 @@ class UserRegister(BaseModel):
                 "Password must not contain any spaces"
             )
         return v
+
+
+class OnboardingData(BaseModel):
+    """
+    Profile data collected during onboarding (step 2).
+    """
+    username: str
+    full_name: Optional[str] = None
+    gym_level: Optional[str] = None  # "Beginner", "Intermediate", "Advanced"
+    avatar_url: Optional[str] = None
+
     @field_validator("username")
     def username_length(cls, v):
         if len(v) < 3:
@@ -46,12 +57,14 @@ class UserRegister(BaseModel):
         if not v.isalnum():
             raise ValueError("Username must contain only letters and numbers")
         return v
-    @field_validator("gym_level")
-    def gym_level_length(cls, v):
-        cases = ["Beginner", "Intermediate", "Advanced"]
-        if v not in cases:
-            raise ValueError("Gym level must be one of the following: Beginner, Intermediate, Advanced")
 
+    @field_validator("gym_level")
+    def gym_level_valid(cls, v):
+        if v is not None:
+            cases = ["Beginner", "Intermediate", "Advanced"]
+            if v not in cases:
+                raise ValueError("Gym level must be one of: Beginner, Intermediate, Advanced")
+        return v
 
 
 class UserLogin(BaseModel):
@@ -77,7 +90,7 @@ class UserResponse(BaseModel):
     """
     User data going TO React Native (safe - no password).
     """
-    id: int
+    id: UUID
     email: EmailStr
     username: str
     created_at: datetime
@@ -86,7 +99,7 @@ class UserResponse(BaseModel):
 
 class ProfileResponse(BaseModel):
     """"profile data"""
-    id: int
+    id: UUID
     full_name: Optional[str]
     gym_name: Optional[str]
     gym_level: Optional[str]
@@ -99,7 +112,7 @@ class ProfileResponse(BaseModel):
 
 class UserwithProfile(BaseModel):
     """the user with profile data"""
-    id: int
+    id: UUID
     email: EmailStr
     username: str
     created_at: datetime
@@ -116,9 +129,6 @@ class Token(BaseModel):
     token_type: str
 
 class UserUpdate(BaseModel):
-    """
-    Data for updating user profile.
-    """
     username: str | None = None
     email: EmailStr | None = None
     
@@ -132,3 +142,66 @@ class UserUpdate(BaseModel):
             if not v.isalnum():
                 raise ValueError("Username must contain only letters and numbers")
         return v
+
+class PasswordUpdate(BaseModel):
+    current_password: str
+    new_password: str
+
+    @field_validator("new_password")
+    def password_strength(cls, v):
+        if len(v) == 0:
+            raise ValueError("Password cannot be empty")
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters long")
+        if len(v) > 20:
+            raise ValueError("Password must be less than 20 characters long")
+        if not any(c.isupper() for c in v):
+            raise ValueError("Password must contain at least one uppercase letter")
+        if not any(c.isdigit() for c in v):
+            raise ValueError("Password must contain at least one digit")
+        if not any(c.islower() for c in v):
+            raise ValueError("Password must contain at least one lowercase letter")
+        if not any(c.isalpha() for c in v):
+            raise ValueError("Password must contain at least one letter")
+        if not any(not c.isalnum() for c in v):
+            raise ValueError("Password must contain at least one special character")
+        if any(c.isspace() for c in v):
+            raise ValueError(
+                "Password must not contain any spaces"
+            )
+        return v
+
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+
+class PasswordReset(BaseModel):
+    """Schema for reset password via email link"""
+    new_password: str
+
+    @field_validator("new_password")
+    def password_strength(cls, v):
+        if len(v) == 0:
+            raise ValueError("Password cannot be empty")
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters long")
+        if len(v) > 20:
+            raise ValueError("Password must be less than 20 characters long")
+        if not any(c.isupper() for c in v):
+            raise ValueError("Password must contain at least one uppercase letter")
+        if not any(c.isdigit() for c in v):
+            raise ValueError("Password must contain at least one digit")
+        if not any(c.islower() for c in v):
+            raise ValueError("Password must contain at least one lowercase letter")
+        if not any(c.isalpha() for c in v):
+            raise ValueError("Password must contain at least one letter")
+        if not any(not c.isalnum() for c in v):
+            raise ValueError("Password must contain at least one special character")
+        if any(c.isspace() for c in v):
+            raise ValueError("Password must not contain any spaces")
+        return v
+
+class EmailUpdate(BaseModel):
+    new_email: EmailStr
+
+class ResetConfirmation(BaseModel):
+    email: EmailStr

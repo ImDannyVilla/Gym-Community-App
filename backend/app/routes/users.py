@@ -1,14 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
-from app.dependencies import AsyncSessionDep, CurrentUser
 
-from app.db import get_db
-from app.dependencies import get_current_user, AsyncSessionDep
+from app.dependencies import get_current_user, AsyncSessionDep, CurrentUser
 from app.models.user import User, UserProfile
-from app.schemas.user import UserResponse, UserwithProfile, ProfileUpdate, ProfileResponse
-
+from app.schemas.user import UserResponse, UserwithProfile, ProfileUpdate, ProfileResponse, PasswordUpdate, EmailUpdate
+from app.core.supabase_client import supabase, supabase_admin
 router = APIRouter(prefix="/users", tags=["Users"])
 
 #(.get, .put, .post, .delete)
@@ -94,3 +91,60 @@ async def get_user_by_username(
         )
 
     return user
+
+@router.put("/me/password")
+async def update_password(
+        db: AsyncSessionDep,
+        password_data: PasswordUpdate,
+        current_user: CurrentUser
+):
+    try:
+        # Verify current password
+        sign_in = supabase.auth.sign_in_with_password({
+            "email": current_user.email,
+            "password": password_data.current_password
+        })
+
+        if not sign_in.user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Current password is incorrect"
+            )
+
+        # Use admin client to update password,htis avoids session context issues
+        supabase_admin.auth.admin.update_user_by_id(
+            str(current_user.id),
+            {"password": password_data.new_password}
+        )
+
+        return {"message": "Password updated successfully"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect"
+        )
+
+@router.post("/change-email")
+async def change_email(
+        email_data: EmailUpdate,
+        db: AsyncSessionDep,
+        current_user: CurrentUser
+):
+    try:
+        #update in Supabase Auth
+        supabase.auth.update_user({
+            "email": email_data.new_email
+        })
+
+        #update in our db
+        current_user.email = email_data.new_email
+        await db.commit()
+
+        return {"message": "Email updated successfully"}
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
