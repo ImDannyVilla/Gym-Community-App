@@ -1,14 +1,16 @@
-import {useState, useEffect} from "react";
-import {useRouter, useLocalSearchParams} from "expo-router";
+import {useState, useEffect, useCallback} from "react";
+import {useRouter, useLocalSearchParams, useFocusEffect} from "expo-router";
 import {View, Text, Image, Pressable, StyleSheet, Alert, Platform} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import * as NavigationBar from "expo-navigation-bar";
 import Modal from "react-native-modal";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {Tabs, MaterialTabBar} from "react-native-collapsible-tab-view";
 import Posts from "../posts";
 import Workouts from "../workouts"
 import { colors } from "../../lib/theme";
+import { API_BASE_URL } from "../../lib/api";
 
 export default function Profile() {
     // Create router for navigation to editProfile
@@ -16,16 +18,15 @@ export default function Profile() {
 
     const params = useLocalSearchParams();
 
+    const [name, setName] = useState("Name")
     const [username, setUsername] = useState("Username");
     const [about, setAbout] = useState("This is a little about me.");
     const [weight, setWeight] = useState("185 lbs");
-    const [calorieIntake, setCalorieIntake] = useState("2,500 kcal");
     const [lastWorkout, setLastWorkout] = useState("Chest & Triceps");
     const [currentWorkout, setCurrentWorkout] = useState("Back & Biceps");
 
-    const [totalWorkouts, setTotalWorkouts] = useState("847");
-    const [dayStreak, setDayStreak] = useState("45");
-    const [totalCalories, setTotalCalories] = useState("18k");
+    const [totalWorkouts, setTotalWorkouts] = useState("0");
+    const [dayStreak, setDayStreak] = useState("0");
 
     const [isStreakModalVisible, setStreakModalVisible] = useState(false);
 
@@ -46,6 +47,9 @@ export default function Profile() {
     }
 
     useEffect(() => {
+        if(params.name) {
+            setName(params.name);
+        }
         if(params.username) {
             setUsername(params.username);
         }
@@ -55,16 +59,52 @@ export default function Profile() {
         if(params.weight) {
             setWeight(params.weight);
         }
-        if(params.calorieIntake) {
-            setCalorieIntake(params.calorieIntake);
-        }
         if(params.lastWorkout) {
             setLastWorkout(params.lastWorkout);
         }
         if(params.currentWorkout) {
             setCurrentWorkout(params.currentWorkout);
         }
-    }, [params.username, params.about, params.weight, params.calorieIntake, params.lastWorkout, params.currentWorkout]);
+    }, [params.name, params.username, params.about, params.weight, params.lastWorkout, params.currentWorkout]);
+
+    const loadProfileData = async () => {
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            if (!token) return;
+
+            const response = await fetch(`${API_BASE_URL}/users/me`, {
+                method: "GET",
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setUsername(data.username || "Username");
+                
+                if (data.profile) {
+                    setName(data.profile.name || "Name");
+                    setAbout(data.profile.about || "This is a little about me.");
+                    setWeight(data.profile.weight ? `${data.profile.weight} lbs` : "--");
+                    setLastWorkout(data.profile.last_workout || "--");
+                    setCurrentWorkout(data.profile.current_workout || "--");
+                    setTotalWorkouts(data.profile.total_workouts?.toString() || "0");
+                    setDayStreak(data.profile.day_streak?.toString() || "0");
+                }
+            } else {
+                console.log("Failed to fetch profile", response.status);
+            }
+        } catch (error) {
+            console.log("Failed to load profile data (Network error)", error);
+        }
+    };
+
+    useFocusEffect(
+        useCallback(() => {
+            loadProfileData();
+        }, [])
+    );
 
     // Force navigation bar to be dark
     useEffect(() => {
@@ -117,7 +157,7 @@ export default function Profile() {
                     </Pressable>
                 </View>
 
-                <Text style={styles.name}>Name</Text>
+                <Text style={styles.name}>{name}</Text>
                 <Text style={styles.userName}>@{username}</Text>
 
                 <View style={styles.topStatsContainer}>
@@ -129,33 +169,25 @@ export default function Profile() {
                         <Text style={styles.topStatValue} adjustsFontSizeToFit numberOfLines={1}>{dayStreak}</Text>
                         <Text style={styles.topStatLabel} adjustsFontSizeToFit numberOfLines={1}>Day Streak</Text>
                     </Pressable>
-                    <View style={styles.topStatItem}>
-                        <Text style={styles.topStatValue} adjustsFontSizeToFit numberOfLines={1}>{totalCalories}</Text>
-                        <Text style={styles.topStatLabel} adjustsFontSizeToFit numberOfLines={1}>Calories</Text>
-                    </View>
                 </View>
 
                 <View style={styles.editProfile}>
                     {/* Pass in username and about variables into the editProfile page */}
-                    <Pressable style={styles.editButton} onPress={() => {router.push({ pathname: "../edit/editProfile", params: {username, about, weight, calorieIntake, lastWorkout, currentWorkout}})}}>
+                    <Pressable style={styles.editButton} onPress={() => {router.push({ pathname: "../edit/editProfile", params: {name, username, about, weight, lastWorkout, currentWorkout}})}}>
                         <Text style={styles.edit}>Edit Profile</Text>
                     </Pressable>
                 </View>
 
                 <View style={styles.cardContainer} pointerEvents="none">
-                    <View style={styles.statCard}>
+                    <View style={[styles.statCard, { width: "100%", borderBottomWidth: 1, borderRightWidth: 0 }]}>
                         <Text style={styles.cardTitle} adjustsFontSizeToFit numberOfLines={1}>Weight</Text>
                         <Text style={styles.cardValue} adjustsFontSizeToFit numberOfLines={1}>{weight}</Text>
                     </View>
-                    <View style={styles.statCard}>
-                        <Text style={styles.cardTitle} adjustsFontSizeToFit numberOfLines={1}>Daily Calorie Intake</Text>
-                        <Text style={styles.cardValue} adjustsFontSizeToFit numberOfLines={1}>{calorieIntake}</Text>
-                    </View>
-                    <View style={styles.statCard}>
+                    <View style={[styles.statCard, { borderBottomWidth: 0 }]}>
                         <Text style={styles.cardTitle} adjustsFontSizeToFit numberOfLines={1}>Last Workout</Text>
                         <Text style={styles.cardValue} adjustsFontSizeToFit numberOfLines={1}>{lastWorkout}</Text>
                     </View>
-                    <View style={styles.statCard}>
+                    <View style={[styles.statCard, { borderBottomWidth: 0, borderRightWidth: 0 }]}>
                         <Text style={styles.cardTitle} adjustsFontSizeToFit numberOfLines={1}>Current Workout</Text>
                         <Text style={styles.cardValue} adjustsFontSizeToFit numberOfLines={1}>{currentWorkout}</Text>
                     </View>
@@ -296,7 +328,7 @@ const styles = StyleSheet.create({
     topStatsContainer: {
         flexDirection: "row",
         justifyContent: "center",
-        gap: 32,
+        gap: 64,
         width: "90%",
         marginBottom: 12,
     },
@@ -325,17 +357,18 @@ const styles = StyleSheet.create({
     },
 
     editButton: {
-        borderWidth: 1,
-        borderColor: colors.text,
-        borderStyle: "solid",
+        backgroundColor: colors.primary,
         borderRadius: 8,
-        width: "50%",
-        paddingVertical: "2%"
+        width: "45%",
+        paddingVertical: "2%",
+        alignItems: "center",
     },
 
     edit: {
         textAlign: "center",
-        color: colors.text,
+        color: "white",
+        fontWeight: "bold",
+        fontSize: 13,
     },
 
     aboutContainer: {

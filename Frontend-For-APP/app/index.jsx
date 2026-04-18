@@ -20,17 +20,33 @@ const APP_ICON_SIZE = 120;
 const ICON_BORDER_RADIUS = 24;
 const FORM_MAX_WIDTH = 400;
 
+const validateEmail = (email) => {
+  if (!email.trim()) return "Email is required";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "Invalid email format";
+  return "";
+};
+
+const validatePassword = (password) => {
+  if (!password) return "Password is required";
+  return "";
+};
+
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
 
   const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
-      Alert.alert("Missing Info", "Please enter your email and password.");
-      return;
-    }
+    const emailErr = validateEmail(email);
+    const passwordErr = validatePassword(password);
+
+    setEmailError(emailErr);
+    setPasswordError(passwordErr);
+
+    if (emailErr || passwordErr) return;
 
     try {
       setLoading(true);
@@ -78,27 +94,34 @@ export default function LoginScreen() {
               Email
             </Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, emailError && styles.inputError]}
               placeholder="Enter your email"
               placeholderTextColor={colors.textTertiary}
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(text) => {
+                setEmail(text);
+                if (emailError) setEmailError("");
+              }}
               autoCapitalize="none"
               keyboardType="email-address"
             />
+            {emailError && <Text style={styles.errorText}>{emailError}</Text>}
           </View>
 
           <View style={styles.inputContainer}>
             <Text style={styles.label}>
               Password
             </Text>
-            <View style={styles.passwordContainer}>
+            <View style={[styles.passwordContainer, passwordError && styles.inputError]}>
               <TextInput
                 style={styles.passwordInput}
                 placeholder="Enter your password"
                 placeholderTextColor={colors.textTertiary}
                 value={password}
-                onChangeText={setPassword}
+                onChangeText={(text) => {
+                  setPassword(text);
+                  if (passwordError) setPasswordError("");
+                }}
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
               />
@@ -110,6 +133,7 @@ export default function LoginScreen() {
                 />
               </Pressable>
             </View>
+            {passwordError && <Text style={styles.errorText}>{passwordError}</Text>}
           </View>
 
           <Pressable
@@ -257,5 +281,13 @@ const styles = StyleSheet.create({
   adminButtonText: {
     color: colors.textTertiary,
     fontSize: typography.bodySmall.fontSize,
+  },
+  inputError: {
+    borderColor: colors.error,
+  },
+  errorText: {
+    color: colors.error,
+    fontSize: typography.caption.fontSize,
+    marginTop: spacing.xs,
   },
 });

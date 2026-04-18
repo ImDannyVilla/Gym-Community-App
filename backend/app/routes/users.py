@@ -54,16 +54,25 @@ async def update_my_profile(
         db.add(profile)
 
     # Update fields
-    if profile_data.full_name is not None:
-        profile.full_name = profile_data.full_name
-    if profile_data.gym_name is not None:
-        profile.gym_name = profile_data.gym_name
+    if profile_data.name is not None:
+        profile.name = profile_data.name
     if profile_data.gym_level is not None:
         profile.gym_level = profile_data.gym_level
-    if profile_data.bio is not None:
-        profile.bio = profile_data.bio
+    if profile_data.about is not None:
+        profile.about = profile_data.about
     if profile_data.avatar_url is not None:
         profile.avatar_url = profile_data.avatar_url
+    if profile_data.weight is not None:
+        profile.weight = profile_data.weight
+    if profile_data.last_workout is not None:
+        profile.last_workout = profile_data.last_workout
+    if profile_data.current_workout is not None:
+        profile.current_workout = profile_data.current_workout
+        
+    # Also update username if provided
+    if profile_data.username is not None and profile_data.username != current_user.username:
+        # NOTE: Ideally check if username exists first.
+        current_user.username = profile_data.username
 
     await db.commit()
     await db.refresh(profile)

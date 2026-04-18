@@ -16,18 +16,82 @@ import ScreenContainer from "./_components/ScreenContainer";
 
 const FORM_MAX_WIDTH = 400;
 
+const passwordRequirements = [
+  { label: "At least 8 characters", test: (p) => p.length >= 8 },
+  { label: "One uppercase letter", test: (p) => /[A-Z]/.test(p) },
+  { label: "One lowercase letter", test: (p) => /[a-z]/.test(p) },
+  { label: "One number", test: (p) => /[0-9]/.test(p) },
+  { label: "One symbol (!@#$%)", test: (p) => /[!@#$%^&*(),.?":{}|<>]/.test(p) },
+];
+
+const getPasswordStrength = (password) => {
+  const metCount = passwordRequirements.filter((req) => req.test(password)).length;
+  if (metCount <= 1) return { level: "Weak", color: colors.error };
+  if (metCount <= 3) return { level: "Medium", color: colors.warning };
+  return { level: "Strong", color: colors.success };
+};
+
+const validateEmail = (email) => {
+  if (!email.trim()) return "Email is required";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "Invalid email format";
+  return "";
+};
+
+const validateUsername = (username) => {
+  if (!username.trim()) return "Username is required";
+  if (username.length < 3) return "Username must be at least 3 characters";
+  if (username.length > 20) return "Username must be less than 20 characters";
+  return "";
+};
+
+const validatePassword = (password) => {
+  if (!password) return "Password is required";
+  const metCount = passwordRequirements.filter((req) => req.test(password)).length;
+  if (metCount < 5) return "Password does not meet all requirements";
+  return "";
+};
+
 export default function SignUp() {
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [emailError, setEmailError] = useState("");
+  const [usernameError, setUsernameError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+
+  const passwordStrength = getPasswordStrength(password);
 
   const handleCreateAccount = async () => {
-    if (!email.trim() || !username.trim() || !password.trim()) {
-      Alert.alert("Missing Info", "Please enter your email, username, and password.");
+    const emailErr = validateEmail(email);
+    const usernameErr = validateUsername(username);
+    const passwordErr = validatePassword(password);
+
+    setEmailError(emailErr);
+    setUsernameError(usernameErr);
+    setPasswordError(passwordErr);
+
+    if (emailErr || usernameErr || passwordErr) return;
+
+    // Mariano's code starts here -----------------------------------------
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    
+    if (!emailRegex.test(email.trim())) {
+      Alert.alert("Invalid Email", "Please enter a valid email address.");
       return;
     }
+
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9])[^\s]{8,}$/;
+    if (!passwordRegex.test(password)) {
+      Alert.alert(
+        "Invalid Password",
+        "Password must be at least 8 characters and include uppercase, lowercase, number, special character, and no spaces."
+      );
+      return;
+    }
+    
+    // Mariano's code ends here --------------------------------------------
 
     try {
       setLoading(true);
@@ -61,45 +125,50 @@ export default function SignUp() {
 
         <View style={styles.form}>
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>
-              Email
-            </Text>
+            <Text style={styles.label}>Email</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, emailError && styles.inputError]}
               placeholder="Enter your email"
               placeholderTextColor={colors.textTertiary}
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(text) => {
+                setEmail(text);
+                if (emailError) setEmailError("");
+              }}
               autoCapitalize="none"
               keyboardType="email-address"
             />
+            {emailError && <Text style={styles.errorText}>{emailError}</Text>}
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>
-              Username
-            </Text>
+            <Text style={styles.label}>Username</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, usernameError && styles.inputError]}
               placeholder="Enter your username"
               placeholderTextColor={colors.textTertiary}
               value={username}
-              onChangeText={setUsername}
+              onChangeText={(text) => {
+                setUsername(text);
+                if (usernameError) setUsernameError("");
+              }}
               autoCapitalize="none"
             />
+            {usernameError && <Text style={styles.errorText}>{usernameError}</Text>}
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>
-              Password
-            </Text>
-            <View style={styles.passwordContainer}>
+            <Text style={styles.label}>Password</Text>
+            <View style={[styles.passwordContainer, passwordError && styles.inputError]}>
               <TextInput
                 style={styles.passwordInput}
                 placeholder="Enter your password"
                 placeholderTextColor={colors.textTertiary}
                 value={password}
-                onChangeText={setPassword}
+                onChangeText={(text) => {
+                  setPassword(text);
+                  if (passwordError) setPasswordError("");
+                }}
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
               />
@@ -111,6 +180,46 @@ export default function SignUp() {
                 />
               </Pressable>
             </View>
+            {passwordError && <Text style={styles.errorText}>{passwordError}</Text>}
+            
+            {password.length > 0 && (
+              <View style={styles.passwordSection}>
+                <View style={styles.strengthBar}>
+                  <View
+                    style={[
+                      styles.strengthFill,
+                      { backgroundColor: passwordStrength.color, width: passwordStrength.level === "Weak" ? "33%" : passwordStrength.level === "Medium" ? "66%" : "100%" },
+                    ]}
+                  />
+                </View>
+                <Text style={[styles.strengthText, { color: passwordStrength.color }]}>
+                  {passwordStrength.level}
+                </Text>
+
+                <View style={styles.requirementsList}>
+                  {passwordRequirements.map((req, index) => {
+                    const met = req.test(password);
+                    return (
+                      <View key={index} style={styles.requirementItem}>
+                        <Ionicons
+                          name={met ? "checkmark-circle" : "close-circle"}
+                          size={14}
+                          color={met ? colors.success : colors.error}
+                        />
+                        <Text
+                          style={[
+                            styles.requirementText,
+                            { color: met ? colors.success : colors.textTertiary },
+                          ]}
+                        >
+                          {req.label}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
           </View>
 
           <Pressable
@@ -227,5 +336,45 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: typography.bodySmall.fontSize,
     fontWeight: "600",
+  },
+  inputError: {
+    borderColor: colors.error,
+  },
+  errorText: {
+    color: colors.error,
+    fontSize: typography.caption.fontSize,
+    marginTop: spacing.xs,
+  },
+  passwordSection: {
+    marginTop: spacing.sm,
+  },
+  strengthBar: {
+    height: 4,
+    backgroundColor: colors.surface,
+    borderRadius: 2,
+    overflow: "hidden",
+    marginBottom: spacing.xs,
+  },
+  strengthFill: {
+    height: "100%",
+    borderRadius: 2,
+  },
+  strengthText: {
+    fontSize: typography.caption.fontSize,
+    fontWeight: "600",
+    marginBottom: spacing.sm,
+  },
+  requirementsList: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+  },
+  requirementItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  requirementText: {
+    fontSize: 12,
   },
 });

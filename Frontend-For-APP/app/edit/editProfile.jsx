@@ -1,20 +1,22 @@
-import {View, Text, TextInput, StyleSheet, Pressable, ScrollView} from "react-native"
+import {View, Text, TextInput, StyleSheet, Pressable, ScrollView, Alert} from "react-native"
 import {useState} from "react"
 import {SafeAreaProvider, SafeAreaView} from "react-native-safe-area-context"
 import {MaterialCommunityIcons} from "@expo/vector-icons"
 import {useLocalSearchParams, useRouter} from "expo-router"
+import {getToken} from "../../lib/tokenStorage"
 import { colors } from "../../lib/theme"
+import { API_BASE_URL } from "../../lib/api"
 
 export default function editProfile()
 {
     const router = useRouter();
 
-    const {username, about, weight, calorieIntake, lastWorkout, currentWorkout} = useLocalSearchParams();
+    const {name, username, about, weight, lastWorkout, currentWorkout} = useLocalSearchParams();
 
+    const [newName, setNewName] = useState(name || "");
     const [newUsername, setNewUsername] = useState(username || "");
     const [newAbout, setNewAbout] = useState(about || "");
     const [newWeight, setNewWeight] = useState(weight || "");
-    const [newCalorieIntake, setNewCalorieIntake] = useState(calorieIntake || "");
     const [newLastWorkout, setNewLastWorkout] = useState(lastWorkout || "");
     const [newCurrentWorkout, setNewCurrentWorkout] = useState(currentWorkout || "");
 
@@ -24,35 +26,62 @@ export default function editProfile()
     {
         try
         {
+            // Extract integer from weight string (e.g. "185 lbs" -> 185)
+            const numericWeight = newWeight ? parseInt(newWeight.replace(/[^0-9]/g, ''), 10) : null;
+
             const payload = {
+                name: newName,
                 username: newUsername, 
                 about: newAbout,
-                weight: newWeight,
-                calorieIntake: newCalorieIntake,
-                lastWorkout: newLastWorkout,
-                currentWorkout: newCurrentWorkout
+                weight: isNaN(numericWeight) ? null : numericWeight,
+                last_workout: newLastWorkout,
+                current_workout: newCurrentWorkout
             };
 
-            const response = await fetch("The URL for the backend", {
+            const token = await getToken();
+            console.log("Token retrieved:", token);
+
+            const response = await fetch(`${API_BASE_URL}/users/me/profile`, {
                 method: "PUT", 
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
                 body: JSON.stringify(payload)
             });
             
             if(response.ok)
             {
+                // Update frontend state variables that are passed back (using the original camelCase formats)
+                const returnPayload = {
+                    name: newName,
+                    username: newUsername, 
+                    about: newAbout,
+                    weight: newWeight, // Keep string for UI
+                    lastWorkout: newLastWorkout,
+                    currentWorkout: newCurrentWorkout
+                };
+
                 router.navigate({
-                    pathname: "/_profileCom/profile", 
-                    params: payload
+                    pathname: "/profile", 
+                    params: returnPayload
                 });
             }
             else
             {
-                console.log("Server error");
+                const errorData = await response.text();
+                console.log("Server error", errorData);
+                if(response.status === 401 || response.status === 403) {
+                    Alert.alert("Unauthorized", "Please log in again to save your profile.");
+                } else {
+                    Alert.alert("Save Failed", "There was an error saving your profile.");
+                }
             }
         }
         catch(error)
         {
-            console.log("Failed to reach server");
+            console.log("Failed to reach server", error);
+            Alert.alert("Network Error", "Could not connect to the server. Make sure it is running.");
         }
     };
 
@@ -70,6 +99,15 @@ export default function editProfile()
                 </View>
 
                 <ScrollView contentContainerStyle={styles.scrollContainer}>
+                    <Text style={styles.text}>Name:</Text>
+                    <TextInput 
+                        style={styles.input} 
+                        onChangeText={setNewName}
+                        value={newName} 
+                        placeholder="e.g. Angel"
+                        placeholderTextColor={colors.textSecondary}
+                    />
+
                     <Text style={styles.text}>Username:</Text>
                     <TextInput 
                         style={styles.input} 
@@ -96,15 +134,6 @@ export default function editProfile()
                         onChangeText={setNewWeight}
                         value={newWeight} 
                         placeholder="e.g. 185 lbs"
-                        placeholderTextColor={colors.textSecondary}
-                    />
-
-                    <Text style={styles.text}>Daily Calorie Intake:</Text>
-                    <TextInput 
-                        style={styles.input} 
-                        onChangeText={setNewCalorieIntake}
-                        value={newCalorieIntake} 
-                        placeholder="e.g. 2,500 kcal"
                         placeholderTextColor={colors.textSecondary}
                     />
 

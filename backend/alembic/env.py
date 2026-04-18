@@ -15,6 +15,8 @@ database_url = os.getenv("DATABASE_URL")
 if database_url and database_url.startswith("postgresql+asyncpg://"):
     # Replace asyncpg with psycopg2 for sync operations
     database_url = database_url.replace("postgresql+asyncpg://", "postgresql://")
+elif database_url and database_url.startswith("sqlite+aiosqlite:///"):
+    database_url = database_url.replace("sqlite+aiosqlite:///", "sqlite:///")
 
 config.set_main_option("sqlalchemy.url", database_url)
 
