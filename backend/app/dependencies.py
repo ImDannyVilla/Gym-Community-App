@@ -1,16 +1,15 @@
 from typing import Annotated
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import ALGORITHM, SECRET_KEY
+from app.core.supabase_client import supabase
 from app.models.user import User
 from app.db import get_db
 
-# This tells FastAPI where to look for the token (the /auth/login route)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+
 
 async def get_current_user(
         token: Annotated[str, Depends(oauth2_scheme)],
@@ -21,31 +20,26 @@ async def get_current_user(
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+
     try:
-        print(f"RAW TOKEN RECEIVED: {token}") # Is it null?
-        
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        print(f"DECODED PAYLOAD: {payload}") # What is actually inside 'sub'?
-        
-        email: str = payload.get("sub")
-        if email is None:
-            print("FAILED: 'sub' claim is missing from payload")
+        user_response = supabase.auth.get_user(token)
+
+        if not user_response.user:
             raise credentials_exception
-            
-    except JWTError as e:
-        print(f"JWT DECODE FAILED: {e}") # Why did it fail?
+
+        result = await db.execute(
+            select(User).where(User.id == user_response.user.id)
+        )
+        user = result.scalars().first()
+
+        if user is None:
+            raise credentials_exception
+
+        return user
+
+    except Exception:
         raise credentials_exception
 
-    # Find the user in the database
-    result = await db.execute(select(User).where(User.email == email))
-    user = result.scalars().first()
 
-    if user is None:
-        raise credentials_exception
-    return user
-
-#Type alias for the database session
-AsyncSessionDep = Annotated[AsyncSession, Depends(get_db)] #async def get_workouts(db: AsyncSessionDep):
-
-# Type alias for easy use in routers
+AsyncSessionDep = Annotated[AsyncSession, Depends(get_db)]
 CurrentUser = Annotated[User, Depends(get_current_user)]
