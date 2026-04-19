@@ -5,8 +5,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import asyncio
 from app.db import async_session_maker
-from app.models.workout import Workout
-from app.models.exercise import Exercise
+from app.models.seededWorkout import Workout
+from app.models.exerciseLibrary import Exercise
 
 
 async def seed_chest_triceps():

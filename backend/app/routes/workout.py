@@ -5,8 +5,8 @@ from sqlalchemy.orm import selectinload
 from typing import List
 
 from app.db import get_db
-from app.models.workout import Workout
-from app.models.exercise import Exercise
+from app.models.seededWorkout import Workout
+from app.models.exerciseLibrary import Exercise
 from app.schemas.workout import WorkoutResponse, WorkoutSummary
 from app.dependencies import AsyncSessionDep
 
