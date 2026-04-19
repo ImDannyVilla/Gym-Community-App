@@ -127,6 +127,7 @@ class Token(BaseModel):
     """
     access_token: str
     token_type: str
+    is_onboarded: bool
 
 class UserUpdate(BaseModel):
     username: str | None = None

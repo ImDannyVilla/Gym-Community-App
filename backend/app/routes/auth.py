@@ -55,12 +55,8 @@ async def register(
 
         await db.commit()
         await db.refresh(new_user)
+        return {"message": "Registration successful. Please check your email to confirm your account."}
 
-        # return token so user can proceed to onboarding
-        return Token(
-            access_token=auth_response.session.access_token,
-            token_type="bearer"
-        )
     except HTTPException:
         raise
     except Exception as e:
@@ -69,7 +65,6 @@ async def register(
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Registration failed: {str(e)}")
-
 
 @router.post("/onboarding", response_model=UserwithProfile)
 async def complete_onboarding(
@@ -82,20 +77,7 @@ async def complete_onboarding(
     Requires authentication (user must have registered first).
     """
     try:
-        # Check if username is already taken
-        result = await db.execute(
-            select(User).where(User.username == onboarding_data.username)
-        )
-        if result.scalars().first():
-            raise HTTPException(
-                status_code=400,
-                detail="Username already taken"
-            )
-
-        # Update user with username
-        current_user.username = onboarding_data.username
-
-        # Get or create profile
+        # Get or create profile FIRST
         result = await db.execute(
             select(UserProfile).where(UserProfile.user_id == current_user.id)
         )
@@ -105,7 +87,21 @@ async def complete_onboarding(
             profile = UserProfile(user_id=current_user.id)
             db.add(profile)
 
-        # Update profile fields
+        # checking if username is already taken
+        result = await db.execute(
+            select(UserProfile).where(
+                UserProfile.user_name == onboarding_data.username,
+                UserProfile.user_id != current_user.id
+            )
+        )
+        if result.scalars().first():
+            raise HTTPException(
+                status_code=400,
+                detail="Username already taken"
+            )
+
+        # Update profile fields (including username)
+        profile.user_name = onboarding_data.username
         if onboarding_data.full_name:
             profile.full_name = onboarding_data.full_name
         if onboarding_data.gym_level:
@@ -114,9 +110,9 @@ async def complete_onboarding(
             profile.avatar_url = onboarding_data.avatar_url
 
         await db.commit()
-        await db.refresh(current_user)
+        await db.refresh(profile)
 
-        # Return user with profile
+        # return user with profile
         result = await db.execute(
             select(User)
             .options(selectinload(User.profile))
@@ -138,7 +134,6 @@ async def complete_onboarding(
             detail=f"Onboarding failed: {str(e)}"
         )
 
-
 @router.post("/login", response_model=Token)
 async def login(credentials: UserLogin, db: AsyncSessionDep):
     try:
@@ -150,9 +145,16 @@ async def login(credentials: UserLogin, db: AsyncSessionDep):
         if not auth_response.session:
             raise HTTPException(status_code=401, detail="Invalid credentials")
 
+        result = await db.execute(
+            select(UserProfile).join(User).where(User.id == credentials.email)
+        )
+        profile = result.scalars().first()
+        is_onboarded = profile is not None and profile.user_name is not None
+
         return Token(
             access_token=auth_response.session.access_token,
-            token_type="bearer"
+            token_type="bearer",
+            is_onboarded=is_onboarded
         )
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid credentials")
