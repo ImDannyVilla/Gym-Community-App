@@ -1,8 +1,8 @@
 """initial schema with supabase auth and uuid
 
-Revision ID: c217eaf89e9e
+Revision ID: a4d4028918c5
 Revises: 
-Create Date: 2026-04-18 16:06:14.136649
+Create Date: 2026-04-18 17:25:49.207348
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'c217eaf89e9e'
+revision = 'a4d4028918c5'
 down_revision = None
 branch_labels = None
 depends_on = None

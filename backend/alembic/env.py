@@ -28,12 +28,10 @@ if config.config_file_name is not None:
 
 # Import your Base and all models
 from app.db import Base
-
-# Import ALL models so Alembic can detect them
 from app.models.user import User, UserProfile, Follow
 from app.models.workout import Workout
 from app.models.exercise import Exercise
-from app.models.routine import Routine, RoutineExercise 
+from app.models.routine import Routine, RoutineExercise
 from app.models.workout_log import WorkoutLog, WorkoutLogExercise, WorkoutLogSet
 
 # Set target metadata for autogenerate
