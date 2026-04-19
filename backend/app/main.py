@@ -8,11 +8,8 @@ from contextlib import asynccontextmanager
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # This runs when the server starts
-    async with engine.begin() as conn: #starts db connection
-        await conn.run_sync(Base.metadata.create_all) #creates tabeles in Supabase if not created already from models.py
-    yield # This tells FastAPI that setup is done, start the server, handle user requests, etc.
-
+    # Tables are managed by Alembic migrations, not create_all
+    yield
 gym_app = FastAPI(lifespan=lifespan)
 
 origins = [
