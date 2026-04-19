@@ -1,8 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from .db import engine, Base
-from app.routes import auth, workout, users, programs
+from app.routes import auth, workout, users
 from typing import List
 from contextlib import asynccontextmanager
 
