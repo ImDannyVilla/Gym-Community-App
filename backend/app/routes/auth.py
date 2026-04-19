@@ -133,21 +133,24 @@ async def complete_onboarding(
             status_code=500,
             detail=f"Onboarding failed: {str(e)}"
         )
+from fastapi.security import OAuth2PasswordRequestForm
+from fastapi import Depends
 
 @router.post("/login", response_model=Token)
-async def login(credentials: UserLogin, db: AsyncSessionDep):
+async def login(credentials: OAuth2PasswordRequestForm = Depends(), db: AsyncSessionDep = None):
     try:
         auth_response = supabase.auth.sign_in_with_password({
-            "email": credentials.email,
+            "email": credentials.username,
             "password": credentials.password
         })
 
         if not auth_response.session:
             raise HTTPException(status_code=401, detail="Invalid credentials")
+
         user_id = UUID(auth_response.user.id)
 
         result = await db.execute(
-            select(UserProfile).join(User).where(UserProfile.id == user_id)
+            select(UserProfile).where(UserProfile.user_id == user_id)
         )
         profile = result.scalars().first()
         is_onboarded = profile is not None and profile.user_name is not None
@@ -157,9 +160,13 @@ async def login(credentials: UserLogin, db: AsyncSessionDep):
             token_type="bearer",
             is_onboarded=is_onboarded
         )
-    except Exception:
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Login error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=401, detail="Invalid credentials")
-
 @router.post("/request-password-reset")
 async def request_password_reset(data: PasswordResetRequest):
     try:

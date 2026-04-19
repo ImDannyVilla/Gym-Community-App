@@ -92,7 +92,6 @@ class UserResponse(BaseModel):
     """
     id: UUID
     email: EmailStr
-    username: str
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -101,7 +100,7 @@ class ProfileResponse(BaseModel):
     """"profile data"""
     id: UUID
     full_name: Optional[str]
-    gym_name: Optional[str]
+    #gym_name: Optional[str]
     gym_level: Optional[str]
     bio: Optional[str]
     avatar_url: Optional[str]
@@ -114,7 +113,6 @@ class UserwithProfile(BaseModel):
     """the user with profile data"""
     id: UUID
     email: EmailStr
-    username: str
     created_at: datetime
     profile: Optional[ProfileResponse]
 
