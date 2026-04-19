@@ -144,9 +144,10 @@ async def login(credentials: UserLogin, db: AsyncSessionDep):
 
         if not auth_response.session:
             raise HTTPException(status_code=401, detail="Invalid credentials")
+        user_id = UUID(auth_response.user.id)
 
         result = await db.execute(
-            select(UserProfile).join(User).where(User.id == credentials.email)
+            select(UserProfile).join(User).where(UserProfile.id == user_id)
         )
         profile = result.scalars().first()
         is_onboarded = profile is not None and profile.user_name is not None
