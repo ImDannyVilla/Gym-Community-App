@@ -1,81 +1,208 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_
-from app.core.security import get_password_hash, verify_password, create_access_token
-from app.db import get_db
+from fastapi import APIRouter, Depends, HTTPException, status, Header
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
+
 from app.models.user import User, UserProfile
-from app.schemas.user import UserRegister, UserLogin, Token, UserResponse
-from app.dependencies import AsyncSessionDep
+from app.schemas.user import (
+    UserRegister,
+    UserLogin,
+    Token,
+    PasswordReset,
+    PasswordResetRequest,
+    ResetConfirmation,
+    OnboardingData,
+    UserwithProfile
+)
+from app.dependencies import AsyncSessionDep, CurrentUser
+from app.core.supabase_client import supabase, supabase_admin
+from uuid import UUID
+
 
 router = APIRouter(prefix="/auth", tags=["auth"]) #all routes start with /auth; in API they are grouped under auth
 
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+
+@router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register(
         user_data: UserRegister,
         db: AsyncSessionDep
 ):
-    #check if email is already taken
-    result = await db.execute(
-        select(User).where(User.email == user_data.email)
-    )
-    if result.scalars().first():
-        raise HTTPException(
-            status_code=400,
-            detail="Email already registered"
+    try:
+        # create user in supabase auth
+        auth_response = supabase.auth.sign_up({
+            "email": user_data.email,
+            "password": user_data.password,
+        })
+
+        if not auth_response.user:
+            raise HTTPException(status_code=400, detail="Registration failed")
+
+        user_id = UUID(auth_response.user.id)
+
+        # save user to User table
+        new_user = User(
+            id=user_id,
+            email=user_data.email,
+            is_active=True,
         )
-    #Check is username is already taken
-    result = await db.execute(
-        select(User).where(User.username == user_data.username)
-    )
+        db.add(new_user)
+        await db.flush()
 
-    if result.scalars().first():
-        raise HTTPException(
-            status_code=400, detail="Username already registered"
+        # Create the empty profile
+        new_profile = UserProfile(
+            user_id=new_user.id,
         )
+        db.add(new_profile)
 
-    hashed_password = get_password_hash(user_data.password)
+        await db.commit()
+        await db.refresh(new_user)
+        return {"message": "Registration successful. Please check your email to confirm your account."}
 
-    #save user to db
-    new_user = User(
-        email=user_data.email,
-        username=user_data.username,
-        hashed_password=hashed_password
-    )
-    db.add(new_user)
-    await db.flush()
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        print(f"Registration Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Registration failed: {str(e)}")
 
-    new_profile = UserProfile(
-        user_id = new_user.id,
-    )
-    db.add(new_profile)
-
-    await db.commit() #SQLAlchemy puts that user object into a Session where it stages the changes to the database.
-    await db.refresh(new_user)
-
-    return new_user
-
-@router.post("/login", response_model=Token)
-async def login(
+@router.post("/onboarding", response_model=UserwithProfile)
+async def complete_onboarding(
+        onboarding_data: OnboardingData,
         db: AsyncSessionDep,
-        form_data: OAuth2PasswordRequestForm = Depends()
+        current_user: CurrentUser
 ):
-    result = await db.execute(
-        select(User).where(
-            or_(
-                User.username == form_data.username,
-                User.email == form_data.username
+    """
+    Complete user onboarding after registration.
+    Requires authentication (user must have registered first).
+    """
+    try:
+        # Get or create profile FIRST
+        result = await db.execute(
+            select(UserProfile).where(UserProfile.user_id == current_user.id)
+        )
+        profile = result.scalars().first()
+
+        if not profile:
+            profile = UserProfile(user_id=current_user.id)
+            db.add(profile)
+
+        # checking if username is already taken
+        result = await db.execute(
+            select(UserProfile).where(
+                UserProfile.user_name == onboarding_data.username,
+                UserProfile.user_id != current_user.id
             )
         )
-    )
-    user = result.scalars().first() #.scalars() unwraps the database result so you get the actual User object instead of a wrapped Row object.
+        if result.scalars().first():
+            raise HTTPException(
+                status_code=400,
+                detail="Username already taken"
+            )
 
-    if not user or not verify_password(form_data.password, user.hashed_password):
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid email or password",
-            headers={"WWW-Authenticate": "Bearer"},
+        # Update profile fields (including username)
+        profile.user_name = onboarding_data.username
+        if onboarding_data.full_name:
+            profile.full_name = onboarding_data.full_name
+        if onboarding_data.gym_level:
+            profile.gym_level = onboarding_data.gym_level
+        if onboarding_data.avatar_url:
+            profile.avatar_url = onboarding_data.avatar_url
+
+        await db.commit()
+        await db.refresh(profile)
+
+        # return user with profile
+        result = await db.execute(
+            select(User)
+            .options(selectinload(User.profile))
+            .where(User.id == current_user.id)
         )
+        user = result.scalars().first()
 
-    token = create_access_token(data={"sub": user.email})
-    return Token(access_token=token, token_type="bearer")
+        return user
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        print(f"Onboarding Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Onboarding failed: {str(e)}"
+        )
+from fastapi.security import OAuth2PasswordRequestForm
+from fastapi import Depends
+
+@router.post("/login", response_model=Token)
+async def login(credentials: OAuth2PasswordRequestForm = Depends(), db: AsyncSessionDep = None):
+    try:
+        auth_response = supabase.auth.sign_in_with_password({
+            "email": credentials.username,
+            "password": credentials.password
+        })
+
+        if not auth_response.session:
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+
+        user_id = UUID(auth_response.user.id)
+
+        result = await db.execute(
+            select(UserProfile).where(UserProfile.user_id == user_id)
+        )
+        profile = result.scalars().first()
+        is_onboarded = profile is not None and profile.user_name is not None
+
+        return Token(
+            access_token=auth_response.session.access_token,
+            token_type="bearer",
+            is_onboarded=is_onboarded
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Login error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+@router.post("/request-password-reset")
+async def request_password_reset(data: PasswordResetRequest):
+    try:
+        supabase.auth.reset_password_for_email(
+            email= data.email,
+            options={
+                "redirect_to": "gym_app://reset-password"
+            }
+        )
+        return {"message": "If the email exists, a reset link will be sent."}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/update-password")
+async def update_password(
+    password_data: PasswordReset,
+    authorization: str = Header(...)
+):
+    try:
+        access_token = authorization.replace("Bearer ", "").strip()
+        supabase.auth.set_session(access_token, refresh_token=None)
+        supabase.auth.update_user({"password": password_data.new_password})
+        return {"message": "Password successfully updated"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/resend-confirmation")
+async def resend_confirmation(data: ResetConfirmation):
+    try:
+        supabase.auth.resend({
+            "type": "signup",
+            "email": data.email,
+            "options": {
+                "email_redirect_to": "gym_app://resend-confirmation"
+            }
+        })
+        return {"message": "Confirmation email sent successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))

@@ -1,11 +1,15 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+<<<<<<< HEAD
 from pydantic import BaseModel
 from .db import engine, Base, async_session_maker
 from app.routes import auth, workout, users, programs
 from sqlalchemy import select
 from app.models.workout import Workout
 from app.models.exercise import Exercise
+=======
+from app.routes import auth, workout, users, exercise, workout_log, routine
+>>>>>>> 1a8403eae355262c2b0231f76289f6fc81dc8abd
 from typing import List
 from contextlib import asynccontextmanager
 
@@ -227,6 +231,7 @@ async def seed_workouts_on_startup():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+<<<<<<< HEAD
     # This runs when the server starts
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -239,6 +244,10 @@ async def lifespan(app: FastAPI):
     
     yield
 
+=======
+    # Tables are managed by Alembic migrations, not create_all
+    yield
+>>>>>>> 1a8403eae355262c2b0231f76289f6fc81dc8abd
 gym_app = FastAPI(lifespan=lifespan)
 
 origins = [
@@ -261,7 +270,9 @@ gym_app.include_router(auth.router)
 gym_app.include_router(workout.router)
 #gym_app.include_router(programs.router)
 gym_app.include_router(users.router)
-
+gym_app.include_router(exercise.router)
+gym_app.include_router(workout_log.router)
+gym_app.include_router(routine.router)
 @gym_app.get("/health")
 def health_check():
     return {"status": "healthy"}

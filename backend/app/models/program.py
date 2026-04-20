@@ -3,7 +3,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from ..db import Base
 
-
+"""
 class Program(Base):
     __tablename__ = "programs"
 
@@ -28,3 +28,4 @@ class ProgramDay(Base):
 
     program = relationship("Program", back_populates="program_days")
     workout = relationship("Workout")
+"""

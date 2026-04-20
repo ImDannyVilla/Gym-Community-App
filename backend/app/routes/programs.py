@@ -1,3 +1,5 @@
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -28,7 +30,6 @@ async def get_program_detail(
         program_id: int,
         db: AsyncSessionDep
 ):
-    """
     here you get program with full schedule.
 
     Returns:
@@ -50,7 +51,6 @@ async def get_program_detail(
             }
         ]
     }
-    """
     result = await db.execute(
         select(Program).where(Program.id == program_id)
     )
@@ -70,10 +70,7 @@ async def get_programs_by_difficulty(
         difficulty: str,
         db: AsyncSessionDep
 ):
-    """
-    get the programs filtered by difficulty.
-    the Options are: Beginner, Intermediate, Advanced (see models.Program)
-    """
+
     result = await db.execute(
         select(Program)
         .where(Program.difficulty == difficulty)
@@ -83,3 +80,5 @@ async def get_programs_by_difficulty(
     programs = result.scalars().all()
 
     return programs
+
+"""
