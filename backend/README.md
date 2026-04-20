@@ -1,4 +1,4 @@
-# Gym Community App - Backend API
+# Gym Community App - Backend API Doc
 
 **Live API:** https://gym-community-app.onrender.com
 
@@ -7,7 +7,6 @@
 **Health Check:** https://gym-community-app.onrender.com/health
 
 ---
-# Gym Community App - API Documentation
 
 This documentation provides a complete reference for all backend API endpoints, including request/response schemas, authentication requirements, and the application flow.
 
