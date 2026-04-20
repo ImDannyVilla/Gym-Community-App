@@ -43,12 +43,12 @@ class OnboardingData(BaseModel):
     """
     Profile data collected during onboarding (step 2).
     """
-    username: str
+    user_name: str
     full_name: Optional[str] = None
     gym_level: Optional[str] = None  # "Beginner", "Intermediate", "Advanced"
     avatar_url: Optional[str] = None
 
-    @field_validator("username")
+    @field_validator("user_name")
     def username_length(cls, v):
         if len(v) < 3:
             raise ValueError("Username must be at least 3 characters long")
@@ -76,7 +76,7 @@ class UserLogin(BaseModel):
 
 class ProfileUpdate(BaseModel):
     full_name: Optional[str] = None
-    username: Optional[str] = None
+    user_name: Optional[str] = None
     #gym_name: Optional[str] = None
     gym_level: Optional[str] = None
     bio: Optional[str] = None
@@ -97,15 +97,14 @@ class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 class ProfileResponse(BaseModel):
-    """"profile data"""
     id: UUID
-    full_name: Optional[str]
-    #gym_name: Optional[str]
-    gym_level: Optional[str]
-    bio: Optional[str]
-    avatar_url: Optional[str]
-    followers_count: int
-    following_count: int
+    full_name: Optional[str] = None
+    user_name: Optional[str] = None
+    gym_level: Optional[str] = None
+    bio: Optional[str] = None
+    avatar_url: Optional[str] = None
+    followers_count: int = 0
+    following_count: int = 0
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -114,7 +113,7 @@ class UserwithProfile(BaseModel):
     id: UUID
     email: EmailStr
     created_at: datetime
-    profile: Optional[ProfileResponse]
+    profile: Optional[ProfileResponse] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -128,10 +127,10 @@ class Token(BaseModel):
     is_onboarded: bool
 
 class UserUpdate(BaseModel):
-    username: str | None = None
+    user_name: str | None = None
     email: EmailStr | None = None
     
-    @field_validator("username")
+    @field_validator("user_name")
     def username_length(cls, v):
         if v is not None:
             if len(v) < 3:

@@ -4,30 +4,35 @@ from sqlalchemy.sql import func
 from ..db import Base
 from typing import Optional, List
 from datetime import datetime
-from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from uuid import UUID, uuid4
+from app.db import GUID
 
 class WorkoutLog(Base):
     """user workout session performed"""
     __tablename__ = "workout_logs"
 
     id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(as_uuid=True),
         primary_key=True,
         default=uuid4,
         index=True
     )
     user_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE")
     )
     routine_id: Mapped[Optional[UUID]] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(as_uuid=True),
         ForeignKey("routines.id", ondelete="SET NULL")
     )
     name: Mapped[str]
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    is_public: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    media_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    media_type: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # "photo" or "video"
+    caption: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     duration: Mapped[Optional[int]]
     exercises: Mapped[List["WorkoutLogExercise"]] = relationship(
@@ -35,32 +40,29 @@ class WorkoutLog(Base):
     )
 
 class WorkoutLogExercise(Base):
-    """many to many relationship between workout logs and exercises"""
+    """Exercise performed during a workout log session"""
     __tablename__ = "workout_log_exercises"
 
-    id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True),
-        primary_key=True,
-        default=uuid4
-    )
+    id: Mapped[UUID] = mapped_column(GUID(as_uuid=True), primary_key=True, default=uuid4)
     workout_log_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(as_uuid=True),
         ForeignKey("workout_logs.id", ondelete="CASCADE")
     )
-    #ExerciseDB reference
-    exercise_id: Mapped[str]  # "0001"
-    name: Mapped[str]  # "Barbell Bench Press"
-    body_part: Mapped[Optional[str]]  # "chest"
-    target: Mapped[Optional[str]]  # "pectorals"
-    gif_url: Mapped[Optional[str]]
+    # ExerciseLibrary reference
+    exercise_id: Mapped[str] = mapped_column(String)
+    name: Mapped[str] = mapped_column(String)
+    category: Mapped[Optional[str]] = mapped_column(String)
+    target: Mapped[Optional[str]] = mapped_column(String)
+    equipment: Mapped[Optional[str]] = mapped_column(String)
+    gif_url: Mapped[Optional[str]] = mapped_column(String)
 
-    order: Mapped[int]
+    order: Mapped[int] = mapped_column(Integer)
 
     workout_logs: Mapped["WorkoutLog"] = relationship(
         "WorkoutLog", back_populates="exercises"
     )
     sets: Mapped[List["WorkoutLogSet"]] = relationship(
-        "WorkoutLogSet", back_populates="workout_log_exercise"
+        "WorkoutLogSet", back_populates="workout_log_exercise", cascade="all, delete-orphan"
     )
 
 class WorkoutLogSet(Base):
@@ -68,12 +70,12 @@ class WorkoutLogSet(Base):
     __tablename__ = "workout_log_sets"
 
     id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(as_uuid=True),
         primary_key=True,
         default=uuid4
     )
     workout_log_exercise_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(as_uuid=True),
         ForeignKey("workout_log_exercises.id")
     )
     set_number: Mapped[int]

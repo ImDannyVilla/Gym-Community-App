@@ -28,6 +28,13 @@ if config.config_file_name is not None:
 
 # Import your Base and all models
 from app.db import Base
+from app.models.user import User, UserProfile, Follow
+from app.models.exerciseLibrary import ExerciseLibrary
+from app.models.seededWorkout import SeededWorkout
+from app.models.routine import Routine, RoutineExercise
+from app.models.workout_log import WorkoutLog, WorkoutLogExercise, WorkoutLogSet
+from app.models.seeded_workout_exercise import SeededWorkoutExercise
+
 # Set target metadata for autogenerate
 target_metadata = Base.metadata
 
