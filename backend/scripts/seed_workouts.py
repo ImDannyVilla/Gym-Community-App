@@ -1,13 +1,9 @@
 import asyncio
-<<<<<<< HEAD
-from sqlalchemy import select
-=======
 from uuid import uuid4
 
 from envs.CarieDetection_NewData.Lib.unittest.test.testmock.support import target
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
->>>>>>> 1a8403eae355262c2b0231f76289f6fc81dc8abd
 from app.db import async_session_maker
 from app.models.seededWorkout import SeededWorkout
 from app.models.seeded_workout_exercise import SeededWorkoutExercise
@@ -237,29 +233,6 @@ async def seed_workouts():
             import traceback
             traceback.print_exc()
             raise
-
-
-async def seed_workouts_on_startup():
-    """Called automatically when backend starts - checks for existing workouts first."""
-    from app.db import async_session_maker
-    from sqlalchemy import select
-    from app.models.workout import Workout
-    
-    # Check if workouts already exist
-    async with async_session_maker() as db:
-        result = await db.execute(
-            select(Workout).where(Workout.is_preset == True)
-        )
-        existing = result.scalars().all()
-        if existing:
-            print(f"✅ {len(existing)} preset workouts already exist, skipping seed.")
-            return
-    
-    print("🌱 Auto-seeding preset workouts...")
-    await seed_chest_triceps()
-    await seed_back_biceps()
-    await seed_legs()
-    print("✅ All workouts seeded!")
 
 
 if __name__ == "__main__":

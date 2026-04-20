@@ -1,6 +1,7 @@
 import React from "react";
 import { View, StyleSheet, ScrollView } from "react-native";
 import { colors, layout } from "../../lib/theme";
+import BottomNav from "../_components/BottomNav";
 import Header from "../_components/Header";
 import PlaceholderCard from "../_dashboardCom/_PlaceholderCard";
 
@@ -16,7 +17,7 @@ const exercises = [
 export default function Arms() {
   return (
     <View style={styles.container}>
-      <Header title="Arms Workouts" showBack={true} />
+      <Header title="Arms Workouts" />
       
       <ScrollView
         style={styles.scrollView}

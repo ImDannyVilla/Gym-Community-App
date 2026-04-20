@@ -52,7 +52,7 @@ const LoginScreen = () => {
 
       if (data.access_token) {
         await saveToken(data.access_token);
-        router.replace("/workouts");
+        router.replace("/dashboard");
       } else {
         Alert.alert("Login failed", "No access token received.");
       }

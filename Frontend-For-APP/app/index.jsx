@@ -28,7 +28,6 @@ const validateEmail = (email) => {
 
 const validatePassword = (password) => {
   if (!password) return "Password is required";
-  if (password.length < 8) return "Password must be at least 8 characters";
   return "";
 };
 
@@ -58,19 +57,12 @@ export default function LoginScreen() {
 
       if (data.access_token) {
         await saveToken(data.access_token);
-        router.replace("/workouts");
+        router.replace("/dashboard");
       } else {
         Alert.alert("Login Failed", "No access token received.");
       }
     } catch (error) {
-      // Display backend error message if available
-      const errorMessage = error.message || "Something went wrong.";
-      Alert.alert("Login Failed", errorMessage);
-      // Set field error for invalid credentials
-      if (errorMessage.includes("Invalid") || errorMessage.includes("password")) {
-        setPasswordError("Invalid email or password");
-        setEmailError("");
-      }
+      Alert.alert("Login Failed", error.message || "Something went wrong.");
     } finally {
       setLoading(false);
     }
@@ -164,7 +156,7 @@ export default function LoginScreen() {
             </Text>
           </Pressable>
 
-          <Pressable style={styles.adminButton} onPress={() => router.replace("/workouts")}>
+          <Pressable style={styles.adminButton} onPress={() => router.replace("/dashboard")}>
             <Text style={styles.adminButtonText}>
               Admin Pass
             </Text>

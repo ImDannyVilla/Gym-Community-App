@@ -8,7 +8,8 @@ export default function BottomNav({ state, descriptors, navigation, active }) {
   if (!state) {
     const navItems = [
       { key: "community", label: "Community", route: "/community", icon: "people" },
-      { key: "workouts", label: "Workouts", route: "/workouts", icon: "barbell" },
+      { key: "dashboard", label: "Dashboard", route: "/dashboard", icon: "home" },
+      { key: "workouts", label: "My Workouts", route: "/workouts", icon: "barbell" },
       { key: "profile", label: "Profile", route: "/profile", icon: "person" },
     ];
 
@@ -71,12 +72,14 @@ export default function BottomNav({ state, descriptors, navigation, active }) {
 
         let iconName = "home";
         if (route.name === "community") iconName = "people";
+        if (route.name === "dashboard") iconName = "home";
         if (route.name === "workouts") iconName = "barbell";
         if (route.name === "profile") iconName = "person";
 
         const mappedLabel = 
-          route.name === "workouts" ? "Workouts" : 
+          route.name === "workouts" ? "My Workouts" : 
           route.name === "community" ? "Community" :
+          route.name === "dashboard" ? "Dashboard" :
           route.name === "profile" ? "Profile" : label;
 
         return (

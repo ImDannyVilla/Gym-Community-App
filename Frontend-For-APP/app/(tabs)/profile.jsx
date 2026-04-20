@@ -8,7 +8,7 @@ import Modal from "react-native-modal";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {Tabs, MaterialTabBar} from "react-native-collapsible-tab-view";
 import Posts from "../posts";
-import Workouts from "./workouts"
+import Workouts from "../workouts"
 import { colors } from "../../lib/theme";
 import { API_BASE_URL } from "../../lib/api";
 
