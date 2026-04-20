@@ -1,7 +1,6 @@
 import React from "react";
 import { View, StyleSheet, ScrollView } from "react-native";
 import { colors, layout } from "../../lib/theme";
-import BottomNav from "../_components/BottomNav";
 import Header from "../_components/Header";
 import PlaceholderCard from "../_dashboardCom/_PlaceholderCard";
 
@@ -17,21 +16,19 @@ const exercises = [
 export default function Chest() {
   return (
     <View style={styles.container}>
-      <Header title="Chest Workouts" />
+      <Header title="Chest Workouts" showBack={true} />
       
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-      >
+>
         <View style={styles.grid}>
           {exercises.map((exercise, index) => (
             <PlaceholderCard key={index} title={exercise} />
           ))}
         </View>
       </ScrollView>
-
-      <BottomNav active="workouts" />
     </View>
   );
 }

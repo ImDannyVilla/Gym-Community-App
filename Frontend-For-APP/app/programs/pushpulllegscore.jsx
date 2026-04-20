@@ -1,6 +1,5 @@
 import { View, Text, StyleSheet, SafeAreaView } from "react-native";
 import { Stack } from "expo-router";
-import BottomNav from "../_components/BottomNav";
 
 export default function PushPullLegs() {
   return (
@@ -10,8 +9,6 @@ export default function PushPullLegs() {
       <View style={styles.content}>
         <Text style={styles.text}>Push Pull Legs Page</Text>
       </View>
-
-      <BottomNav active="workouts" />
     </SafeAreaView>
   );
 }

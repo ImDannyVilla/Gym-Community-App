@@ -13,7 +13,6 @@ export default function TabLayout() {
         screenOptions={{ swipeEnabled: true }}
     >
       <SwipeableTabs.Screen name="community" />
-      <SwipeableTabs.Screen name="dashboard" />
       <SwipeableTabs.Screen name="workouts" />
       <SwipeableTabs.Screen name="profile" />
     </SwipeableTabs>

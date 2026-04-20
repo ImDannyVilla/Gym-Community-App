@@ -1,11 +1,10 @@
-import {View, Text, StyleSheet} from "react-native";
-import {Tabs} from "react-native-collapsible-tab-view";
+import { View, Text, StyleSheet, ScrollView } from "react-native";
 import { colors } from "../lib/theme";
 
 export default function Posts()
 {
     return (
-        <Tabs.ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={styles.scrollContainer}>
+        <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={styles.scrollContainer}>
             {Array.from({length: 30}).map((_, i) => (
                 <View key={i} style={[styles.postCard, i === 0 && { marginTop: 16 }]}>
                     <View style={styles.postHeader}>
@@ -18,7 +17,7 @@ export default function Posts()
                     </Text>
                 </View>
             ))}
-        </Tabs.ScrollView>
+        </ScrollView>
     );
 }
 

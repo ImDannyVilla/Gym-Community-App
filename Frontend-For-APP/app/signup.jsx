@@ -41,6 +41,7 @@ const validateUsername = (username) => {
   if (!username.trim()) return "Username is required";
   if (username.length < 3) return "Username must be at least 3 characters";
   if (username.length > 20) return "Username must be less than 20 characters";
+  if (!/^[a-zA-Z0-9]+$/.test(username)) return "Username must contain only letters and numbers";
   return "";
 };
 
@@ -103,7 +104,15 @@ export default function SignUp() {
       Alert.alert("Success", "Account created. Please log in.");
       router.replace("/");
     } catch (error) {
-      Alert.alert("Sign Up Failed", error.message || "Something went wrong.");
+      // Display backend error message if available
+      const errorMessage = error.message || "Something went wrong.";
+      Alert.alert("Sign Up Failed", errorMessage);
+      // Set specific field errors based on backend response
+      if (errorMessage.includes("Email already registered")) {
+        setEmailError("This email is already registered");
+      } else if (errorMessage.includes("Username already registered")) {
+        setUsernameError("This username is already taken");
+      }
     } finally {
       setLoading(false);
     }

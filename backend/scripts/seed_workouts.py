@@ -4,6 +4,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import asyncio
+from sqlalchemy import select
 from app.db import async_session_maker
 from app.models.workout import Workout
 from app.models.exercise import Exercise
@@ -256,6 +257,29 @@ async def seed_legs():
 
 async def main():
     print("🌱 Seeding preset workouts...")
+    await seed_chest_triceps()
+    await seed_back_biceps()
+    await seed_legs()
+    print("✅ All workouts seeded!")
+
+
+async def seed_workouts_on_startup():
+    """Called automatically when backend starts - checks for existing workouts first."""
+    from app.db import async_session_maker
+    from sqlalchemy import select
+    from app.models.workout import Workout
+    
+    # Check if workouts already exist
+    async with async_session_maker() as db:
+        result = await db.execute(
+            select(Workout).where(Workout.is_preset == True)
+        )
+        existing = result.scalars().all()
+        if existing:
+            print(f"✅ {len(existing)} preset workouts already exist, skipping seed.")
+            return
+    
+    print("🌱 Auto-seeding preset workouts...")
     await seed_chest_triceps()
     await seed_back_biceps()
     await seed_legs()

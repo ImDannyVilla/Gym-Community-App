@@ -3,7 +3,6 @@ import { View, StyleSheet, ScrollView } from "react-native";
 import { router } from "expo-router";
 import { colors, layout } from "../../lib/theme";
 import MuscleCard from "../_dashboardCom/_MuscleCard";
-import BottomNav from "../_components/BottomNav";
 import Header from "../_components/Header";
 
 const chestImage = require("../../assets/Chest.png");
@@ -25,7 +24,7 @@ const muscles = [
 export default function Workouts() {
   return (
     <View style={styles.container}>
-      <Header title="Workouts" />
+      <Header title="Workouts" showBack={true} />
       
       <ScrollView
         style={styles.scrollView}
@@ -43,8 +42,6 @@ export default function Workouts() {
           ))}
         </View>
       </ScrollView>
-
-      <BottomNav active="workouts" />
     </View>
   );
 }

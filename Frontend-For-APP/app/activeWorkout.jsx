@@ -143,8 +143,8 @@ export default function ActiveWorkout() {
         
         {/* Header */}
         <View style={styles.header}>
-          <Pressable onPress={handleCancel} style={styles.headerButton}>
-            <Text style={styles.headerButtonText}>Cancel</Text>
+          <Pressable onPress={() => router.back()} style={styles.headerButton}>
+            <Ionicons name="chevron-back" size={28} color={colors.primary} />
           </Pressable>
           <View style={styles.headerCenter}>
             <TextInput
