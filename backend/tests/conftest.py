@@ -6,7 +6,7 @@ AsyncSession, async_sessionmaker, create_async_engine
 )
 from typing import AsyncGenerator
 
-from app.db import Base, get_db
+from app.db import Base, GUID
 from app.main import gym_app
 from app.models.user import User, UserProfile, Follow
 from uuid import uuid4
@@ -56,7 +56,6 @@ async def test_user(test_session) -> User:
     user = User(
         id=auth_response.user.id,
         email=test_email,
-        username="testuser"
     )
     test_session.add(user)
     await test_session.flush()

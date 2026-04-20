@@ -4,15 +4,14 @@ from sqlalchemy.sql import func
 from ..db import Base
 from typing import Optional
 from uuid import UUID, uuid4
-from sqlalchemy.dialects.postgresql import UUID as PGUUID
-
+from app.db import GUID
 
 class Routine(Base):
     """users saved workout routines like push, pull, leg, etc..."""
     __tablename__ = "routines"
 
     id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(as_uuid=True),
         primary_key=True,
         default=uuid4,
         index=True
@@ -20,7 +19,7 @@ class Routine(Base):
     #It identifies which user "owns" or created this specific routine.
     #It ensures that you cannot have a routine that isn't connected to a valid user
     user_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(as_uuid=True),
         ForeignKey("users.id")
     )
     name: Mapped[str] = mapped_column(String)
@@ -38,17 +37,20 @@ class RoutineExercise(Base):
     __tablename__ = "routine_exercises"
 
     id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(as_uuid=True),
         primary_key=True,
         default=uuid4
     )
     routine_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True),
+        GUID(as_uuid=True),
         ForeignKey("routines.id", ondelete="CASCADE")
     )
     exercise_id: Mapped[str] #exercise db reference id
     name: Mapped[str]
     gif_url: Mapped[Optional[str]]
+    category: Mapped[Optional[str]] = mapped_column(String)
+    target: Mapped[Optional[str]] = mapped_column(String)
+    equipment: Mapped[Optional[str]] = mapped_column(String)
     order: Mapped[int]
 
     # Target values (goals)

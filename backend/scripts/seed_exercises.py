@@ -24,7 +24,7 @@ async def seed_exercises():
                     id=uuid4(),
                     exercise_id=ex.get("id"),
                     name=ex.get("name"),
-                    body_part=ex.get("category"),
+                    category=ex.get("category"),
                     target=", ".join(ex.get("primaryMuscles", [])),
                     equipment=ex.get("equipment"),
                     gif_url=image_url,

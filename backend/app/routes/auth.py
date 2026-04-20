@@ -21,7 +21,7 @@ from uuid import UUID
 router = APIRouter(prefix="/auth", tags=["auth"]) #all routes start with /auth; in API they are grouped under auth
 
 
-@router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
+@router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register(
         user_data: UserRegister,
         db: AsyncSessionDep

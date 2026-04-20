@@ -33,7 +33,7 @@ from app.models.exerciseLibrary import ExerciseLibrary
 from app.models.seededWorkout import SeededWorkout
 from app.models.routine import Routine, RoutineExercise
 from app.models.workout_log import WorkoutLog, WorkoutLogExercise, WorkoutLogSet
-
+from app.models.seeded_workout_exercise import SeededWorkoutExercise
 
 # Set target metadata for autogenerate
 target_metadata = Base.metadata

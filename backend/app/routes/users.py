@@ -1,6 +1,8 @@
+from typing import List, Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, Query
 
 from app.dependencies import get_current_user, AsyncSessionDep, CurrentUser
 from app.models.user import User, UserProfile
@@ -24,61 +26,61 @@ async def get_my_profile(
     user = result.scalars().first()
     return user
 
-
 @router.put("/me/profile", response_model=ProfileResponse)
 async def update_my_profile(
         db: AsyncSessionDep,
         profile_data: ProfileUpdate,
-        current_user: User = Depends(get_current_user)
+        current_user: CurrentUser
 ):
-
-    if profile_data.username is not None:
-        result = await db.execute(
-            select(User).where(User.username == profile_data.username)
-        )
-        if result.scalars().first():
-            raise HTTPException(
-                status_code=400, detail="Username already taken"
-            )
-        current_user.username = profile_data.username
-
-    # Get or create profile
     result = await db.execute(
         select(UserProfile).where(UserProfile.user_id == current_user.id)
     )
     profile = result.scalars().first()
 
     if not profile:
-        # Create profile if doesn't exist
         profile = UserProfile(user_id=current_user.id)
         db.add(profile)
 
-    # Update fields
-    if profile_data.name is not None:
-        profile.name = profile_data.name
+    # Check username uniqueness
+    if profile_data.username is not None:
+        existing = await db.execute(
+            select(UserProfile).where(UserProfile.user_name == profile_data.username)
+        )
+        if existing.scalars().first():
+            raise HTTPException(status_code=400, detail="Username already taken")
+        profile.user_name = profile_data.username
+
+    if profile_data.full_name is not None:
+        profile.full_name = profile_data.full_name
     if profile_data.gym_level is not None:
         profile.gym_level = profile_data.gym_level
-    if profile_data.about is not None:
-        profile.about = profile_data.about
+    if profile_data.bio is not None:
+        profile.bio = profile_data.bio
     if profile_data.avatar_url is not None:
         profile.avatar_url = profile_data.avatar_url
-    if profile_data.weight is not None:
-        profile.weight = profile_data.weight
-    if profile_data.last_workout is not None:
-        profile.last_workout = profile_data.last_workout
-    if profile_data.current_workout is not None:
-        profile.current_workout = profile_data.current_workout
-        
-    # Also update username if provided
-    if profile_data.username is not None and profile_data.username != current_user.username:
-        # NOTE: Ideally check if username exists first.
-        current_user.username = profile_data.username
 
     await db.commit()
     await db.refresh(profile)
-
     return profile
 
+
+@router.get("/search", response_model=List[UserwithProfile])
+async def search_users(
+    q: str,
+    db: AsyncSessionDep,
+    current_user: CurrentUser,
+    limit: int = 20
+):
+    """Search users by username. Used for social features."""
+    result = await db.execute(
+        select(User)
+        .join(UserProfile, UserProfile.user_id == User.id)
+        .options(selectinload(User.profile))
+        .where(UserProfile.user_name.ilike(f"%{q}%"))
+        .where(User.id != current_user.id)  # exclude self
+        .limit(limit)
+    )
+    return result.scalars().all()
 
 @router.get("/{username}", response_model=UserwithProfile)
 async def get_user_by_username(
@@ -88,8 +90,9 @@ async def get_user_by_username(
     """Get any user's profile by username"""
     result = await db.execute(
         select(User)
+        .join(UserProfile, UserProfile.user_id == User.id)
         .options(selectinload(User.profile))
-        .where(User.username == username)
+        .where(UserProfile.user_name == username)
     )
     user = result.scalars().first()
 
@@ -100,6 +103,7 @@ async def get_user_by_username(
         )
 
     return user
+
 
 @router.put("/me/password")
 async def update_password(
