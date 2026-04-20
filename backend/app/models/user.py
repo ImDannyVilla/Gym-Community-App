@@ -13,7 +13,7 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[UUID] = mapped_column(
-        GUID(as_uuid=True),
+        GUID(),
         primary_key=True,
         default=uuid4,
         index=True
@@ -48,13 +48,13 @@ class UserProfile(Base):
     __tablename__ = "user_profiles"
 
     id: Mapped[UUID] = mapped_column(
-        GUID(as_uuid=True),
+        GUID(),
         primary_key=True,
         default=uuid4,
         index=True
     )
     user_id: Mapped[UUID] = mapped_column(
-        GUID(as_uuid=True),
+        GUID(),
         ForeignKey("users.id", ondelete="CASCADE"), unique=True
     )
 
@@ -87,15 +87,15 @@ class Follow(Base):
     __tablename__ = "follows"
 
     id: Mapped[UUID] = mapped_column(
-        GUID(as_uuid=True),
+        GUID(),
         primary_key=True,
         default=uuid4,
     )
     follower_id: Mapped[UUID] = mapped_column(
-        GUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE")
+        GUID(), ForeignKey("users.id", ondelete="CASCADE")
     )
     following_id: Mapped[UUID] = mapped_column(
-        GUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE")
+        GUID(), ForeignKey("users.id", ondelete="CASCADE")
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

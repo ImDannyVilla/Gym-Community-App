@@ -10,13 +10,13 @@ from app.models.exerciseLibrary import ExerciseLibrary
 class SeededWorkoutExercise(Base):
     __tablename__ = "seeded_workout_exercises"
 
-    id: Mapped[UUID] = mapped_column(GUID(as_uuid=True), primary_key=True, default=uuid4)
+    id: Mapped[UUID] = mapped_column(GUID(), primary_key=True, default=uuid4)
     seeded_workout_id: Mapped[UUID] = mapped_column(
-        GUID(as_uuid=True),
+        GUID(),
         ForeignKey("seeded_workouts.id", ondelete="CASCADE")
     )
     exercise_library_id: Mapped[UUID] = mapped_column(
-        GUID(as_uuid=True),
+        GUID(),
         ForeignKey("exercise_library.id", ondelete="CASCADE")
     )
     # in seeded_workout_exercise.py

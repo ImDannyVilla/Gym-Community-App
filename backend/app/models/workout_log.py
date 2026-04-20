@@ -12,17 +12,17 @@ class WorkoutLog(Base):
     __tablename__ = "workout_logs"
 
     id: Mapped[UUID] = mapped_column(
-        GUID(as_uuid=True),
+        GUID(),
         primary_key=True,
         default=uuid4,
         index=True
     )
     user_id: Mapped[UUID] = mapped_column(
-        GUID(as_uuid=True),
+        GUID(),
         ForeignKey("users.id", ondelete="CASCADE")
     )
     routine_id: Mapped[Optional[UUID]] = mapped_column(
-        GUID(as_uuid=True),
+        GUID(),
         ForeignKey("routines.id", ondelete="SET NULL")
     )
     name: Mapped[str]
@@ -43,9 +43,9 @@ class WorkoutLogExercise(Base):
     """Exercise performed during a workout log session"""
     __tablename__ = "workout_log_exercises"
 
-    id: Mapped[UUID] = mapped_column(GUID(as_uuid=True), primary_key=True, default=uuid4)
+    id: Mapped[UUID] = mapped_column(GUID(), primary_key=True, default=uuid4)
     workout_log_id: Mapped[UUID] = mapped_column(
-        GUID(as_uuid=True),
+        GUID(),
         ForeignKey("workout_logs.id", ondelete="CASCADE")
     )
     # ExerciseLibrary reference
@@ -70,12 +70,12 @@ class WorkoutLogSet(Base):
     __tablename__ = "workout_log_sets"
 
     id: Mapped[UUID] = mapped_column(
-        GUID(as_uuid=True),
+        GUID(),
         primary_key=True,
         default=uuid4
     )
     workout_log_exercise_id: Mapped[UUID] = mapped_column(
-        GUID(as_uuid=True),
+        GUID(),
         ForeignKey("workout_log_exercises.id")
     )
     set_number: Mapped[int]

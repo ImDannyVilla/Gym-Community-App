@@ -11,7 +11,7 @@ class Routine(Base):
     __tablename__ = "routines"
 
     id: Mapped[UUID] = mapped_column(
-        GUID(as_uuid=True),
+        GUID(),
         primary_key=True,
         default=uuid4,
         index=True
@@ -19,7 +19,7 @@ class Routine(Base):
     #It identifies which user "owns" or created this specific routine.
     #It ensures that you cannot have a routine that isn't connected to a valid user
     user_id: Mapped[UUID] = mapped_column(
-        GUID(as_uuid=True),
+        GUID(),
         ForeignKey("users.id")
     )
     name: Mapped[str] = mapped_column(String)
@@ -37,12 +37,12 @@ class RoutineExercise(Base):
     __tablename__ = "routine_exercises"
 
     id: Mapped[UUID] = mapped_column(
-        GUID(as_uuid=True),
+        GUID(),
         primary_key=True,
         default=uuid4
     )
     routine_id: Mapped[UUID] = mapped_column(
-        GUID(as_uuid=True),
+        GUID(),
         ForeignKey("routines.id", ondelete="CASCADE")
     )
     exercise_id: Mapped[str] #exercise db reference id

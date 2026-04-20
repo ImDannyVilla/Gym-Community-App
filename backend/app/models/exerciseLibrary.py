@@ -8,7 +8,7 @@ from app.db import Base
 class ExerciseLibrary(Base):
     __tablename__ = "exercise_library"
 
-    id: Mapped[UUID] = mapped_column(GUID(as_uuid=True), primary_key=True, default=uuid4)
+    id: Mapped[UUID] = mapped_column(GUID(), primary_key=True, default=uuid4)
     exercise_id: Mapped[str] = mapped_column(String, unique=True, index=True)
     name: Mapped[str] = mapped_column(String, index=True)
     category: Mapped[Optional[str]] = mapped_column(String, index=True)
