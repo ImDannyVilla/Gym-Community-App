@@ -1,6 +1,6 @@
 import { API_BASE_URL } from "./api";
 
-export async function registerUser({ email, username, password }) {
+export async function registerUser({ email, username, password, full_name }) {
   const response = await fetch(`${API_BASE_URL}/auth/register`, {
     method: "POST",
     headers: {
@@ -10,6 +10,7 @@ export async function registerUser({ email, username, password }) {
       email,
       username,
       password,
+      full_name
     }),
   });
 

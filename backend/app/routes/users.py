@@ -41,14 +41,14 @@ async def update_my_profile(
         profile = UserProfile(user_id=current_user.id)
         db.add(profile)
 
-    # Check username uniqueness
-    if profile_data.username is not None:
+    # Check username uniqueness only if it was changed
+    if profile_data.user_name is not None and profile_data.user_name != profile.user_name:
         existing = await db.execute(
-            select(UserProfile).where(UserProfile.user_name == profile_data.username)
+            select(UserProfile).where(UserProfile.user_name == profile_data.user_name)
         )
         if existing.scalars().first():
             raise HTTPException(status_code=400, detail="Username already taken")
-        profile.user_name = profile_data.username
+        profile.user_name = profile_data.user_name
 
     if profile_data.full_name is not None:
         profile.full_name = profile_data.full_name
@@ -58,6 +58,12 @@ async def update_my_profile(
         profile.bio = profile_data.bio
     if profile_data.avatar_url is not None:
         profile.avatar_url = profile_data.avatar_url
+    if profile_data.weight is not None:
+        profile.weight = profile_data.weight
+    if profile_data.last_workout is not None:
+        profile.last_workout = profile_data.last_workout
+    if profile_data.current_workout is not None:
+        profile.current_workout = profile_data.current_workout
 
     await db.commit()
     await db.refresh(profile)

@@ -30,9 +30,9 @@ export default function editProfile()
             const numericWeight = newWeight ? parseInt(newWeight.replace(/[^0-9]/g, ''), 10) : null;
 
             const payload = {
-                name: newName,
-                username: newUsername, 
-                about: newAbout,
+                full_name: newName,
+                user_name: newUsername, 
+                bio: newAbout,
                 weight: isNaN(numericWeight) ? null : numericWeight,
                 last_workout: newLastWorkout,
                 current_workout: newCurrentWorkout

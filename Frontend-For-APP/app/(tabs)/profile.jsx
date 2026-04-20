@@ -1,6 +1,6 @@
 import {useState, useEffect, useCallback} from "react";
 import {useRouter, useLocalSearchParams, useFocusEffect} from "expo-router";
-import {View, Text, Image, Pressable, StyleSheet, Alert, Platform} from "react-native";
+import {View, Text, Image, Pressable, StyleSheet, Alert, Platform, ActivityIndicator} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import * as NavigationBar from "expo-navigation-bar";
@@ -11,6 +11,7 @@ import Posts from "../posts";
 import Workouts from "../workouts"
 import { colors } from "../../lib/theme";
 import { API_BASE_URL } from "../../lib/api";
+import { getToken } from "../../lib/tokenStorage";
 
 export default function Profile() {
     // Create router for navigation to editProfile
@@ -18,17 +19,18 @@ export default function Profile() {
 
     const params = useLocalSearchParams();
 
-    const [name, setName] = useState("Name")
-    const [username, setUsername] = useState("Username");
-    const [about, setAbout] = useState("This is a little about me.");
-    const [weight, setWeight] = useState("185 lbs");
-    const [lastWorkout, setLastWorkout] = useState("Chest & Triceps");
-    const [currentWorkout, setCurrentWorkout] = useState("Back & Biceps");
+    const [name, setName] = useState("")
+    const [username, setUsername] = useState("");
+    const [about, setAbout] = useState("");
+    const [weight, setWeight] = useState("");
+    const [lastWorkout, setLastWorkout] = useState("");
+    const [currentWorkout, setCurrentWorkout] = useState("");
 
     const [totalWorkouts, setTotalWorkouts] = useState("0");
     const [dayStreak, setDayStreak] = useState("0");
 
     const [isStreakModalVisible, setStreakModalVisible] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
 
     const currentDate = new Date();
     const currentMonth = currentDate.toLocaleString('default', { month: 'long' });
@@ -69,7 +71,8 @@ export default function Profile() {
 
     const loadProfileData = async () => {
         try {
-            const token = await AsyncStorage.getItem("userToken");
+            setIsLoading(true);
+            const token = await getToken();
             if (!token) return;
 
             const response = await fetch(`${API_BASE_URL}/users/me`, {
@@ -81,11 +84,11 @@ export default function Profile() {
 
             if (response.ok) {
                 const data = await response.json();
-                setUsername(data.username || "Username");
                 
                 if (data.profile) {
-                    setName(data.profile.name || "Name");
-                    setAbout(data.profile.about || "This is a little about me.");
+                    setUsername(data.profile.user_name || "");
+                    setName(data.profile.full_name || "");
+                    setAbout(data.profile.bio || "");
                     setWeight(data.profile.weight ? `${data.profile.weight} lbs` : "--");
                     setLastWorkout(data.profile.last_workout || "--");
                     setCurrentWorkout(data.profile.current_workout || "--");
@@ -97,6 +100,8 @@ export default function Profile() {
             }
         } catch (error) {
             console.log("Failed to load profile data (Network error)", error);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -200,6 +205,14 @@ export default function Profile() {
             </View>
         );
     };
+
+    if (isLoading) {
+        return (
+            <SafeAreaView style={[styles.scrollWindow, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]} edges={['top']}>
+                <ActivityIndicator size="large" color={colors.primary} />
+            </SafeAreaView>
+        );
+    }
 
     return (
         <SafeAreaView style={[styles.scrollWindow, { backgroundColor: colors.background }]} edges={['top']}>

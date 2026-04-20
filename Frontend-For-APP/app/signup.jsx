@@ -37,6 +37,11 @@ const validateEmail = (email) => {
   return "";
 };
 
+const validateName = (name) => {
+  if (!name.trim()) return "Name is required";
+  return "";
+};
+
 const validateUsername = (username) => {
   if (!username.trim()) return "Username is required";
   if (username.length < 3) return "Username must be at least 3 characters";
@@ -52,11 +57,13 @@ const validatePassword = (password) => {
 };
 
 export default function SignUp() {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [nameError, setNameError] = useState("");
   const [emailError, setEmailError] = useState("");
   const [usernameError, setUsernameError] = useState("");
   const [passwordError, setPasswordError] = useState("");
@@ -64,15 +71,17 @@ export default function SignUp() {
   const passwordStrength = getPasswordStrength(password);
 
   const handleCreateAccount = async () => {
+    const nameErr = validateName(name);
     const emailErr = validateEmail(email);
     const usernameErr = validateUsername(username);
     const passwordErr = validatePassword(password);
 
+    setNameError(nameErr);
     setEmailError(emailErr);
     setUsernameError(usernameErr);
     setPasswordError(passwordErr);
 
-    if (emailErr || usernameErr || passwordErr) return;
+    if (nameErr || emailErr || usernameErr || passwordErr) return;
 
     // Mariano's code starts here -----------------------------------------
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
@@ -96,6 +105,7 @@ export default function SignUp() {
     try {
       setLoading(true);
       await registerUser({
+        full_name: name.trim(),
         email: email.trim(),
         username: username.trim(),
         password: password.trim(),
@@ -124,6 +134,22 @@ export default function SignUp() {
         </View>
 
         <View style={styles.form}>
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Name</Text>
+            <TextInput
+              style={[styles.input, nameError && styles.inputError]}
+              placeholder="Enter your name"
+              placeholderTextColor={colors.textTertiary}
+              value={name}
+              onChangeText={(text) => {
+                setName(text);
+                if (nameError) setNameError("");
+              }}
+              autoCapitalize="words"
+            />
+            {nameError && <Text style={styles.errorText}>{nameError}</Text>}
+          </View>
+
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Email</Text>
             <TextInput

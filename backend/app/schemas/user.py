@@ -13,8 +13,9 @@ class UserRegister(BaseModel):
     Data coming FROM React Native during registration.
     """
     email: EmailStr
+    username: str
+    full_name: Optional[str] = None
     password: str
-    @field_validator("password")
     def password_strength(cls, v):
         if len(v) == 0:
             raise ValueError("Password cannot be empty")
@@ -77,12 +78,12 @@ class UserLogin(BaseModel):
 class ProfileUpdate(BaseModel):
     full_name: Optional[str] = None
     user_name: Optional[str] = None
-    #gym_name: Optional[str] = None
     gym_level: Optional[str] = None
     bio: Optional[str] = None
     avatar_url: Optional[str] = None
-
-
+    weight: Optional[int] = None
+    last_workout: Optional[str] = None
+    current_workout: Optional[str] = None
 
 # OUTPUT SCHEMAS
 
@@ -103,6 +104,11 @@ class ProfileResponse(BaseModel):
     gym_level: Optional[str] = None
     bio: Optional[str] = None
     avatar_url: Optional[str] = None
+    weight: Optional[int] = None
+    last_workout: Optional[str] = None
+    current_workout: Optional[str] = None
+    total_workouts: int = 0
+    day_streak: int = 0
     followers_count: int = 0
     following_count: int = 0
 
