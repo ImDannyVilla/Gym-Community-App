@@ -50,8 +50,6 @@ async def register(
         # Create the empty profile
         new_profile = UserProfile(
             user_id=new_user.id,
-            user_name=user_data.username,
-            full_name=user_data.full_name
         )
         db.add(new_profile)
 

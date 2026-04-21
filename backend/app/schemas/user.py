@@ -13,8 +13,6 @@ class UserRegister(BaseModel):
     Data coming FROM React Native during registration.
     """
     email: EmailStr
-    username: str
-    full_name: Optional[str] = None
     password: str
     def password_strength(cls, v):
         if len(v) == 0:
