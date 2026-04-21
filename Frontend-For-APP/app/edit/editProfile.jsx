@@ -1,8 +1,9 @@
-import {View, Text, TextInput, StyleSheet, Pressable, ScrollView, Alert} from "react-native"
+import {View, Text, TextInput, StyleSheet, Pressable, ScrollView} from "react-native"
 import {useState} from "react"
 import {SafeAreaProvider, SafeAreaView} from "react-native-safe-area-context"
 import {MaterialCommunityIcons} from "@expo/vector-icons"
 import {useLocalSearchParams, useRouter} from "expo-router"
+import Modal from "react-native-modal"
 import {getToken} from "../../lib/tokenStorage"
 import { colors } from "../../lib/theme"
 import { API_BASE_URL } from "../../lib/api"
@@ -21,6 +22,16 @@ export default function editProfile()
     const [newCurrentWorkout, setNewCurrentWorkout] = useState(currentWorkout || "");
 
     const [inputHeight, setInputHeight] = useState(60);
+
+    const [errorModalVisible, setErrorModalVisible] = useState(false);
+    const [errorTitle, setErrorTitle] = useState("");
+    const [errorMessage, setErrorMessage] = useState("");
+
+    const showError = (title, message) => {
+        setErrorTitle(title);
+        setErrorMessage(message);
+        setErrorModalVisible(true);
+    };
 
     const saveProfile = async () => 
     {
@@ -72,16 +83,16 @@ export default function editProfile()
                 const errorData = await response.text();
                 console.log("Server error", errorData);
                 if(response.status === 401 || response.status === 403) {
-                    Alert.alert("Unauthorized", "Please log in again to save your profile.");
+                    showError("Unauthorized", "Please log in again to save your profile.");
                 } else {
-                    Alert.alert("Save Failed", "There was an error saving your profile.");
+                    showError("Save Failed", "There was an error saving your profile.");
                 }
             }
         }
         catch(error)
         {
             console.log("Failed to reach server", error);
-            Alert.alert("Network Error", "Could not connect to the server. Make sure it is running.");
+            showError("Network Error", "Could not connect to the server. Make sure it is running.");
         }
     };
 
@@ -156,6 +167,23 @@ export default function editProfile()
                     />
                 </ScrollView>
             </SafeAreaView>
+
+            <Modal
+                isVisible={errorModalVisible}
+                backdropOpacity={0.6}
+                animationIn="fadeIn"
+                animationOut="fadeOut"
+                useNativeDriver={true}
+                onBackdropPress={() => setErrorModalVisible(false)}
+            >
+                <View style={styles.alertBox}>
+                    <Text style={styles.alertTitle}>{errorTitle}</Text>
+                    <Text style={styles.alertMessage}>{errorMessage}</Text>
+                    <Pressable style={styles.alertDestructiveBtn} onPress={() => setErrorModalVisible(false)}>
+                        <Text style={styles.alertDestructiveBtnText}>OK</Text>
+                    </Pressable>
+                </View>
+            </Modal>
         </SafeAreaProvider>
     );
 };
@@ -209,5 +237,36 @@ const styles = StyleSheet.create({
         textAlignVertical: "top",
         paddingHorizontal: 10,
         paddingTop: 12
+    },
+    alertBox: {
+        backgroundColor: colors.surface,
+        borderRadius: 16,
+        padding: 24,
+        alignItems: "center",
+    },
+    alertTitle: {
+        fontSize: 20,
+        fontWeight: "bold",
+        color: colors.text,
+        marginBottom: 12,
+    },
+    alertMessage: {
+        fontSize: 16,
+        color: colors.textSecondary,
+        textAlign: "center",
+        marginBottom: 24,
+        lineHeight: 22,
+    },
+    alertDestructiveBtn: {
+        width: "100%",
+        paddingVertical: 14,
+        borderRadius: 8,
+        backgroundColor: colors.primary,
+        alignItems: "center",
+    },
+    alertDestructiveBtnText: {
+        color: "white",
+        fontSize: 16,
+        fontWeight: "bold",
     },
 });
