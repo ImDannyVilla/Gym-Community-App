@@ -1,17 +1,199 @@
 import {useState, useEffect, useCallback} from "react";
 import {useRouter, useLocalSearchParams, useFocusEffect} from "expo-router";
-import {View, Text, Image, Pressable, StyleSheet, Alert, Platform, ActivityIndicator} from "react-native";
+import {View, Text, Image, Pressable, StyleSheet, Alert, Platform, ActivityIndicator, ScrollView, FlatList} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import * as NavigationBar from "expo-navigation-bar";
 import Modal from "react-native-modal";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Ionicons } from "@expo/vector-icons";
 import {Tabs, MaterialTabBar} from "react-native-collapsible-tab-view";
-import Posts from "../posts";
-import Workouts from "../workouts"
-import { colors } from "../../lib/theme";
-import { API_BASE_URL } from "../../lib/api";
+import { colors, spacing, layout } from "../../lib/theme";
 import { getToken } from "../../lib/tokenStorage";
+
+function PostsTab() {
+    const [posts, setPosts] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    const fetchPosts = useCallback(async () => {
+        try {
+            const token = await getToken();
+            if (!token) return;
+
+            const response = await fetch("https://gym-community-app.onrender.com/workout-logs/me", {
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                const publicPosts = (data || []).filter(log => log.is_public);
+                setPosts(publicPosts);
+            }
+        } catch (e) {
+            console.error("Failed to load posts", e);
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    useFocusEffect(
+        useCallback(() => {
+            fetchPosts();
+        }, [fetchPosts])
+    );
+
+    const formatDate = (isoString) => {
+        if (!isoString) return "--";
+        const date = new Date(isoString);
+        return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    };
+
+    const formatTime = (seconds) => {
+        if (!seconds) return "--";
+        const m = Math.floor(seconds / 60);
+        return `${m} min`;
+    };
+
+    if (isLoading) {
+        return (
+            <View style={styles.tabContainer}>
+                <ActivityIndicator size="small" color={colors.primary} />
+            </View>
+        );
+    }
+
+    if (posts.length === 0) {
+        return (
+            <View style={styles.tabContainer}>
+                <Ionicons name="share-social-outline" size={48} color={colors.border} />
+                <Text style={styles.emptyText}>No posts yet</Text>
+                <Text style={styles.emptySubtext}>Share a workout to make it public</Text>
+            </View>
+        );
+    }
+
+    return (
+        <ScrollView
+            style={styles.scrollView}
+            showsVerticalScrollIndicator={false}
+        >
+            <View style={styles.listContent}>
+                {posts.map((item) => (
+                    <View key={item.id} style={styles.postCard}>
+                        <View style={styles.cardHeader}>
+                            <Text style={styles.cardTitle}>{item.name}</Text>
+                            <Text style={styles.cardDate}>{formatDate(item.started_at)}</Text>
+                        </View>
+                        {item.caption && (
+                            <Text style={styles.caption} numberOfLines={3}>{item.caption}</Text>
+                        )}
+                        <View style={styles.statsRow}>
+                            <View style={styles.statChip}>
+                                <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
+                                <Text style={styles.statChipText}>{formatTime(item.duration)}</Text>
+                            </View>
+                            <Text style={styles.exerciseCount}>
+                                {item.exercises?.length || 0} exercises
+                            </Text>
+                        </View>
+                    </View>
+                ))}
+            </View>
+        </ScrollView>
+    );
+}
+
+function WorkoutsTab() {
+    const [workouts, setWorkouts] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    const fetchWorkouts = useCallback(async () => {
+        try {
+            const token = await getToken();
+            if (!token) return;
+
+            const response = await fetch("https://gym-community-app.onrender.com/workout-logs/me", {
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setWorkouts(data || []);
+            }
+        } catch (e) {
+            console.error("Failed to load workouts", e);
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    useFocusEffect(
+        useCallback(() => {
+            fetchWorkouts();
+        }, [fetchWorkouts])
+    );
+
+    const formatDate = (isoString) => {
+        if (!isoString) return "--";
+        const date = new Date(isoString);
+        return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    };
+
+    const formatTime = (seconds) => {
+        if (!seconds) return "--";
+        const m = Math.floor(seconds / 60);
+        return `${m} min`;
+    };
+
+    if (isLoading) {
+        return (
+            <View style={styles.tabContainer}>
+                <ActivityIndicator size="small" color={colors.primary} />
+            </View>
+        );
+    }
+
+    if (workouts.length === 0) {
+        return (
+            <View style={styles.tabContainer}>
+                <Ionicons name="barbell-outline" size={48} color={colors.border} />
+                <Text style={styles.emptyText}>No workouts yet</Text>
+                <Text style={styles.emptySubtext}>Start a workout to track your progress</Text>
+            </View>
+        );
+    }
+
+    return (
+        <ScrollView
+            style={styles.scrollView}
+            showsVerticalScrollIndicator={false}
+        >
+            <View style={styles.listContent}>
+                {workouts.map((item) => (
+                    <View key={item.id} style={styles.workoutCard}>
+                        <View style={styles.cardHeader}>
+                            <Text style={styles.cardTitle}>{item.name}</Text>
+                            <Text style={styles.cardDate}>{formatDate(item.started_at)}</Text>
+                        </View>
+                        <View style={styles.statsRow}>
+                            <View style={styles.statChip}>
+                                <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
+                                <Text style={styles.statChipText}>{formatTime(item.duration)}</Text>
+                            </View>
+                            <View style={styles.statChip}>
+                                <Ionicons name="barbell-outline" size={14} color={colors.textSecondary} />
+                                <Text style={styles.statChipText}>{item.exercises?.length || 0} exercises</Text>
+                            </View>
+                            {item.is_public && (
+                                <Ionicons name="globe" size={14} color={colors.primary} />
+                            )}
+                        </View>
+                    </View>
+                ))}
+            </View>
+        </ScrollView>
+    );
+}
 
 export default function Profile() {
     // Create router for navigation to editProfile
@@ -69,26 +251,26 @@ export default function Profile() {
         }
     }, [params.name, params.username, params.about, params.weight, params.lastWorkout, params.currentWorkout]);
 
-    const loadProfileData = async () => {
+const loadProfileData = async () => {
         try {
             setIsLoading(true);
             const token = await getToken();
             if (!token) return;
 
-            const response = await fetch(`${API_BASE_URL}/users/me`, {
+            const response = await fetch(`https://gym-community-app.onrender.com/users/me`, {
                 method: "GET",
                 headers: {
                     "Authorization": `Bearer ${token}`
                 }
             });
 
-            if (response.ok) {
+if (response.ok) {
                 const data = await response.json();
                 
                 if (data.profile) {
-                    setUsername(data.profile.user_name || "");
-                    setName(data.profile.full_name || "");
-                    setAbout(data.profile.bio || "");
+                    setUsername(data.profile.user_name || "Username");
+                    setName(data.profile.full_name || "Name");
+                    setAbout(data.profile.bio || "This is a little about me.");
                     setWeight(data.profile.weight ? `${data.profile.weight} lbs` : "--");
                     setLastWorkout(data.profile.last_workout || "--");
                     setCurrentWorkout(data.profile.current_workout || "--");
@@ -234,11 +416,11 @@ export default function Profile() {
                 )}
             >
                 <Tabs.Tab name="posts" label="Posts">
-                    <Posts/>
+                    <PostsTab/>
                 </Tabs.Tab>
 
                 <Tabs.Tab name="workouts" label="Workouts">
-                    <Workouts/>
+                    <WorkoutsTab/>
                 </Tabs.Tab>
             </Tabs.Container>
 
@@ -509,5 +691,93 @@ const styles = StyleSheet.create({
     currentDayText: {
         color: colors.text,
         fontWeight: "bold",
+    },
+
+    tabContainer: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        backgroundColor: colors.background,
+        padding: spacing.lg,
+    },
+    emptyText: {
+        fontSize: 18,
+        fontWeight: "bold",
+        color: colors.textSecondary,
+        marginTop: spacing.md,
+    },
+    emptySubtext: {
+        fontSize: 14,
+        color: colors.textTertiary,
+        marginTop: spacing.xs,
+    },
+    listContent: {
+        padding: layout.screenPadding,
+        paddingBottom: layout.bottomSafeArea + 80,
+    },
+    postCard: {
+        backgroundColor: colors.surface,
+        padding: spacing.md,
+        borderRadius: 12,
+        marginBottom: spacing.md,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    workoutCard: {
+        backgroundColor: colors.surface,
+        padding: spacing.md,
+        borderRadius: 12,
+        marginBottom: spacing.md,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    cardHeader: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: spacing.sm,
+    },
+    cardTitle: {
+        fontSize: 16,
+        fontWeight: "bold",
+        color: colors.text,
+        flex: 1,
+    },
+    cardDate: {
+        fontSize: 12,
+        color: colors.textTertiary,
+    },
+    caption: {
+        fontSize: 14,
+        color: colors.textSecondary,
+        marginBottom: spacing.sm,
+        lineHeight: 20,
+    },
+    statsRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: spacing.sm,
+    },
+    statChip: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: colors.background,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 6,
+        gap: 4,
+    },
+    statChipText: {
+        fontSize: 12,
+        color: colors.textSecondary,
+        fontWeight: "500",
+    },
+    exerciseCount: {
+        fontSize: 12,
+        color: colors.textSecondary,
+    },
+    scrollView: {
+        flex: 1,
+        backgroundColor: colors.background,
     },
 });

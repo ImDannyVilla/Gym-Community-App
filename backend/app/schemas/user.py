@@ -14,6 +14,9 @@ class UserRegister(BaseModel):
     """
     email: EmailStr
     password: str
+
+    @field_validator("password")
+    @classmethod
     def password_strength(cls, v):
         if len(v) == 0:
             raise ValueError("Password cannot be empty")
@@ -53,8 +56,8 @@ class OnboardingData(BaseModel):
             raise ValueError("Username must be at least 3 characters long")
         if len(v) > 20:
             raise ValueError("Username must be less than 20 characters long")
-        if not v.isalnum():
-            raise ValueError("Username must contain only letters and numbers")
+        if not v.replace("_", "").replace("-", "").isalnum():
+            raise ValueError("Username must contain only letters, numbers, underscores, and hyphens")
         return v
 
     @field_validator("gym_level")
@@ -141,8 +144,8 @@ class UserUpdate(BaseModel):
                 raise ValueError("Username must be at least 3 characters long")
             if len(v) > 20:
                 raise ValueError("Username must be less than 20 characters long")
-            if not v.isalnum():
-                raise ValueError("Username must contain only letters and numbers")
+            if not v.replace("_", "").replace("-", "").isalnum():
+                raise ValueError("Username must contain only letters, numbers, underscores, and hyphens")
         return v
 
 class PasswordUpdate(BaseModel):

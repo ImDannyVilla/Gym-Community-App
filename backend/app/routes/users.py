@@ -2,7 +2,7 @@ from typing import List, Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload, Query
+from sqlalchemy.orm import selectinload
 
 from app.dependencies import get_current_user, AsyncSessionDep, CurrentUser
 from app.models.user import User, UserProfile
@@ -78,12 +78,13 @@ async def search_users(
     limit: int = 20
 ):
     """Search users by username. Used for social features."""
+    safe_q = q.replace("%", "").replace("_", "")
     result = await db.execute(
         select(User)
         .join(UserProfile, UserProfile.user_id == User.id)
         .options(selectinload(User.profile))
-        .where(UserProfile.user_name.ilike(f"%{q}%"))
-        .where(User.id != current_user.id)  # exclude self
+        .where(UserProfile.user_name.ilike(f"%{safe_q}%"))
+        .where(User.id != current_user.id)
         .limit(limit)
     )
     return result.scalars().all()

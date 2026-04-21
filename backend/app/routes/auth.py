@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Header
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
+from uuid import UUID
 
 from app.models.user import User, UserProfile
 from app.schemas.user import (
@@ -15,7 +17,6 @@ from app.schemas.user import (
 )
 from app.dependencies import AsyncSessionDep, CurrentUser
 from app.core.supabase_client import supabase, supabase_admin
-from uuid import UUID
 
 
 router = APIRouter(prefix="/auth", tags=["auth"]) #all routes start with /auth; in API they are grouped under auth
@@ -27,10 +28,13 @@ async def register(
         db: AsyncSessionDep
 ):
     try:
-        # create user in supabase auth
+        # create user in supabase auth (skip email confirmation)
         auth_response = supabase.auth.sign_up({
             "email": user_data.email,
             "password": user_data.password,
+            "options": {
+                "email_confirm": True
+            }
         })
 
         if not auth_response.user:
@@ -55,7 +59,7 @@ async def register(
 
         await db.commit()
         await db.refresh(new_user)
-        return {"message": "Registration successful. Please check your email to confirm your account."}
+        return {"message": "Registration successful. You can now log in."}
 
     except HTTPException:
         raise
@@ -133,11 +137,10 @@ async def complete_onboarding(
             status_code=500,
             detail=f"Onboarding failed: {str(e)}"
         )
-from fastapi.security import OAuth2PasswordRequestForm
-from fastapi import Depends
+
 
 @router.post("/login", response_model=Token)
-async def login(credentials: OAuth2PasswordRequestForm = Depends(), db: AsyncSessionDep = None):
+async def login(db: AsyncSessionDep, credentials: OAuth2PasswordRequestForm = Depends()):
     try:
         auth_response = supabase.auth.sign_in_with_password({
             "email": credentials.username,
@@ -180,6 +183,33 @@ async def request_password_reset(data: PasswordResetRequest):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+@router.get("/forgot-email")
+async def forgot_email(username: str, db: AsyncSessionDep):
+    """Find email associated with a username."""
+    try:
+        result = await db.execute(
+            select(User)
+            .join(UserProfile, UserProfile.user_id == User.id)
+            .where(UserProfile.user_name == username)
+        )
+        user = result.scalars().first()
+
+        if not user:
+            return {"email": None, "message": "No account found with this username"}
+
+        # Return email with partial masking for security
+        email = user.email
+        if "@" in email:
+            local, domain = email.split("@", 1)
+            masked_local = local[:2] + "***" if len(local) > 2 else local[0] + "***"
+            masked_email = f"{masked_local}@{domain}"
+        else:
+            masked_email = email
+
+        return {"email": email, "masked_email": masked_email}
+    except Exception as e:
+        return {"email": None, "message": "No account found with this username"}
+
 @router.post("/update-password")
 async def update_password(
     password_data: PasswordReset,
@@ -187,9 +217,17 @@ async def update_password(
 ):
     try:
         access_token = authorization.replace("Bearer ", "").strip()
-        supabase.auth.set_session(access_token, refresh_token=None)
-        supabase.auth.update_user({"password": password_data.new_password})
+        user_response = supabase.auth.get_user(access_token)
+        if not user_response.user:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        result = supabase.auth.update_user(
+            {"password": password_data.new_password}
+        )
+        if not result.user:
+            raise HTTPException(status_code=400, detail="Failed to update password")
         return {"message": "Password successfully updated"}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 

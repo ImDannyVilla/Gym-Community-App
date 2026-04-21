@@ -1,8 +1,27 @@
-import { Platform } from "react-native";
+import { getToken } from "./tokenStorage";
 
-// Expo will automatically swap this value based on your environment
-export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
+export const API_BASE_URL = "https://gym-community-app.onrender.com";
 
-if (!API_BASE_URL) {
-    console.warn("API_BASE_URL is missing! Check your .env file.");
+export async function getAuthHeader() {
+  const token = await getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+export async function apiFetch(endpoint, options = {}) {
+  const authHeader = await getAuthHeader();
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeader,
+      ...options.headers,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: "Request failed" }));
+    throw new Error(error.detail || "Request failed");
+  }
+
+  return response.json();
 }

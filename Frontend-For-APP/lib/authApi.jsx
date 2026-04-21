@@ -68,3 +68,38 @@ export async function loginUser({ email, password }) {
   // Returns { access_token: "...", token_type: "bearer" }
   return data;
 }
+
+export async function forgotPasswordEmail({ email }) {
+  const response = await fetch(`${API_BASE_URL}/auth/request-password-reset`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.detail || "Failed to send reset link");
+  }
+
+  return data;
+}
+
+export async function forgotEmailUsername({ username }) {
+  const response = await fetch(`${API_BASE_URL}/auth/forgot-email?username=${encodeURIComponent(username)}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.detail || "Failed to find email");
+  }
+
+  return data;
+}

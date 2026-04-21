@@ -1,0 +1,147 @@
+import { API_BASE_URL, getAuthHeader } from "./api";
+
+async function fetchWithAuth(endpoint, options = {}) {
+  const authHeader = await getAuthHeader();
+  
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeader,
+      ...options.headers,
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.detail || "Request failed");
+  }
+
+  return data;
+}
+
+export async function getSeededWorkouts(category = null, difficulty = null) {
+  const params = new URLSearchParams();
+  if (category) params.append("category", category);
+  if (difficulty) params.append("difficulty", difficulty);
+  const query = params.toString() ? `?${params.toString()}` : "";
+  return fetchWithAuth(`/workouts/seeded${query}`);
+}
+
+export async function getSeededWorkout(workoutId) {
+  return fetchWithAuth(`/workouts/seeded/${workoutId}`);
+}
+
+export async function getWorkoutLogs() {
+  const authHeader = await getAuthHeader();
+  return fetchWithAuth("/workout-logs/me", { headers: authHeader });
+}
+
+export async function startWorkout(name, routineId = null, isPublic = false) {
+  const authHeader = await getAuthHeader();
+  return fetchWithAuth("/workout-logs/", {
+    method: "POST",
+    headers: authHeader,
+    body: JSON.stringify({
+      name,
+      routine_id: routineId,
+      is_public: isPublic,
+    }),
+  });
+}
+
+export async function getWorkoutLog(logId) {
+  const authHeader = await getAuthHeader();
+  return fetchWithAuth(`/workout-logs/${logId}`, { headers: authHeader });
+}
+
+export async function updateWorkoutLog(logId, data) {
+  const authHeader = await getAuthHeader();
+  return fetchWithAuth(`/workout-logs/${logId}`, {
+    method: "PUT",
+    headers: authHeader,
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteWorkoutLog(logId) {
+  const authHeader = await getAuthHeader();
+  return fetchWithAuth(`/workout-logs/${logId}`, {
+    method: "DELETE",
+    headers: authHeader,
+  });
+}
+
+export async function addExerciseToLog(logId, exerciseData) {
+  const authHeader = await getAuthHeader();
+  return fetchWithAuth(`/workout-logs/${logId}/exercises`, {
+    method: "POST",
+    headers: authHeader,
+    body: JSON.stringify(exerciseData),
+  });
+}
+
+export async function saveLogAsRoutine(logId, name = null) {
+  const authHeader = await getAuthHeader();
+  const params = name ? `?name=${encodeURIComponent(name)}` : "";
+  return fetchWithAuth(`/workout-logs/${logId}/save-as-routine${params}`, {
+    method: "POST",
+    headers: authHeader,
+  });
+}
+
+export async function getMyRoutines() {
+  const authHeader = await getAuthHeader();
+  return fetchWithAuth("/routines/me", { headers: authHeader });
+}
+
+export async function getRoutine(routineId) {
+  const authHeader = await getAuthHeader();
+  return fetchWithAuth(`/routines/${routineId}`, { headers: authHeader });
+}
+
+export async function createRoutine(name, description = "", isPublic = false, exercises = []) {
+  const authHeader = await getAuthHeader();
+  return fetchWithAuth("/routines/", {
+    method: "POST",
+    headers: authHeader,
+    body: JSON.stringify({
+      name,
+      description,
+      is_public: isPublic,
+      exercises,
+    }),
+  });
+}
+
+export async function deleteRoutine(routineId) {
+  const authHeader = await getAuthHeader();
+  return fetchWithAuth(`/routines/${routineId}`, {
+    method: "DELETE",
+    headers: authHeader,
+  });
+}
+
+export async function searchExercises(q = "", category = null, equipment = null, target = null, limit = 20) {
+  const params = new URLSearchParams();
+  if (q) params.append("q", q);
+  if (category) params.append("category", category);
+  if (equipment) params.append("equipment", equipment);
+  if (target) params.append("target", target);
+  params.append("limit", limit);
+  return fetchWithAuth(`/exercises/search?${params.toString()}`);
+}
+
+export async function getBodyParts() {
+  return fetchWithAuth("/exercises/body-parts");
+}
+
+export async function getEquipmentTypes() {
+  return fetchWithAuth("/exercises/equipment");
+}
+
+export async function getExerciseHistory(exerciseId) {
+  const authHeader = await getAuthHeader();
+  return fetchWithAuth(`/exercises/${exerciseId}/history`, { headers: authHeader });
+}

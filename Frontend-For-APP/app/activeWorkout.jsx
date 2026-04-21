@@ -3,8 +3,8 @@ import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, SafeAreaView,
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Modal from "react-native-modal";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { colors, layout, typography, spacing } from "../lib/theme";
+import { startWorkout, updateWorkoutLog, addExerciseToLog, searchExercises } from "../lib/workoutApi";
 
 const EXERCISE_LIST = [
   { category: "Chest", name: "Bench Press" },
@@ -30,9 +30,41 @@ export default function ActiveWorkout() {
   const [startTime] = useState(Date.now());
   const [timer, setTimer] = useState(0);
   const [exercises, setExercises] = useState([]);
+  const [currentLogId, setCurrentLogId] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [exerciseList, setExerciseList] = useState([]);
   const [isModalVisible, setModalVisible] = useState(false);
   const [showCancelAlert, setShowCancelAlert] = useState(false);
   const [showEmptyAlert, setShowEmptyAlert] = useState(false);
+
+  useEffect(() => {
+    initWorkout();
+  }, []);
+
+  const initWorkout = async () => {
+    try {
+      const log = await startWorkout(workoutName);
+      setCurrentLogId(log.id);
+    } catch (e) {
+      console.error("Failed to start workout:", e.message);
+      Alert.alert("Error", "Failed to start workout session. Please try again.");
+    }
+  };
+
+  const loadExerciseOptions = async (query = "") => {
+    try {
+      const data = await searchExercises(query);
+      setExerciseList(data || []);
+    } catch (e) {
+      console.error("Failed to load exercises:", e.message);
+      setExerciseList(EXERCISE_LIST);
+    }
+  };
+
+  const handleOpenModal = () => {
+    loadExerciseOptions();
+    setModalVisible(true);
+  };
 
   // Timer logic
   useEffect(() => {
@@ -103,33 +135,47 @@ export default function ActiveWorkout() {
   };
 
   const handleFinish = async () => {
-    // Filter out uncompleted sets
     const completedExercises = exercises.map(ex => ({
       ...ex,
       sets: ex.sets.filter(s => s.completed && s.weight && s.reps)
     })).filter(ex => ex.sets.length > 0);
 
-    if (completedExercises.length === 0) {
+    if (completedExercises.length === 0 || !currentLogId) {
       setShowEmptyAlert(true);
       return;
     }
 
-    const newWorkout = {
-      id: Date.now().toString(),
-      name: workoutName,
-      date: new Date().toISOString(),
-      duration: timer, // in seconds
-      exercises: completedExercises
-    };
-
+    setIsLoading(true);
     try {
-      const savedWorkoutsJSON = await AsyncStorage.getItem("@gym_app_workouts");
-      const savedWorkouts = savedWorkoutsJSON ? JSON.parse(savedWorkoutsJSON) : [];
-      savedWorkouts.unshift(newWorkout); // Add to top
-      await AsyncStorage.setItem("@gym_app_workouts", JSON.stringify(savedWorkouts));
+      await updateWorkoutLog(currentLogId, {
+        name: workoutName,
+        completed_at: new Date().toISOString(),
+        duration: timer,
+        is_public: false,
+      });
+
+      for (const ex of completedExercises) {
+        await addExerciseToLog(currentLogId, {
+          exercise_id: ex.exercise_id || ex.id,
+          name: ex.name,
+          category: ex.category,
+          target: ex.target,
+          equipment: ex.equipment,
+          order: exercises.findIndex(e => e.id === ex.id),
+          sets: ex.sets.map((s, i) => ({
+            set_number: i + 1,
+            reps: parseInt(s.reps) || 0,
+            weight_lbs: parseFloat(s.weight) || 0,
+            completed: s.completed,
+          })),
+        });
+      }
+
       router.back();
     } catch (e) {
       Alert.alert("Error", "Failed to save workout.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -212,7 +258,11 @@ export default function ActiveWorkout() {
           ))}
 
           {/* Add Exercise Button */}
-          <Pressable style={styles.addExerciseButton} onPress={() => setModalVisible(true)}>
+          <Pressable 
+            style={[styles.addExerciseButton, !currentLogId && styles.addExerciseButtonDisabled]} 
+            onPress={handleOpenModal}
+            disabled={!currentLogId}
+          >
             <Ionicons name="add" size={20} color={colors.primary} />
             <Text style={styles.addExerciseButtonText}>Add Exercise</Text>
           </Pressable>
@@ -232,14 +282,14 @@ export default function ActiveWorkout() {
           <View style={styles.dragHandle} />
           <Text style={styles.modalHeader}>Select Exercise</Text>
           <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
-            {EXERCISE_LIST.map((item, idx) => (
+            {(exerciseList.length > 0 ? exerciseList : EXERCISE_LIST).map((item, idx) => (
               <Pressable 
                 key={idx} 
                 style={styles.modalExerciseRow}
                 onPress={() => handleAddExercise(item.name)}
               >
                 <Text style={styles.modalExerciseName}>{item.name}</Text>
-                <Text style={styles.modalExerciseCategory}>{item.category}</Text>
+                <Text style={styles.modalExerciseCategory}>{item.target || item.category}</Text>
               </Pressable>
             ))}
           </ScrollView>
@@ -436,16 +486,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "bold",
   },
-  addExerciseButton: {
+addExerciseButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 16,
-    backgroundColor: "rgba(0, 123, 255, 0.1)", // Primary color with low opacity
+    backgroundColor: "rgba(0, 123, 255, 0.1)",
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.primary,
     marginTop: spacing.md,
+  },
+  addExerciseButtonDisabled: {
+    opacity: 0.5,
+    backgroundColor: colors.border,
+    borderColor: colors.border,
   },
   addExerciseButtonText: {
     color: colors.primary,

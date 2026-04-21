@@ -37,7 +37,9 @@ async def get_current_user(
 
         return user
 
-    except Exception:
+    except Exception as e:
+        import logging
+        logging.warning(f"Authentication error: {e}")
         raise credentials_exception
 
 

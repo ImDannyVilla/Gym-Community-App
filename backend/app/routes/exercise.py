@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Query, HTTPException
-from sqlalchemy import select, or_
+from sqlalchemy import select
 from typing import Optional, List
 from uuid import UUID
 
@@ -11,6 +11,11 @@ from app.models.workout_log import WorkoutLogExercise, WorkoutLog
 from app.schemas.exercise import ExerciseLibraryResponse, ExerciseHistoryResponse
 
 router = APIRouter(prefix="/exercises", tags=["Exercises"])
+
+
+def sanitize_search_term(term: str) -> str:
+    """Remove wildcard characters to prevent SQL injection in LIKE queries."""
+    return term.replace("%", "").replace("_", "")
 
 
 @router.get("/search", response_model=List[ExerciseLibraryResponse])
@@ -32,13 +37,17 @@ async def search_exercises(
     query = select(ExerciseLibrary)
 
     if q:
-        query = query.where(ExerciseLibrary.name.ilike(f"%{q}%"))
+        safe_q = sanitize_search_term(q)
+        query = query.where(ExerciseLibrary.name.ilike(f"%{safe_q}%"))
     if category:
-        query = query.where(ExerciseLibrary.category.ilike(f"%{category}%"))
+        safe_category = sanitize_search_term(category)
+        query = query.where(ExerciseLibrary.category.ilike(f"%{safe_category}%"))
     if equipment:
-        query = query.where(ExerciseLibrary.equipment.ilike(f"%{equipment}%"))
+        safe_equipment = sanitize_search_term(equipment)
+        query = query.where(ExerciseLibrary.equipment.ilike(f"%{safe_equipment}%"))
     if target:
-        query = query.where(ExerciseLibrary.target.ilike(f"%{target}%"))
+        safe_target = sanitize_search_term(target)
+        query = query.where(ExerciseLibrary.target.ilike(f"%{safe_target}%"))
 
     query = query.order_by(ExerciseLibrary.name).limit(limit)
     result = await db.execute(query)

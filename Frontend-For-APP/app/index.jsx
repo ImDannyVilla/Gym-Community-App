@@ -57,12 +57,33 @@ export default function LoginScreen() {
 
       if (data.access_token) {
         await saveToken(data.access_token);
-        router.replace("/dashboard");
+        router.replace("/workouts");
       } else {
         Alert.alert("Login Failed", "No access token received.");
       }
     } catch (error) {
       Alert.alert("Login Failed", error.message || "Something went wrong.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAdminLogin = async () => {
+    setLoading(true);
+    try {
+      const data = await loginUser({
+        email: "admin@gymapp.com",
+        password: "Admin123!",
+      });
+
+      if (data.access_token) {
+        await saveToken(data.access_token);
+        router.replace("/workouts");
+      } else {
+        Alert.alert("Admin Login Failed", "No access token received.");
+      }
+    } catch (error) {
+      Alert.alert("Admin Login Failed", error.message || "Something went wrong.");
     } finally {
       setLoading(false);
     }
@@ -156,9 +177,19 @@ export default function LoginScreen() {
             </Text>
           </Pressable>
 
-          <Pressable style={styles.adminButton} onPress={() => router.replace("/dashboard")}>
+          <View style={styles.forgotRow}>
+            <Pressable onPress={() => router.push("/forgot-password")}>
+              <Text style={styles.forgotText}>Forgot Password?</Text>
+            </Pressable>
+            <Text style={styles.forgotSeparator}>|</Text>
+            <Pressable onPress={() => router.push("/forgot-email")}>
+              <Text style={styles.forgotText}>Forgot Email?</Text>
+            </Pressable>
+          </View>
+
+          <Pressable style={styles.adminButton} onPress={handleAdminLogin}>
             <Text style={styles.adminButtonText}>
-              Admin Pass
+              {loading ? "Loading..." : "Admin Pass"}
             </Text>
           </Pressable>
         </View>
@@ -279,6 +310,21 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   adminButtonText: {
+    color: colors.textTertiary,
+    fontSize: typography.bodySmall.fontSize,
+  },
+  forgotRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: spacing.md,
+    gap: spacing.sm,
+  },
+  forgotText: {
+    color: colors.primary,
+    fontSize: typography.bodySmall.fontSize,
+    fontWeight: "600",
+  },
+  forgotSeparator: {
     color: colors.textTertiary,
     fontSize: typography.bodySmall.fontSize,
   },

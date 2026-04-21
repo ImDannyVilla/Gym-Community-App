@@ -37,7 +37,6 @@ export default function editProfile()
     {
         try
         {
-            // Extract integer from weight string (e.g. "185 lbs" -> 185)
             const numericWeight = newWeight ? parseInt(newWeight.replace(/[^0-9]/g, ''), 10) : null;
 
             const payload = {
@@ -52,7 +51,7 @@ export default function editProfile()
             const token = await getToken();
             console.log("Token retrieved:", token);
 
-            const response = await fetch(`${API_BASE_URL}/users/me/profile`, {
+            const response = await fetch(`https://gym-community-app.onrender.com/users/me/profile`, {
                 method: "PUT", 
                 headers: {
                     "Content-Type": "application/json",
@@ -63,12 +62,11 @@ export default function editProfile()
             
             if(response.ok)
             {
-                // Update frontend state variables that are passed back (using the original camelCase formats)
                 const returnPayload = {
                     name: newName,
                     username: newUsername, 
                     about: newAbout,
-                    weight: newWeight, // Keep string for UI
+                    weight: newWeight,
                     lastWorkout: newLastWorkout,
                     currentWorkout: newCurrentWorkout
                 };

@@ -1,12 +1,11 @@
 from sqlalchemy import TypeDecorator, String
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
-import os
-from dotenv import load_dotenv
-import uuid
-from sqlalchemy import TypeDecorator, String
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
+import os
 import uuid
+
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -15,10 +14,9 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise ValueError("DATABASE_URL is not set in the .env file")
 
-#the async database engine
 engine = create_async_engine(
     DATABASE_URL,
-    echo=True,
+    echo=os.getenv("DEBUG", "false").lower() == "true",
     pool_pre_ping=True,
 )
 

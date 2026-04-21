@@ -6,6 +6,8 @@ export default function Layout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="signup" />
+      <Stack.Screen name="forgot-password" />
+      <Stack.Screen name="forgot-email" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="programs/chest" />
       <Stack.Screen name="programs/arms" />
