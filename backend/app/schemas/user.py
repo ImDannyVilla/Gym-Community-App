@@ -14,6 +14,18 @@ class UserRegister(BaseModel):
     """
     email: EmailStr
     password: str
+    user_name: str
+    full_name: Optional[str] = None
+
+    @field_validator("user_name")
+    def username_length(cls, v):
+        if len(v) < 3:
+            raise ValueError("Username must be at least 3 characters long")
+        if len(v) > 20:
+            raise ValueError("Username must be less than 20 characters long")
+        if not v.replace("_", "").replace("-", "").isalnum():
+            raise ValueError("Username must contain only letters, numbers, underscores, and hyphens")
+        return v
 
     @field_validator("password")
     @classmethod
@@ -38,34 +50,6 @@ class UserRegister(BaseModel):
             raise ValueError(
                 "Password must not contain any spaces"
             )
-        return v
-
-
-class OnboardingData(BaseModel):
-    """
-    Profile data collected during onboarding (step 2).
-    """
-    user_name: str
-    full_name: Optional[str] = None
-    gym_level: Optional[str] = None  # "Beginner", "Intermediate", "Advanced"
-    avatar_url: Optional[str] = None
-
-    @field_validator("user_name")
-    def username_length(cls, v):
-        if len(v) < 3:
-            raise ValueError("Username must be at least 3 characters long")
-        if len(v) > 20:
-            raise ValueError("Username must be less than 20 characters long")
-        if not v.replace("_", "").replace("-", "").isalnum():
-            raise ValueError("Username must contain only letters, numbers, underscores, and hyphens")
-        return v
-
-    @field_validator("gym_level")
-    def gym_level_valid(cls, v):
-        if v is not None:
-            cases = ["Beginner", "Intermediate", "Advanced"]
-            if v not in cases:
-                raise ValueError("Gym level must be one of: Beginner, Intermediate, Advanced")
         return v
 
 
@@ -210,3 +194,21 @@ class EmailUpdate(BaseModel):
 
 class ResetConfirmation(BaseModel):
     email: EmailStr
+
+class FollowResponse(BaseModel):
+    """Response when following/unfollowing a user"""
+    is_following: bool
+    followers_count: int
+    following_count: int
+
+class UserListItem(BaseModel):
+    """Minimal user info for follower/following lists"""
+    id: UUID
+    user_name: Optional[str] = None
+    full_name: Optional[str] = None
+    avatar_url: Optional[str] = None
+    bio: Optional[str] = None
+    followers_count: int
+    is_following: bool  # Whether current user follows this user
+
+    model_config = ConfigDict(from_attributes=True)

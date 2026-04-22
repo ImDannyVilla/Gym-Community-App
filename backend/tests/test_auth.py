@@ -46,14 +46,20 @@ async def test_password_validation(client, bad_password, expected_error):
 
 @pytest.mark.asyncio
 async def test_register_success(client):
+    import uuid
+    unique_id = uuid.uuid4().hex[:8]
+    unique_username = f"testuser_{unique_id}"
+    unique_email = f"success_{unique_id}@test.com"
     response = await client.post("/auth/register", json={
-        "email": "success@test.com",
+        "email": unique_email,
         "password": "Password123!",
+        "user_name": unique_username,
+        "full_name": "Test User"
     })
     assert response.status_code == 201
     data = response.json()
     assert "message" in data
-    assert "check your email" in data["message"].lower()
+    assert "registration successful" in data["message"].lower()
 
 
 # ── Login ─────────────────────────────────────────────
@@ -86,27 +92,6 @@ async def test_login_wrong_email(client):
     response = await client.post("/auth/login", data={
         "username": "nonexistent@test.com",
         "password": "Password123!",
-    })
-    assert response.status_code == 401
-
-
-# ── Onboarding ────────────────────────────────────────
-
-@pytest.mark.asyncio
-async def test_onboarding_success(client, auth_headers):
-    client.headers.update(auth_headers)
-    response = await client.post("/auth/onboarding", json={
-        "user_name": "dannyvilla",
-        "full_name": "Danny Villanueva",
-        "gym_level": "Intermediate",
-    })
-    assert response.status_code == 200
-
-
-@pytest.mark.asyncio
-async def test_onboarding_requires_auth(client):
-    response = await client.post("/auth/onboarding", json={
-        "user_name": "dannyvilla",
     })
     assert response.status_code == 401
 

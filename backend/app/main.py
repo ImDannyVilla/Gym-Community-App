@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import auth, workout, users, exercise, workout_log, routine
+from app.routes import auth, workout, users, exercise, workout_log, routine, follow
 from typing import List
 from contextlib import asynccontextmanager
 
@@ -34,6 +34,8 @@ gym_app.include_router(users.router)
 gym_app.include_router(exercise.router)
 gym_app.include_router(workout_log.router)
 gym_app.include_router(routine.router)
+gym_app.include_router(follow.router)
+
 @gym_app.get("/health")
 def health_check():
     return {"status": "healthy"}
