@@ -1,26 +1,71 @@
-import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Alert, Image } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Alert, Image, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { colors } from '../lib/theme';
 import { useRoutineStore } from '../stores/routineStore';
-import { createRoutine } from '../lib/workoutApi';
+import { createRoutine, getRoutine, updateRoutine } from '../lib/workoutApi';
 import ExerciseConfigSheet from './_components/ExerciseConfigSheet';
 
 export default function CreateRoutineScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
+  const routineId = params.routineId;
+  const isEditMode = !!routineId;
+  
   const exercises = useRoutineStore(state => state.pendingExercises);
   const clearExercises = useRoutineStore(state => state.clearExercises);
   const removeExercise = useRoutineStore(state => state.removeExercise);
   const updateExercise = useRoutineStore(state => state.updateExercise);
+  const setExercises = useRoutineStore(state => state.setExercises);
   
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [isPublic, setIsPublic] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingRoutine, setIsLoadingRoutine] = useState(false);
   const [editingExercise, setEditingExercise] = useState(null);
   const [editingIndex, setEditingIndex] = useState(null);
   const [showConfig, setShowConfig] = useState(false);
+
+  // Load existing routine if in edit mode
+  useEffect(() => {
+    if (isEditMode) {
+      loadRoutine();
+    }
+  }, [routineId]);
+
+  const loadRoutine = async () => {
+    setIsLoadingRoutine(true);
+    try {
+      const routine = await getRoutine(routineId);
+      setName(routine.name);
+      setDescription(routine.description || '');
+      setIsPublic(routine.is_public);
+      
+      // Convert routine exercises to the format expected by the store
+      const formattedExercises = routine.exercises.map(ex => ({
+        exercise_id: ex.exercise_id,
+        name: ex.name,
+        gif_url: ex.gif_url,
+        category: ex.category,
+        target: ex.target,
+        equipment: ex.equipment,
+        target_sets: ex.target_sets,
+        target_reps_min: ex.target_reps_min,
+        target_reps_max: ex.target_reps_max,
+        target_weight_lbs: ex.target_weight_lbs,
+        notes: ex.notes,
+      }));
+      setExercises(formattedExercises);
+    } catch (error) {
+      console.error('Failed to load routine:', error);
+      Alert.alert('Error', 'Failed to load routine. Please try again.');
+      router.back();
+    } finally {
+      setIsLoadingRoutine(false);
+    }
+  };
 
   const handleAddExercise = () => {
     router.push({
@@ -29,7 +74,7 @@ export default function CreateRoutineScreen() {
     });
   };
 
-  const handleCreateRoutine = async () => {
+  const handleSaveRoutine = async () => {
     if (!name.trim()) {
       Alert.alert('Error', 'Please enter a routine name');
       return;
@@ -41,30 +86,45 @@ export default function CreateRoutineScreen() {
 
     setIsLoading(true);
     try {
-      const exercisesData = exercises.map((ex, index) => ({
-        exercise_id: ex.exercise_id,
-        name: ex.name,
-        gif_url: ex.gif_url,
-        category: ex.category,
-        target: ex.target,
-        equipment: ex.equipment,
-        order: index + 1,
-        target_sets: ex.target_sets || 3,
-        target_reps_min: ex.target_reps_min || 8,
-        target_reps_max: ex.target_reps_max || 12,
-        target_weight_lbs: ex.target_weight_lbs || null,
-        notes: ex.notes || null,
-      }));
+      if (isEditMode) {
+        // Update existing routine
+        await updateRoutine(routineId, {
+          name: name.trim(),
+          description: description.trim() || null,
+          is_public: isPublic,
+        });
+        
+        clearExercises();
+        Alert.alert('Success', 'Routine updated successfully', [
+          { text: 'OK', onPress: () => router.replace('/(tabs)/workouts') }
+        ]);
+      } else {
+        // Create new routine
+        const exercisesData = exercises.map((ex, index) => ({
+          exercise_id: ex.exercise_id,
+          name: ex.name,
+          gif_url: ex.gif_url,
+          category: ex.category,
+          target: ex.target,
+          equipment: ex.equipment,
+          order: index + 1,
+          target_sets: ex.target_sets || 3,
+          target_reps_min: ex.target_reps_min || 8,
+          target_reps_max: ex.target_reps_max || 12,
+          target_weight_lbs: ex.target_weight_lbs || null,
+          notes: ex.notes || null,
+        }));
 
-      await createRoutine(name.trim(), description.trim() || null, isPublic, exercisesData);
-      
-      clearExercises();
-      Alert.alert('Success', 'Routine created successfully', [
-        { text: 'OK', onPress: () => router.replace('/(tabs)/workouts') }
-      ]);
+        await createRoutine(name.trim(), description.trim() || null, isPublic, exercisesData);
+        
+        clearExercises();
+        Alert.alert('Success', 'Routine created successfully', [
+          { text: 'OK', onPress: () => router.replace('/(tabs)/workouts') }
+        ]);
+      }
     } catch (error) {
-      Alert.alert('Error', 'Failed to create routine. Please try again.');
-      console.error('Create routine error:', error);
+      Alert.alert('Error', `Failed to ${isEditMode ? 'update' : 'create'} routine. Please try again.`);
+      console.error(`${isEditMode ? 'Update' : 'Create'} routine error:`, error);
     } finally {
       setIsLoading(false);
     }
@@ -105,6 +165,17 @@ export default function CreateRoutineScreen() {
     setEditingIndex(null);
   };
 
+  if (isLoadingRoutine) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>Loading routine...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
@@ -112,8 +183,8 @@ export default function CreateRoutineScreen() {
         <TouchableOpacity onPress={handleCancel}>
           <Text style={styles.cancel}>Cancel</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>New Routine</Text>
-        <TouchableOpacity onPress={handleCreateRoutine} disabled={isLoading}>
+        <Text style={styles.title}>{isEditMode ? 'Edit Routine' : 'New Routine'}</Text>
+        <TouchableOpacity onPress={handleSaveRoutine} disabled={isLoading}>
           <Text style={[styles.save, isLoading && { opacity: 0.5 }]}>Save</Text>
         </TouchableOpacity>
       </View>
@@ -220,7 +291,17 @@ const styles = StyleSheet.create({
     flex: 1, 
     backgroundColor: '#0a0a0a', 
   },
-  header: { 
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    marginTop: 12,
+  },
+  header: {
     flexDirection: 'row', 
     justifyContent: 'space-between', 
     alignItems: 'center', 

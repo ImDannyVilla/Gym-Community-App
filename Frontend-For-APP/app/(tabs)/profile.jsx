@@ -10,6 +10,7 @@ import { Ionicons } from "@expo/vector-icons";
 import {Tabs, MaterialTabBar} from "react-native-collapsible-tab-view";
 import { colors, spacing, layout } from "../../lib/theme";
 import { getToken } from "../../lib/tokenStorage";
+import { getMyProfile, updateMyProfile } from "../../lib/socialApi";
 
 function PostsTab() {
     const [posts, setPosts] = useState([]);
@@ -178,6 +179,11 @@ export default function Profile() {
     const [name, setName] = useState("")
     const [username, setUsername] = useState("");
     const [about, setAbout] = useState("");
+    const [gymLevel, setGymLevel] = useState("");
+    const [weight, setWeight] = useState("");
+    const [lastWorkout, setLastWorkout] = useState("");
+    const [currentWorkout, setCurrentWorkout] = useState("");
+    const [avatarUrl, setAvatarUrl] = useState("");
 
     const [totalWorkouts, setTotalWorkouts] = useState("0");
     const [dayStreak, setDayStreak] = useState("0");
@@ -223,26 +229,22 @@ const loadProfileData = async () => {
             const token = await getToken();
             if (!token) return;
 
-            // Fetch user profile
-            const profileResponse = await fetch(`https://gym-community-app.onrender.com/users/me`, {
-                method: "GET",
-                headers: {
-                    "Authorization": `Bearer ${token}`
-                }
-            });
-
-            if (profileResponse.ok) {
-                const data = await profileResponse.json();
-                
-                if (data.profile) {
-                    setUsername(data.profile.user_name || "Username");
-                    setName(data.profile.full_name || "Name");
-                    setAbout(data.profile.bio || "This is a little about me.");
-                    setFollowersCount(data.profile.followers_count || 0);
-                    setFollowingCount(data.profile.following_count || 0);
-                }
-            } else {
-                console.log("Failed to fetch profile", profileResponse.status);
+            // Fetch user profile using socialApi
+            const data = await getMyProfile();
+            
+            if (data.profile) {
+                setUsername(data.profile.user_name || "Username");
+                setName(data.profile.full_name || "Name");
+                setAbout(data.profile.bio || "This is a little about me.");
+                setGymLevel(data.profile.gym_level || "");
+                setWeight(data.profile.weight?.toString() || "");
+                setLastWorkout(data.profile.last_workout || "");
+                setCurrentWorkout(data.profile.current_workout || "");
+                setAvatarUrl(data.profile.avatar_url || "");
+                setFollowersCount(data.profile.followers_count || 0);
+                setFollowingCount(data.profile.following_count || 0);
+                setTotalWorkouts(data.profile.total_workouts?.toString() || "0");
+                setDayStreak(data.profile.day_streak?.toString() || "0");
             }
 
             // Fetch workout streak stats
@@ -255,8 +257,6 @@ const loadProfileData = async () => {
 
             if (streakResponse.ok) {
                 const streakData = await streakResponse.json();
-                setDayStreak(streakData.current_streak_days?.toString() || "0");
-                setTotalWorkouts(streakData.total_workouts?.toString() || "0");
                 setWorkoutsThisWeek(streakData.workouts_this_week?.toString() || "0");
             }
 
@@ -293,9 +293,15 @@ const loadProfileData = async () => {
         }
     }, []);
 
-    const [profilePhotoUri, setProfilePhotoUri] = useState(
-        "https://picsum.photos/800/400"
-    );
+    // Request photo permissions on mount if not granted
+    useEffect(() => {
+        (async () => {
+            const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
+            if (status !== "granted") {
+                await ImagePicker.requestMediaLibraryPermissionsAsync();
+            }
+        })();
+    }, []);
 
     const changeProfilePhoto = async () => {
         // Ask permission
@@ -317,7 +323,17 @@ const loadProfileData = async () => {
         });
 
         if (!result.canceled && result.assets?.length) {
-            setProfilePhotoUri(result.assets[0].uri);
+            const newUri = result.assets[0].uri;
+            
+            try {
+                // Update avatar_url in backend
+                await updateMyProfile({ avatar_url: newUri });
+                setAvatarUrl(newUri);
+                Alert.alert("Success", "Profile photo updated!");
+            } catch (error) {
+                console.error("Failed to update profile photo:", error);
+                Alert.alert("Error", "Failed to update profile photo. Please try again.");
+            }
         }
     };
 
@@ -326,7 +342,7 @@ const loadProfileData = async () => {
             <View style={{width: "100%", alignItems: "center"}}>
                 <View style={styles.photoContainer}>
                     <Image
-                        source={{ uri: profilePhotoUri }}
+                        source={{ uri: avatarUrl || "https://via.placeholder.com/400" }}
                         style={styles.profilePhoto}
                         resizeMode="cover"
                     />
@@ -368,7 +384,7 @@ const loadProfileData = async () => {
                 </View>
 
                 <View style={styles.editProfile}>
-                    <Pressable style={styles.editButton} onPress={() => {router.push({ pathname: "../edit/editProfile", params: {name, username, about}})}}>
+                    <Pressable style={styles.editButton} onPress={() => {router.push({ pathname: "../edit/editProfile", params: {name, username, about, gymLevel, weight, lastWorkout, currentWorkout}})}}>
                         <Text style={styles.edit}>Edit Profile</Text>
                     </Pressable>
                 </View>

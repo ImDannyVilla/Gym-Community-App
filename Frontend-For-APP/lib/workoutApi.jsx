@@ -33,6 +33,12 @@ export async function getSeededWorkout(workoutId) {
   return fetchWithAuth(`/workouts/seeded/${workoutId}`);
 }
 
+export async function saveSeededWorkoutAsRoutine(workoutId) {
+  return fetchWithAuth(`/workouts/seeded/${workoutId}/save-as-routine`, {
+    method: "POST",
+  });
+}
+
 export async function getWorkoutLogs() {
   const authHeader = await getAuthHeader();
   return fetchWithAuth("/workout-logs/me", { headers: authHeader });

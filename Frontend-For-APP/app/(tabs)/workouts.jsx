@@ -145,12 +145,20 @@ export default function WorkoutsScreen() {
                   {routine.exercises?.length || 0} exercises
                 </Text>
               </View>
-              <Pressable 
-                style={styles.startButton}
-                onPress={() => handleStartRoutine(routine.id, routine.name)}
-              >
-                <Text style={styles.startButtonText}>Start</Text>
-              </Pressable>
+              <View style={styles.routineActions}>
+                <Pressable 
+                  style={styles.editButton}
+                  onPress={() => router.push({ pathname: "/create-routine", params: { routineId: routine.id } })}
+                >
+                  <Ionicons name="pencil" size={16} color={colors.textSecondary} />
+                </Pressable>
+                <Pressable 
+                  style={styles.startButton}
+                  onPress={() => handleStartRoutine(routine.id, routine.name)}
+                >
+                  <Text style={styles.startButtonText}>Start</Text>
+                </Pressable>
+              </View>
             </View>
           ))
         )}
@@ -316,6 +324,18 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.textSecondary,
     marginTop: 2,
+  },
+  routineActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  editButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   startButton: {
     backgroundColor: colors.primary,

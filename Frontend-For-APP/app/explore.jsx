@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, Pressable, FlatList, Image, ActivityIndicator, TextInput } from "react-native";
+import { View, Text, StyleSheet, Pressable, FlatList, Image, ActivityIndicator, TextInput, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing } from "../lib/theme";
 import { API_BASE_URL } from "../lib/api";
+import { saveSeededWorkoutAsRoutine } from "../lib/workoutApi";
 
 // Map workout names to local assets
 const WORKOUT_COVERS = {
@@ -74,6 +75,23 @@ export default function ExploreScreen() {
     router.push(`/programs/pushpulllegscore?id=${workoutId}`);
   };
 
+  const handleSaveRoutine = async (workoutId, workoutName) => {
+    try {
+      await saveSeededWorkoutAsRoutine(workoutId);
+      Alert.alert(
+        "Success",
+        `"${workoutName}" has been saved to your routines!`,
+        [
+          { text: "View Routines", onPress: () => router.push("/(tabs)/workouts") },
+          { text: "OK", style: "cancel" }
+        ]
+      );
+    } catch (error) {
+      console.error("Failed to save routine:", error);
+      Alert.alert("Error", "Failed to save routine. Please try again.");
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
@@ -128,32 +146,41 @@ export default function ExploreScreen() {
       ) : (
         <FlatList
           data={workouts}
-          numColumns={2}
-          columnWrapperStyle={styles.columnWrapper}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => (
-            <Pressable
-              style={styles.workoutCard}
-              onPress={() => handleWorkoutPress(item.id)}
-            >
-              {/* Cover Image */}
-              <Image
-                source={WORKOUT_COVERS[item.name] || { uri: item.cover_image_url }}
-                style={styles.workoutImage}
-                resizeMode="cover"
-              />
+            <View style={styles.workoutCard}>
+              <Pressable
+                style={styles.workoutCardContent}
+                onPress={() => handleWorkoutPress(item.id)}
+              >
+                {/* Cover Image */}
+                <Image
+                  source={WORKOUT_COVERS[item.name] || { uri: item.cover_image_url }}
+                  style={styles.workoutImage}
+                  resizeMode="cover"
+                />
+                
+                {/* Workout Info */}
+                <View style={styles.workoutInfo}>
+                  <Text style={styles.workoutName} numberOfLines={1}>
+                    {item.name}
+                  </Text>
+                  <Text style={styles.workoutMeta}>
+                    {item.difficulty} · {item.duration_minutes} min
+                  </Text>
+                </View>
+              </Pressable>
               
-              {/* Workout Info */}
-              <View style={styles.workoutInfo}>
-                <Text style={styles.workoutName} numberOfLines={1}>
-                  {item.name}
-                </Text>
-                <Text style={styles.workoutMeta}>
-                  {item.difficulty} · {item.duration_minutes} min
-                </Text>
-              </View>
-            </Pressable>
+              {/* Save Routine Button */}
+              <Pressable
+                style={styles.saveButton}
+                onPress={() => handleSaveRoutine(item.id, item.name)}
+              >
+                <Ionicons name="bookmark-outline" size={20} color={colors.primary} />
+                <Text style={styles.saveButtonText}>Save</Text>
+              </Pressable>
+            </View>
           )}
           keyExtractor={(item) => item.id}
         />
@@ -180,9 +207,11 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 32,
     fontWeight: "900",
     color: colors.text,
+    letterSpacing: 1,
+    lineHeight: 32,
   },
   placeholder: {
     width: 32,
@@ -259,39 +288,57 @@ const styles = StyleSheet.create({
     color: colors.textTertiary,
     marginTop: 4,
   },
-  columnWrapper: {
-    gap: 12,
-    paddingHorizontal: 16,
-  },
   listContent: {
     paddingBottom: 100,
     paddingTop: 16,
-    gap: 12,
   },
   workoutCard: {
-    flex: 1,
     borderRadius: 12,
     overflow: "hidden",
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    flexDirection: "column",
+  },
+  workoutCardContent: {
+    flexDirection: "row",
+    flex: 1,
   },
   workoutImage: {
-    width: "100%",
-    aspectRatio: 1,
+    width: 120,
+    height: 120,
     backgroundColor: colors.card,
   },
   workoutInfo: {
-    padding: 8,
+    flex: 1,
+    padding: 12,
+    justifyContent: "center",
   },
   workoutName: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: "bold",
     color: colors.text,
-    marginBottom: 2,
+    marginBottom: 4,
   },
   workoutMeta: {
-    fontSize: 11,
+    fontSize: 12,
     color: colors.textSecondary,
+  },
+  saveButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    gap: 6,
+  },
+  saveButtonText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: colors.primary,
   },
 });

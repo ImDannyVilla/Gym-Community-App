@@ -17,5 +17,7 @@ export const useRoutineStore = create((set, get) => ({
     pendingExercises: state.pendingExercises.filter((_, i) => i !== index)
   })),
 
+  setExercises: (exercises) => set({ pendingExercises: exercises }),
+
   clearExercises: () => set({ pendingExercises: [] }),
 }));

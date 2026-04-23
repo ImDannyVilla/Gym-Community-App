@@ -12,11 +12,12 @@ export default function editProfile()
 {
     const router = useRouter();
 
-    const {name, username, about, weight, lastWorkout, currentWorkout} = useLocalSearchParams();
+    const {name, username, about, gymLevel, weight, lastWorkout, currentWorkout} = useLocalSearchParams();
 
     const [newName, setNewName] = useState(name || "");
     const [newUsername, setNewUsername] = useState(username || "");
     const [newAbout, setNewAbout] = useState(about || "");
+    const [newGymLevel, setNewGymLevel] = useState(gymLevel || "");
     const [newWeight, setNewWeight] = useState(weight || "");
     const [newLastWorkout, setNewLastWorkout] = useState(lastWorkout || "");
     const [newCurrentWorkout, setNewCurrentWorkout] = useState(currentWorkout || "");
@@ -43,6 +44,7 @@ export default function editProfile()
                 full_name: newName,
                 user_name: newUsername, 
                 bio: newAbout,
+                gym_level: newGymLevel,
                 weight: isNaN(numericWeight) ? null : numericWeight,
                 last_workout: newLastWorkout,
                 current_workout: newCurrentWorkout
@@ -66,6 +68,7 @@ export default function editProfile()
                     name: newName,
                     username: newUsername, 
                     about: newAbout,
+                    gymLevel: newGymLevel,
                     weight: newWeight,
                     lastWorkout: newLastWorkout,
                     currentWorkout: newCurrentWorkout
@@ -135,6 +138,15 @@ export default function editProfile()
                         multiline
                         onContentSizeChange={(event) => {setInputHeight(event.nativeEvent.contentSize.height);}}
                         style={[styles.input, {height: Math.max(60, inputHeight)}]}
+                    />
+
+                    <Text style={styles.text}>Gym Level:</Text>
+                    <TextInput 
+                        style={styles.input} 
+                        onChangeText={setNewGymLevel}
+                        value={newGymLevel} 
+                        placeholder="e.g. Beginner, Intermediate, Advanced"
+                        placeholderTextColor={colors.textSecondary}
                     />
 
                     <Text style={styles.text}>Weight:</Text>
