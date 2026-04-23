@@ -12,7 +12,6 @@ from app.schemas.user import (
     PasswordReset,
     PasswordResetRequest,
     ResetConfirmation,
-    OnboardingData,
     UserwithProfile
 )
 from app.dependencies import AsyncSessionDep, CurrentUser
@@ -28,6 +27,14 @@ async def register(
         db: AsyncSessionDep
 ):
     try:
+        #checking if username is already taken
+        result = await db.execute(
+            select(UserProfile).where(UserProfile.user_name == user_data.user_name)
+        )
+        if result.scalars().first():
+            raise HTTPException(status_code=400, detail="Username already taken")
+
+
         # create user in supabase auth (skip email confirmation)
         auth_response = supabase.auth.sign_up({
             "email": user_data.email,
@@ -54,6 +61,8 @@ async def register(
         # Create the empty profile
         new_profile = UserProfile(
             user_id=new_user.id,
+            user_name=user_data.user_name,
+            full_name=user_data.full_name
         )
         db.add(new_profile)
 
@@ -70,73 +79,6 @@ async def register(
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Registration failed: {str(e)}")
 
-@router.post("/onboarding", response_model=UserwithProfile)
-async def complete_onboarding(
-        onboarding_data: OnboardingData,
-        db: AsyncSessionDep,
-        current_user: CurrentUser
-):
-    """
-    Complete user onboarding after registration.
-    Requires authentication (user must have registered first).
-    """
-    try:
-        # Get or create profile FIRST
-        result = await db.execute(
-            select(UserProfile).where(UserProfile.user_id == current_user.id)
-        )
-        profile = result.scalars().first()
-
-        if not profile:
-            profile = UserProfile(user_id=current_user.id)
-            db.add(profile)
-
-        # checking if username is already taken
-        result = await db.execute(
-            select(UserProfile).where(
-                UserProfile.user_name == onboarding_data.username,
-                UserProfile.user_id != current_user.id
-            )
-        )
-        if result.scalars().first():
-            raise HTTPException(
-                status_code=400,
-                detail="Username already taken"
-            )
-
-        # Update profile fields (including username)
-        profile.user_name = onboarding_data.username
-        if onboarding_data.full_name:
-            profile.full_name = onboarding_data.full_name
-        if onboarding_data.gym_level:
-            profile.gym_level = onboarding_data.gym_level
-        if onboarding_data.avatar_url:
-            profile.avatar_url = onboarding_data.avatar_url
-
-        await db.commit()
-        await db.refresh(profile)
-
-        # return user with profile
-        result = await db.execute(
-            select(User)
-            .options(selectinload(User.profile))
-            .where(User.id == current_user.id)
-        )
-        user = result.scalars().first()
-
-        return user
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        await db.rollback()
-        print(f"Onboarding Error: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(
-            status_code=500,
-            detail=f"Onboarding failed: {str(e)}"
-        )
 
 
 @router.post("/login", response_model=Token)
@@ -152,16 +94,11 @@ async def login(db: AsyncSessionDep, credentials: OAuth2PasswordRequestForm = De
 
         user_id = UUID(auth_response.user.id)
 
-        result = await db.execute(
-            select(UserProfile).where(UserProfile.user_id == user_id)
-        )
-        profile = result.scalars().first()
-        is_onboarded = profile is not None and profile.user_name is not None
-
+        # Since username is now required at registration, users are always onboarded
         return Token(
             access_token=auth_response.session.access_token,
             token_type="bearer",
-            is_onboarded=is_onboarded
+            is_onboarded=True
         )
     except HTTPException:
         raise

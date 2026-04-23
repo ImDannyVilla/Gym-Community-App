@@ -1,12 +1,13 @@
 from fastapi import APIRouter, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
 from typing import List, Optional
 from uuid import UUID, uuid4
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 from app.models.routine import Routine, RoutineExercise
 from app.models.workout_log import WorkoutLog, WorkoutLogExercise, WorkoutLogSet
+from app.models.user import UserProfile
 from app.schemas.routine import RoutineResponse
 from app.schemas.workout_log import (
     WorkoutLogCreate, WorkoutLogUpdate,
@@ -16,6 +17,75 @@ from app.schemas.workout_log import (
 from app.dependencies import AsyncSessionDep, CurrentUser
 
 router = APIRouter(prefix="/workout-logs", tags=["Workout Logs"])
+
+
+async def update_user_streak(db: AsyncSessionDep, user_id: UUID):
+    """
+    Calculate and update user's workout streak based on completed workout logs.
+    Counts consecutive calendar days with at least one completed workout.
+    """
+    # get all completed workouts for this user, ordered by completion date
+    result = await db.execute(
+        select(WorkoutLog)
+        .where(WorkoutLog.user_id == user_id)
+        .where(WorkoutLog.completed_at.isnot(None))
+        .order_by(WorkoutLog.completed_at.desc())
+    )
+    completed_logs = result.scalars().all()
+    
+    if not completed_logs:
+        # No completed workouts, reset streak
+        profile_result = await db.execute(
+            select(UserProfile).where(UserProfile.user_id == user_id)
+        )
+        profile = profile_result.scalars().first()
+        if profile:
+            profile.day_streak = 0
+            profile.total_workouts = 0
+            await db.commit()
+        return
+    
+    # Update total workouts
+    total_workouts = len(completed_logs)
+    
+    # extracting unique workout dates (calendar days, so ignoring time)
+    workout_dates = set()
+    for log in completed_logs:
+        #converting dates (ignoring time component)
+        workout_date = log.completed_at.date()
+        workout_dates.add(workout_date)
+    
+    sorted_dates = sorted(workout_dates, reverse=True)
+    
+    # Calculate current streak
+    current_streak = 0
+    today = datetime.now(timezone.utc).date()
+    
+    # check if most recent workout was today or yesterday
+    if sorted_dates[0] == today or sorted_dates[0] == today - timedelta(days=1):
+        current_streak = 1
+        expected_date = sorted_dates[0] - timedelta(days=1)
+        
+        # counting consecutive days backwards
+        for i in range(1, len(sorted_dates)):
+            if sorted_dates[i] == expected_date:
+                current_streak += 1
+                expected_date -= timedelta(days=1)
+            elif sorted_dates[i] < expected_date:
+                # Gap found, streak broken
+                break
+    # else: streak is 0 last workout was more than a day ago
+    
+    #uUpdate user profile
+    profile_result = await db.execute(
+        select(UserProfile).where(UserProfile.user_id == user_id)
+    )
+    profile = profile_result.scalars().first()
+    
+    if profile:
+        profile.day_streak = current_streak
+        profile.total_workouts = total_workouts
+        await db.commit()
 
 @router.post("/", response_model=WorkoutLogResponse, status_code=status.HTTP_201_CREATED)
 async def start_workout(
@@ -106,6 +176,8 @@ async def update_workout_log(
         log.is_public = data.is_public
     if data.completed_at is not None:
         log.completed_at = data.completed_at
+        await update_user_streak(db, current_user.id)
+        
     if data.duration is not None:
         log.duration = data.duration
     if data.caption is not None:

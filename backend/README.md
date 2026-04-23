@@ -6,6 +6,8 @@
 
 **Health Check:** https://gym-community-app.onrender.com/health
 
+**Local testing:** 'uv run uvicorn app.main:gym_app --reload'
+
 ---
 
 This documentation provides a complete reference for all backend API endpoints, including request/response schemas, authentication requirements, and the application flow.
