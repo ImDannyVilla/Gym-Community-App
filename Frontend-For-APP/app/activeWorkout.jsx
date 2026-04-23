@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import Modal from "react-native-modal";
 import { colors, layout, typography, spacing } from "../lib/theme";
 import { startWorkout, updateWorkoutLog, addExerciseToLog, searchExercises } from "../lib/workoutApi";
+import { useWorkoutStore } from "../stores/workoutStore";
 
 const EXERCISE_LIST = [
   { category: "Chest", name: "Bench Press" },
@@ -36,6 +37,7 @@ export default function ActiveWorkout() {
   const [isModalVisible, setModalVisible] = useState(false);
   const [showCancelAlert, setShowCancelAlert] = useState(false);
   const [showEmptyAlert, setShowEmptyAlert] = useState(false);
+  const { endWorkout } = useWorkoutStore();
 
   useEffect(() => {
     initWorkout();
@@ -62,8 +64,10 @@ export default function ActiveWorkout() {
   };
 
   const handleOpenModal = () => {
-    loadExerciseOptions();
-    setModalVisible(true);
+    router.push({
+      pathname: '/exercise-search',
+      params: { context: 'active-workout' }
+    });
   };
 
   // Timer logic
@@ -171,6 +175,7 @@ export default function ActiveWorkout() {
         });
       }
 
+      endWorkout();
       router.back();
     } catch (e) {
       Alert.alert("Error", "Failed to save workout.");
@@ -314,6 +319,7 @@ export default function ActiveWorkout() {
             </Pressable>
             <Pressable style={styles.alertDestructiveBtn} onPress={() => {
               setShowCancelAlert(false);
+              endWorkout();
               router.back();
             }}>
               <Text style={styles.alertDestructiveBtnText}>Discard</Text>
@@ -340,6 +346,7 @@ export default function ActiveWorkout() {
             </Pressable>
             <Pressable style={styles.alertDestructiveBtn} onPress={() => {
               setShowEmptyAlert(false);
+              endWorkout();
               router.back();
             }}>
               <Text style={styles.alertDestructiveBtnText}>Discard</Text>

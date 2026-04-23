@@ -103,3 +103,40 @@ export async function forgotEmailUsername({ username }) {
 
   return data;
 }
+
+export async function updatePassword({ new_password }, token) {
+  const response = await fetch(`${API_BASE_URL}/auth/update-password`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`,
+    },
+    body: JSON.stringify({ new_password }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.detail || "Failed to update password");
+  }
+
+  return data;
+}
+
+export async function resendConfirmation({ email }) {
+  const response = await fetch(`${API_BASE_URL}/auth/resend-confirmation`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.detail || "Failed to resend confirmation");
+  }
+
+  return data;
+}

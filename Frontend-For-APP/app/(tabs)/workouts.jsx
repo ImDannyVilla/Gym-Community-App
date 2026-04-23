@@ -1,56 +1,42 @@
 import React, { useState, useCallback, useEffect } from "react";
-import { View, Text, StyleSheet, Pressable, FlatList, ScrollView, Image } from "react-native";
+import { View, Text, StyleSheet, Pressable, ScrollView, Alert } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, layout, spacing } from "../../lib/theme";
-import Header from "../_components/Header";
-import { getWorkoutLogs, getSeededWorkouts } from "../../lib/workoutApi";
-
-const TABS = [
-  { key: "muscleGroups", label: "Muscle Groups" },
-  { key: "history", label: "History" },
-  { key: "explore", label: "Explore" },
-];
-
-const muscleGroups = [
-  { id: 1, title: "Chest", route: "/programs/chest" },
-  { id: 2, title: "Arms", route: "/programs/arms" },
-  { id: 3, title: "Legs", route: "/programs/legs" },
-  { id: 4, title: "Shoulders", route: "/programs/shoulders" },
-  { id: 5, title: "Cardio", route: "/programs/cardio" },
-];
-
-const chestImage = require("../../assets/Chest.png");
-const armsImage = require("../../assets/Arms.png");
-const legsImage = require("../../assets/Legs.png");
-const shouldersImage = require("../../assets/Shoulders.png");
-const cardioImage = require("../../assets/Cardio.png");
-
-const muscleImages = {
-  Chest: chestImage,
-  Arms: armsImage,
-  Legs: legsImage,
-  Shoulders: shouldersImage,
-  Cardio: cardioImage,
-};
-
-const getMuscleImage = (title) => muscleImages[title] || chestImage;
+import { getMyRoutines, startWorkout } from "../../lib/workoutApi";
+import { getMyProfile } from "../../lib/socialApi";
+import { useWorkoutStore } from "../../stores/workoutStore";
 
 export default function WorkoutsScreen() {
-  const [activeTab, setActiveTab] = useState("muscleGroups");
-  const [workouts, setWorkouts] = useState([]);
+  const insets = useSafeAreaInsets();
+  const [routines, setRoutines] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [exploreWorkouts, setExploreWorkouts] = useState([]);
-  const [exploreLoading, setExploreLoading] = useState(true);
-  const [exploreError, setExploreError] = useState("");
+  const [stats, setStats] = useState({
+    totalWorkouts: 0,
+    setsDone: 0,
+    dayStreak: 0,
+  });
+  const { startWorkout: setWorkoutActive } = useWorkoutStore();
 
-  const fetchWorkouts = async () => {
+  const fetchData = async () => {
+    setIsLoading(true);
     try {
-      const data = await getWorkoutLogs();
-      setWorkouts(data || []);
+      // Fetch routines
+      const routinesData = await getMyRoutines();
+      setRoutines(routinesData || []);
+
+      // Fetch user profile for stats
+      const profileData = await getMyProfile();
+      if (profileData?.profile) {
+        setStats({
+          totalWorkouts: profileData.profile.total_workouts || 0,
+          setsDone: 0, // TODO: Calculate from workout logs
+          dayStreak: profileData.profile.day_streak || 0,
+        });
+      }
     } catch (e) {
-      console.error("Failed to load workouts:", e.message);
+      console.error("Failed to load data:", e.message);
     } finally {
       setIsLoading(false);
     }
@@ -58,443 +44,326 @@ export default function WorkoutsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      fetchWorkouts();
+      fetchData();
     }, [])
   );
 
-  const fetchExploreWorkouts = useCallback(async () => {
-    if (exploreLoading) return;
-    setExploreLoading(true);
-    setExploreError("");
-    
+  const getCurrentDate = () => {
+    const date = new Date();
+    const options = { weekday: 'long', month: 'long', day: 'numeric' };
+    return date.toLocaleDateString('en-US', options);
+  };
+
+  const handleStartEmptyWorkout = async () => {
     try {
-      const data = await getSeededWorkouts();
-      setExploreWorkouts(data || []);
+      const log = await startWorkout("My Workout", null, false);
+      setWorkoutActive(log.id);
+      router.push("/activeWorkout");
     } catch (e) {
-      setExploreError(e.message || "Could not connect to server");
-    } finally {
-      setExploreLoading(false);
+      console.error("Failed to start workout:", e.message);
+      Alert.alert("Error", "Failed to start workout. Please try again.");
     }
-  }, [exploreLoading]);
-
-  useEffect(() => {
-    if (activeTab === "explore") {
-      fetchExploreWorkouts();
-    }
-  }, [activeTab]);
-
-  const formatTime = (seconds) => {
-    const m = Math.floor(seconds / 60);
-    return `${m} min`;
   };
 
-  const formatDate = (isoString) => {
-    if (!isoString) return "--";
-    const date = new Date(isoString);
-    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-  };
-
-  const renderMuscleGroups = () => (
-    <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-      <View style={styles.muscleGrid}>
-        {muscleGroups.map((muscle) => (
-          <Pressable
-            key={muscle.id}
-            style={styles.muscleItem}
-            onPress={() => router.push(muscle.route)}
-          >
-            <View style={styles.muscleCard}>
-              <Image 
-                source={getMuscleImage(muscle.title)} 
-                style={styles.muscleImage}
-                resizeMode="cover"
-              />
-              <View style={styles.muscleTextContainer}>
-                <Text style={styles.muscleTitle}>{muscle.title}</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
-            </View>
-          </Pressable>
-        ))}
-      </View>
-    </ScrollView>
-  );
-
-  const renderHistory = () => (
-    <View style={styles.content}>
-      <Pressable 
-        style={styles.startButton} 
-        onPress={() => router.push("/activeWorkout")}
-      >
-        <Ionicons name="add-circle" size={24} color="white" />
-        <Text style={styles.startButtonText}>Start Empty Workout</Text>
-      </Pressable>
-
-      <Text style={styles.sectionTitle}>History</Text>
-
-      {isLoading ? (
-        <Text style={styles.emptyText}>Loading...</Text>
-      ) : workouts.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Ionicons name="barbell-outline" size={64} color={colors.border} />
-          <Text style={styles.emptyText}>No workouts logged yet.</Text>
-          <Text style={styles.emptySubtext}>Time to hit the gym!</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={workouts}
-          keyExtractor={(item) => item.id}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.listContent}
-          renderItem={({ item }) => {
-            const totalSets = item.exercises?.reduce((acc, ex) => acc + (ex.sets?.length || 0), 0) || 0;
-            const exerciseCount = item.exercises?.length || 0;
-            
-            return (
-              <View style={styles.workoutCard}>
-                <View style={styles.cardHeader}>
-                  <Text style={styles.workoutName}>{item.name}</Text>
-                  <Text style={styles.workoutDate}>{formatDate(item.started_at)}</Text>
-                </View>
-                
-                <View style={styles.cardStats}>
-                  <View style={styles.statChip}>
-                    <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
-                    <Text style={styles.statText}>{formatTime(item.duration || 0)}</Text>
-                  </View>
-                  <View style={styles.statChip}>
-                    <Ionicons name="barbell-outline" size={14} color={colors.textSecondary} />
-                    <Text style={styles.statText}>{exerciseCount} Exercises</Text>
-                  </View>
-                </View>
-
-                <Text style={styles.exerciseList} numberOfLines={2}>
-                  {exerciseCount > 0 ? "Tap to view details" : "No exercises logged"}
-                </Text>
-              </View>
-            );
-          }}
-        />
-      )}
-    </View>
-  );
-
-  const renderExplore = () => {
-    if (exploreLoading) {
-      return (
-        <View style={styles.exploreContainer}>
-          <View style={styles.exploreEmpty}>
-            <Text style={styles.emptyText}>Loading...</Text>
-          </View>
-        </View>
-      );
+  const handleStartRoutine = async (routineId, routineName) => {
+    try {
+      const log = await startWorkout(routineName, routineId, false);
+      setWorkoutActive(log.id);
+      router.push("/activeWorkout");
+    } catch (e) {
+      console.error("Failed to start routine:", e.message);
+      Alert.alert("Error", "Failed to start routine. Please try again.");
     }
-
-    if (exploreError) {
-      return (
-        <View style={styles.exploreContainer}>
-          <View style={styles.exploreEmpty}>
-            <Ionicons name="alert-circle-outline" size={64} color={colors.error} />
-            <Text style={styles.emptyText}>{exploreError}</Text>
-            <Pressable onPress={fetchExploreWorkouts} style={styles.retryButton}>
-              <Text style={styles.retryButtonText}>Tap to retry</Text>
-            </Pressable>
-          </View>
-        </View>
-      );
-    }
-
-    if (exploreWorkouts.length === 0) {
-      return (
-        <View style={styles.exploreContainer}>
-          <View style={styles.exploreEmpty}>
-            <Ionicons name="compass-outline" size={64} color={colors.border} />
-            <Text style={styles.emptyText}>No Programs Available</Text>
-            <Text style={styles.emptySubtext}>Check back later for new workouts!</Text>
-          </View>
-        </View>
-      );
-    }
-
-    return (
-      <FlatList
-        data={exploreWorkouts}
-        keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={styles.exploreList}
-        renderItem={({ item }) => (
-          <Pressable style={styles.exploreCard} onPress={() => router.push(`/programs/${item.category.toLowerCase()}`)}>
-            <View style={styles.exploreCardHeader}>
-              <Text style={styles.exploreCardTitle}>{item.name}</Text>
-              <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
-            </View>
-            <View style={styles.exploreCardInfo}>
-              <View style={styles.exploreChip}>
-                <Text style={styles.exploreChipText}>{item.category}</Text>
-              </View>
-              <View style={styles.exploreChip}>
-                <Text style={styles.exploreChipText}>{item.difficulty}</Text>
-              </View>
-              {item.duration_minutes && (
-                <View style={styles.exploreChip}>
-                  <Text style={styles.exploreChipText}>{item.duration_minutes} min</Text>
-                </View>
-              )}
-            </View>
-            {item.description && (
-              <Text style={styles.exploreCardDesc} numberOfLines={2}>{item.description}</Text>
-            )}
-          </Pressable>
-        )}
-      />
-    );
   };
 
   return (
-    <View style={styles.container}>
-      <Header title="Workouts" />
-      
-      <View style={styles.tabBar}>
-        {TABS.map((tab) => (
-          <Pressable
-            key={tab.key}
-            style={[styles.tab, activeTab === tab.key && styles.tabActive]}
-            onPress={() => setActiveTab(tab.key)}
-          >
-            <Text style={[styles.tabText, activeTab === tab.key && styles.tabTextActive]}>
-              {tab.label}
-            </Text>
-          </Pressable>
-        ))}
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={styles.header}>
+        <Text style={styles.dateText}>{getCurrentDate()}</Text>
+        <Text style={styles.titleText}>MY WORKOUTS</Text>
       </View>
 
-      {activeTab === "muscleGroups" && renderMuscleGroups()}
-      {activeTab === "history" && renderHistory()}
-      {activeTab === "explore" && renderExplore()}
-    </View>
+      {/* Stats Bubble */}
+      <View style={styles.statsContainer}>
+        <View style={styles.statBubble}>
+          <Text style={styles.statValue}>{stats.totalWorkouts}</Text>
+          <Text style={styles.statLabel}>Workouts</Text>
+        </View>
+        <View style={styles.statBubble}>
+          <Text style={styles.statValue}>{stats.setsDone}</Text>
+          <Text style={styles.statLabel}>Sets Done</Text>
+        </View>
+        <View style={styles.statBubble}>
+          <Text style={styles.statValue}>{stats.dayStreak} 🔥</Text>
+          <Text style={styles.statLabel}>Day Streak</Text>
+        </View>
+      </View>
+
+      {/* Quick Start Buttons */}
+      <View style={styles.quickStartContainer}>
+        <Pressable 
+          style={styles.quickStartButtonDashed}
+          onPress={handleStartEmptyWorkout}
+        >
+          <Text style={styles.quickStartEmoji}>⚡</Text>
+          <Text style={styles.quickStartTitle}>Empty Workout</Text>
+          <Text style={styles.quickStartSubtitle}>Start fresh</Text>
+        </Pressable>
+
+        <Pressable 
+          style={styles.quickStartButton}
+          onPress={() => router.push("/explore")}
+        >
+          <Text style={styles.quickStartEmoji}>🔍</Text>
+          <Text style={styles.quickStartTitle}>Explore</Text>
+          <Text style={styles.quickStartSubtitle}>Find programs</Text>
+        </Pressable>
+      </View>
+
+      {/* My Routines */}
+      <View style={styles.routinesSection}>
+        <View style={styles.routinesHeader}>
+          <Text style={styles.routinesTitle}>My Routines</Text>
+        </View>
+
+        {isLoading ? (
+          <Text style={styles.loadingText}>Loading...</Text>
+        ) : routines.length === 0 ? (
+          <View style={styles.emptyRoutines}>
+            <Ionicons name="barbell-outline" size={48} color={colors.border} />
+            <Text style={styles.emptyText}>No routines yet</Text>
+            <Text style={styles.emptySubtext}>Create your first routine to get started</Text>
+          </View>
+        ) : (
+          routines.map((routine) => (
+            <View key={routine.id} style={styles.routineCard}>
+              <View style={styles.routineInfo}>
+                <Text style={styles.routineName}>{routine.name}</Text>
+                <Text style={styles.routineExercises}>
+                  {routine.exercises?.length || 0} exercises
+                </Text>
+              </View>
+              <Pressable 
+                style={styles.startButton}
+                onPress={() => handleStartRoutine(routine.id, routine.name)}
+              >
+                <Text style={styles.startButtonText}>Start</Text>
+              </Pressable>
+            </View>
+          ))
+        )}
+      </View>
+      </ScrollView>
+
+      {/* Add Routine Button - Fixed above bottom nav */}
+      <Pressable 
+        style={[styles.addRoutineButton, { bottom: 60 + insets.bottom + 12 }]}
+        onPress={() => router.push("/create-routine")}
+      >
+        <Text style={styles.addRoutineButtonText}>+ Add Routine</Text>
+      </Pressable>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    paddingBottom: 80,
   },
-  tabBar: {
-    flexDirection: "row",
-    paddingHorizontal: layout.screenPadding,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+  header: {
+    paddingHorizontal: 16,
+    paddingTop: 18,
+    paddingBottom: 8,
   },
-  tab: {
-    flex: 1,
-    paddingVertical: spacing.md,
-    alignItems: "center",
-  },
-  tabActive: {
-    borderBottomWidth: 2,
-    borderBottomColor: colors.primary,
-  },
-  tabText: {
-    fontSize: 14,
+  dateText: {
+    fontSize: 11,
     color: colors.textSecondary,
-    fontWeight: "500",
+    letterSpacing: 2,
+    textTransform: "uppercase",
   },
-  tabTextActive: {
-    color: colors.primary,
-    fontWeight: "bold",
+  titleText: {
+    fontSize: 32,
+    fontWeight: "900",
+    color: colors.text,
+    letterSpacing: 1,
+    lineHeight: 32,
   },
-  scrollView: {
-    flex: 1,
-    paddingHorizontal: layout.screenPadding,
-  },
-  muscleGrid: {
-    gap: spacing.md,
-    paddingTop: spacing.md,
-  },
-  muscleItem: {
-    marginBottom: spacing.sm,
-  },
-  muscleCard: {
-    flexDirection: "row",
-    alignItems: "center",
+  statsContainer: {
+    marginHorizontal: 16,
+    marginVertical: 12,
     backgroundColor: colors.surface,
-    borderRadius: 12,
-    padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 8,
+    flexDirection: "row",
+    justifyContent: "space-around",
   },
-  muscleImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-    marginRight: spacing.md,
-  },
-  muscleTextContainer: {
+  statBubble: {
     flex: 1,
+    alignItems: "center",
+    paddingHorizontal: 4,
   },
-  muscleTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
+  statValue: {
+    fontSize: 30,
+    fontWeight: "900",
+    color: colors.primary,
+    lineHeight: 30,
+  },
+  statLabel: {
+    fontSize: 10,
+    color: colors.textSecondary,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginTop: 2,
+  },
+  quickStartContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 14,
+    flexDirection: "row",
+    gap: 10,
+  },
+  quickStartButtonDashed: {
+    flex: 1,
+    backgroundColor: "transparent",
+    borderWidth: 2,
+    borderStyle: "dashed",
+    borderColor: colors.border,
+    borderRadius: 14,
+    paddingVertical: 18,
+    paddingHorizontal: 10,
+    alignItems: "center",
+  },
+  quickStartButton: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 14,
+    paddingVertical: 18,
+    paddingHorizontal: 10,
+    alignItems: "center",
+  },
+  quickStartEmoji: {
+    fontSize: 26,
+    marginBottom: 4,
+  },
+  quickStartTitle: {
+    fontWeight: "800",
+    fontSize: 13,
     color: colors.text,
   },
-  content: {
+  quickStartSubtitle: {
+    fontSize: 10,
+    color: colors.textSecondary,
+    marginTop: 3,
+  },
+  routinesSection: {
+    paddingHorizontal: 16,
+  },
+  routinesHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  routinesTitle: {
+    fontWeight: "900",
+    fontSize: 15,
+    color: colors.text,
+  },
+  createButton: {
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+  },
+  createButtonText: {
+    color: colors.textSecondary,
+    fontSize: 13,
+  },
+  routineCard: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 13,
+    marginBottom: 8,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  routineInfo: {
     flex: 1,
-    paddingHorizontal: layout.screenPadding,
+  },
+  routineName: {
+    fontWeight: "800",
+    fontSize: 14,
+    color: colors.text,
+  },
+  routineExercises: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 2,
   },
   startButton: {
-    flexDirection: "row",
     backgroundColor: colors.primary,
-    paddingVertical: 16,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: spacing.md,
-    marginBottom: spacing.lg,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 10,
   },
   startButtonText: {
-    color: "white",
-    fontSize: 18,
-    fontWeight: "bold",
-    marginLeft: 8,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: colors.text,
-    marginBottom: spacing.md,
-  },
-  listContent: {
-    paddingBottom: layout.bottomSafeArea + 80,
-  },
-  workoutCard: {
-    backgroundColor: colors.surface,
-    padding: spacing.md,
-    borderRadius: 12,
-    marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: spacing.sm,
-  },
-  workoutName: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: colors.text,
-  },
-  workoutDate: {
+    color: "#000",
     fontSize: 12,
-    color: colors.textTertiary,
+    fontWeight: "800",
   },
-  cardStats: {
-    flexDirection: "row",
-    marginBottom: spacing.sm,
-  },
-  statChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.background,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    marginRight: spacing.sm,
-  },
-  statText: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginLeft: 4,
-    fontWeight: "500",
-  },
-  exerciseList: {
+  loadingText: {
     fontSize: 14,
     color: colors.textSecondary,
-    lineHeight: 20,
+    textAlign: "center",
+    marginTop: 20,
   },
-  emptyState: {
-    flex: 1,
-    justifyContent: "center",
+  emptyRoutines: {
     alignItems: "center",
-    marginTop: 40,
+    paddingVertical: 40,
   },
   emptyText: {
-    fontSize: 18,
-    fontWeight: "bold",
+    fontSize: 16,
+    fontWeight: "600",
     color: colors.textSecondary,
-    marginTop: 16,
+    marginTop: 12,
   },
   emptySubtext: {
-    fontSize: 14,
-    color: colors.textTertiary,
-    marginTop: 8,
-  },
-  exploreContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  exploreEmpty: {
-    alignItems: "center",
-  },
-  exploreList: {
-    padding: layout.screenPadding,
-  },
-  exploreCard: {
-    backgroundColor: colors.surface,
-    padding: spacing.md,
-    borderRadius: 12,
-    marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  exploreCardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: spacing.sm,
-  },
-  exploreCardTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: colors.text,
-  },
-  exploreCardInfo: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  exploreChip: {
-    backgroundColor: colors.background,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  exploreChipText: {
     fontSize: 12,
-    color: colors.textSecondary,
-    fontWeight: "500",
-  },
-  exploreCardDesc: {
-    fontSize: 14,
     color: colors.textTertiary,
+    marginTop: 4,
   },
-  retryButton: {
-    marginTop: spacing.md,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
+  addRoutineButton: {
+    position: "absolute",
+    bottom: 80,
+    left: 16,
+    right: 16,
     backgroundColor: colors.primary,
-    borderRadius: 8,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: "center",
+    zIndex: 100,
+    elevation: 5,
   },
-  retryButtonText: {
-    color: colors.text,
+  addRoutineButtonText: {
+    color: "#fff",
     fontWeight: "bold",
+    fontSize: 16,
   },
 });

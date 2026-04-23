@@ -103,36 +103,7 @@ function PostsTab() {
     );
 }
 
-function WorkoutsTab() {
-    const [workouts, setWorkouts] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
-
-    const fetchWorkouts = useCallback(async () => {
-        try {
-            const token = await getToken();
-            if (!token) return;
-
-            const response = await fetch("https://gym-community-app.onrender.com/workout-logs/me", {
-                headers: { "Authorization": `Bearer ${token}` }
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                setWorkouts(data || []);
-            }
-        } catch (e) {
-            console.error("Failed to load workouts", e);
-        } finally {
-            setIsLoading(false);
-        }
-    }, []);
-
-    useFocusEffect(
-        useCallback(() => {
-            fetchWorkouts();
-        }, [fetchWorkouts])
-    );
-
+function WorkoutsTab({ workoutLogs, isLoading }) {
     const formatDate = (isoString) => {
         if (!isoString) return "--";
         const date = new Date(isoString);
@@ -153,7 +124,7 @@ function WorkoutsTab() {
         );
     }
 
-    if (workouts.length === 0) {
+    if (workoutLogs.length === 0) {
         return (
             <View style={styles.tabContainer}>
                 <Ionicons name="barbell-outline" size={48} color={colors.border} />
@@ -169,25 +140,28 @@ function WorkoutsTab() {
             showsVerticalScrollIndicator={false}
         >
             <View style={styles.listContent}>
-                {workouts.map((item) => (
+                {workoutLogs.map((item) => (
                     <View key={item.id} style={styles.workoutCard}>
                         <View style={styles.cardHeader}>
                             <Text style={styles.cardTitle}>{item.name}</Text>
-                            <Text style={styles.cardDate}>{formatDate(item.started_at)}</Text>
-                        </View>
-                        <View style={styles.statsRow}>
-                            <View style={styles.statChip}>
-                                <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
-                                <Text style={styles.statChipText}>{formatTime(item.duration)}</Text>
+                            <View style={[
+                                styles.badge,
+                                item.is_public ? styles.badgePublic : styles.badgePrivate
+                            ]}>
+                                <Text style={styles.badgeText}>
+                                    {item.is_public ? '🌎 Public' : '🔒 Private'}
+                                </Text>
                             </View>
-                            <View style={styles.statChip}>
-                                <Ionicons name="barbell-outline" size={14} color={colors.textSecondary} />
-                                <Text style={styles.statChipText}>{item.exercises?.length || 0} exercises</Text>
-                            </View>
-                            {item.is_public && (
-                                <Ionicons name="globe" size={14} color={colors.primary} />
-                            )}
                         </View>
+                        <Text style={styles.cardDate}>{formatDate(item.started_at)}</Text>
+                        {item.duration && (
+                            <Text style={styles.logDuration}>
+                                ⏱ {formatTime(item.duration)}
+                            </Text>
+                        )}
+                        {!item.completed_at && (
+                            <Text style={styles.logIncomplete}>Incomplete</Text>
+                        )}
                     </View>
                 ))}
             </View>
@@ -204,12 +178,13 @@ export default function Profile() {
     const [name, setName] = useState("")
     const [username, setUsername] = useState("");
     const [about, setAbout] = useState("");
-    const [weight, setWeight] = useState("");
-    const [lastWorkout, setLastWorkout] = useState("");
-    const [currentWorkout, setCurrentWorkout] = useState("");
 
     const [totalWorkouts, setTotalWorkouts] = useState("0");
     const [dayStreak, setDayStreak] = useState("0");
+    const [workoutsThisWeek, setWorkoutsThisWeek] = useState("0");
+    const [followersCount, setFollowersCount] = useState(0);
+    const [followingCount, setFollowingCount] = useState(0);
+    const [workoutLogs, setWorkoutLogs] = useState([]);
 
     const [isStreakModalVisible, setStreakModalVisible] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -240,16 +215,7 @@ export default function Profile() {
         if(params.about) {
             setAbout(params.about);
         }
-        if(params.weight) {
-            setWeight(params.weight);
-        }
-        if(params.lastWorkout) {
-            setLastWorkout(params.lastWorkout);
-        }
-        if(params.currentWorkout) {
-            setCurrentWorkout(params.currentWorkout);
-        }
-    }, [params.name, params.username, params.about, params.weight, params.lastWorkout, params.currentWorkout]);
+    }, [params.name, params.username, params.about]);
 
 const loadProfileData = async () => {
         try {
@@ -257,28 +223,54 @@ const loadProfileData = async () => {
             const token = await getToken();
             if (!token) return;
 
-            const response = await fetch(`https://gym-community-app.onrender.com/users/me`, {
+            // Fetch user profile
+            const profileResponse = await fetch(`https://gym-community-app.onrender.com/users/me`, {
                 method: "GET",
                 headers: {
                     "Authorization": `Bearer ${token}`
                 }
             });
 
-if (response.ok) {
-                const data = await response.json();
+            if (profileResponse.ok) {
+                const data = await profileResponse.json();
                 
                 if (data.profile) {
                     setUsername(data.profile.user_name || "Username");
                     setName(data.profile.full_name || "Name");
                     setAbout(data.profile.bio || "This is a little about me.");
-                    setWeight(data.profile.weight ? `${data.profile.weight} lbs` : "--");
-                    setLastWorkout(data.profile.last_workout || "--");
-                    setCurrentWorkout(data.profile.current_workout || "--");
-                    setTotalWorkouts(data.profile.total_workouts?.toString() || "0");
-                    setDayStreak(data.profile.day_streak?.toString() || "0");
+                    setFollowersCount(data.profile.followers_count || 0);
+                    setFollowingCount(data.profile.following_count || 0);
                 }
             } else {
-                console.log("Failed to fetch profile", response.status);
+                console.log("Failed to fetch profile", profileResponse.status);
+            }
+
+            // Fetch workout streak stats
+            const streakResponse = await fetch(`https://gym-community-app.onrender.com/workout-logs/me/streak`, {
+                method: "GET",
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            });
+
+            if (streakResponse.ok) {
+                const streakData = await streakResponse.json();
+                setDayStreak(streakData.current_streak_days?.toString() || "0");
+                setTotalWorkouts(streakData.total_workouts?.toString() || "0");
+                setWorkoutsThisWeek(streakData.workouts_this_week?.toString() || "0");
+            }
+
+            // Fetch workout logs
+            const logsResponse = await fetch(`https://gym-community-app.onrender.com/workout-logs/me`, {
+                method: "GET",
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            });
+
+            if (logsResponse.ok) {
+                const logsData = await logsResponse.json();
+                setWorkoutLogs(logsData || []);
             }
         } catch (error) {
             console.log("Failed to load profile data (Network error)", error);
@@ -347,37 +339,38 @@ if (response.ok) {
                 <Text style={styles.name}>{name}</Text>
                 <Text style={styles.userName}>@{username}</Text>
 
-                <View style={styles.topStatsContainer}>
-                    <View style={styles.topStatItem}>
-                        <Text style={styles.topStatValue} adjustsFontSizeToFit numberOfLines={1}>{totalWorkouts}</Text>
-                        <Text style={styles.topStatLabel} adjustsFontSizeToFit numberOfLines={1}>Workouts</Text>
+                {/* Workout Streak Stats */}
+                <View style={styles.streakStatsRow}>
+                    <View style={styles.statBox}>
+                        <Text style={styles.statNumber}>{dayStreak}</Text>
+                        <Text style={styles.statLabel}>Day Streak</Text>
                     </View>
-                    <Pressable style={styles.topStatItem} onPress={() => setStreakModalVisible(true)}>
-                        <Text style={styles.topStatValue} adjustsFontSizeToFit numberOfLines={1}>{dayStreak}</Text>
-                        <Text style={styles.topStatLabel} adjustsFontSizeToFit numberOfLines={1}>Day Streak</Text>
+                    <View style={styles.statBox}>
+                        <Text style={styles.statNumber}>{totalWorkouts}</Text>
+                        <Text style={styles.statLabel}>Total</Text>
+                    </View>
+                    <View style={styles.statBox}>
+                        <Text style={styles.statNumber}>{workoutsThisWeek}</Text>
+                        <Text style={styles.statLabel}>This Week</Text>
+                    </View>
+                </View>
+
+                {/* Followers/Following */}
+                <View style={styles.followRow}>
+                    <Pressable style={styles.followStat}>
+                        <Text style={styles.followNumber}>{followersCount}</Text>
+                        <Text style={styles.followLabel}>Followers</Text>
+                    </Pressable>
+                    <Pressable style={styles.followStat}>
+                        <Text style={styles.followNumber}>{followingCount}</Text>
+                        <Text style={styles.followLabel}>Following</Text>
                     </Pressable>
                 </View>
 
                 <View style={styles.editProfile}>
-                    {/* Pass in username and about variables into the editProfile page */}
-                    <Pressable style={styles.editButton} onPress={() => {router.push({ pathname: "../edit/editProfile", params: {name, username, about, weight, lastWorkout, currentWorkout}})}}>
+                    <Pressable style={styles.editButton} onPress={() => {router.push({ pathname: "../edit/editProfile", params: {name, username, about}})}}>
                         <Text style={styles.edit}>Edit Profile</Text>
                     </Pressable>
-                </View>
-
-                <View style={styles.cardContainer} pointerEvents="none">
-                    <View style={[styles.statCard, { width: "100%", borderBottomWidth: 1, borderRightWidth: 0 }]}>
-                        <Text style={styles.cardTitle} adjustsFontSizeToFit numberOfLines={1}>Weight</Text>
-                        <Text style={styles.cardValue} adjustsFontSizeToFit numberOfLines={1}>{weight}</Text>
-                    </View>
-                    <View style={[styles.statCard, { borderBottomWidth: 0 }]}>
-                        <Text style={styles.cardTitle} adjustsFontSizeToFit numberOfLines={1}>Last Workout</Text>
-                        <Text style={styles.cardValue} adjustsFontSizeToFit numberOfLines={1}>{lastWorkout}</Text>
-                    </View>
-                    <View style={[styles.statCard, { borderBottomWidth: 0, borderRightWidth: 0 }]}>
-                        <Text style={styles.cardTitle} adjustsFontSizeToFit numberOfLines={1}>Current Workout</Text>
-                        <Text style={styles.cardValue} adjustsFontSizeToFit numberOfLines={1}>{currentWorkout}</Text>
-                    </View>
                 </View>
 
                 <View style={styles.aboutContainer}>
@@ -420,7 +413,7 @@ if (response.ok) {
                 </Tabs.Tab>
 
                 <Tabs.Tab name="workouts" label="Workouts">
-                    <WorkoutsTab/>
+                    <WorkoutsTab workoutLogs={workoutLogs} isLoading={isLoading} />
                 </Tabs.Tab>
             </Tabs.Container>
 
@@ -779,5 +772,69 @@ const styles = StyleSheet.create({
     scrollView: {
         flex: 1,
         backgroundColor: colors.background,
+    },
+    streakStatsRow: {
+        flexDirection: "row",
+        justifyContent: "space-around",
+        paddingVertical: 16,
+        borderTopWidth: 1,
+        borderBottomWidth: 1,
+        borderColor: '#222',
+    },
+    statBox: {
+        alignItems: "center",
+    },
+    statNumber: {
+        fontSize: 22,
+        fontWeight: "bold",
+        color: colors.text,
+    },
+    statLabel: {
+        fontSize: 12,
+        color: colors.textSecondary,
+        marginTop: 2,
+    },
+    followRow: {
+        flexDirection: "row",
+        gap: 24,
+        justifyContent: "center",
+        paddingVertical: 12,
+    },
+    followStat: {
+        alignItems: "center",
+    },
+    followNumber: {
+        fontSize: 18,
+        fontWeight: "bold",
+        color: colors.text,
+    },
+    followLabel: {
+        fontSize: 12,
+        color: colors.textSecondary,
+    },
+    badge: {
+        borderRadius: 20,
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+    },
+    badgePublic: {
+        backgroundColor: '#052e16',
+    },
+    badgePrivate: {
+        backgroundColor: '#1c1917',
+    },
+    badgeText: {
+        fontSize: 11,
+        color: '#999',
+    },
+    logDuration: {
+        fontSize: 12,
+        color: colors.textSecondary,
+        marginTop: 2,
+    },
+    logIncomplete: {
+        fontSize: 12,
+        color: '#F59E0B',
+        marginTop: 4,
     },
 });

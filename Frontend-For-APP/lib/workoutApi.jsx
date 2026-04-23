@@ -115,10 +115,36 @@ export async function createRoutine(name, description = "", isPublic = false, ex
   });
 }
 
+export async function updateRoutine(routineId, data) {
+  const authHeader = await getAuthHeader();
+  return fetchWithAuth(`/routines/${routineId}`, {
+    method: "PUT",
+    headers: authHeader,
+    body: JSON.stringify(data),
+  });
+}
+
 export async function deleteRoutine(routineId) {
   const authHeader = await getAuthHeader();
   return fetchWithAuth(`/routines/${routineId}`, {
     method: "DELETE",
+    headers: authHeader,
+  });
+}
+
+export async function addExerciseToRoutine(routineId, exercises) {
+  const authHeader = await getAuthHeader();
+  return fetchWithAuth(`/routines/${routineId}/exercises`, {
+    method: "POST",
+    headers: authHeader,
+    body: JSON.stringify({ exercises }),
+  });
+}
+
+export async function copyWorkoutLogAsRoutine(logId) {
+  const authHeader = await getAuthHeader();
+  return fetchWithAuth(`/routines/${logId}/copy`, {
+    method: "POST",
     headers: authHeader,
   });
 }

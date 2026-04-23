@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet, FlatList, KeyboardAvoidingView, Platform } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, layout, typography, spacing } from "../../lib/theme";
 import Header from "../_components/Header";
@@ -18,7 +19,7 @@ export default function Community() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <Header title="Community" />
       
       <KeyboardAvoidingView
@@ -55,7 +56,7 @@ export default function Community() {
           showsVerticalScrollIndicator={false}
         />
       </KeyboardAvoidingView>
-    </View>
+    </SafeAreaView>
   );
 }
 

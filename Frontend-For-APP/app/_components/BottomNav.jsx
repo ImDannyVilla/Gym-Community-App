@@ -1,106 +1,118 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter, usePathname } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, iconSizes, layout } from '../../lib/theme';
 
-export default function BottomNav({ state, descriptors, navigation, active }) {
-  // If no state is passed (fallback usage), behave like before
-  if (!state) {
-    const navItems = [
-      { key: "community", label: "Community", route: "/community", icon: "people" },
-      { key: "workouts", label: "My Workouts", route: "/workouts", icon: "barbell" },
-      { key: "profile", label: "Profile", route: "/profile", icon: "person" },
-    ];
+export default function BottomNav({ state, descriptors, navigation }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const insets = useSafeAreaInsets();
 
+  // Define tab routes
+  const tabs = [
+    { name: 'community', label: 'Community', route: '/(tabs)/community', icon: 'people' },
+    { name: 'workouts', label: 'My Workouts', route: '/(tabs)/workouts', icon: 'barbell' },
+    { name: 'profile', label: 'Profile', route: '/(tabs)/profile', icon: 'person' },
+  ];
+
+  // If state is passed (from tab navigator), use it
+  if (state && descriptors && navigation) {
     return (
-      <View style={[styles.navRow, { paddingVertical: spacing.sm, borderTopColor: colors.divider }]}>
-        {navItems.map((item) => (
-          <Pressable
-            key={item.key}
-            style={({ pressed }) => [
-              styles.navButton,
-              active === item.key && styles.navButtonActive,
-              pressed && styles.navButtonPressed,
-            ]}
-            // fallback uses global router push 
-            onPress={() => {}}
-          >
-            <Ionicons
-              name={item.icon}
-              size={iconSizes.navIcon}
-              color={active === item.key ? colors.text : colors.textTertiary}
-            />
-            <Text 
-              style={[
-                styles.buttonText, 
-                active === item.key && styles.buttonTextActive
+      <View style={[styles.navRow, { paddingVertical: spacing.sm, paddingBottom: insets.bottom + 8, borderTopColor: colors.divider }]}>
+        {state.routes.map((route, index) => {
+          const { options } = descriptors[route.key];
+          const label =
+            options.tabBarLabel !== undefined
+              ? options.tabBarLabel
+              : options.title !== undefined
+              ? options.title
+              : route.name;
+
+          const isFocused = state.index === index;
+
+          const onPress = () => {
+            const event = navigation.emit({
+              type: 'tabPress',
+              target: route.key,
+              canPreventDefault: true,
+            });
+
+            if (!isFocused && !event.defaultPrevented) {
+              navigation.navigate(route.name, route.params);
+            }
+          };
+
+          let iconName = "home";
+          if (route.name === "community") iconName = "people";
+          if (route.name === "workouts") iconName = "barbell";
+          if (route.name === "profile") iconName = "person";
+
+          const mappedLabel = 
+            route.name === "workouts" ? "My Workouts" : 
+            route.name === "community" ? "Community" :
+            route.name === "profile" ? "Profile" : label;
+
+          return (
+            <Pressable
+              key={route.key}
+              style={({ pressed }) => [
+                styles.navButton,
+                isFocused && styles.navButtonActive,
+                pressed && styles.navButtonPressed,
               ]}
+              onPress={onPress}
             >
-              {item.label}
-            </Text>
-          </Pressable>
-        ))}
+              <Ionicons
+                name={iconName}
+                size={iconSizes.navIcon}
+                color={isFocused ? colors.text : colors.textTertiary}
+              />
+              <Text 
+                style={[
+                  styles.buttonText, 
+                  isFocused && styles.buttonTextActive
+                ]}
+              >
+                {mappedLabel}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
     );
   }
 
+  // Standalone mode (rendered at root level) - use expo-router
   return (
-    <View style={[styles.navRow, { paddingVertical: spacing.sm, borderTopColor: colors.divider }]}>
-      {state.routes.map((route, index) => {
-        const { options } = descriptors[route.key];
-        const label =
-          options.tabBarLabel !== undefined
-            ? options.tabBarLabel
-            : options.title !== undefined
-            ? options.title
-            : route.name;
-
-        const isFocused = state.index === index;
-
-        const onPress = () => {
-          const event = navigation.emit({
-            type: 'tabPress',
-            target: route.key,
-            canPreventDefault: true,
-          });
-
-          if (!isFocused && !event.defaultPrevented) {
-            navigation.navigate(route.name, route.params);
-          }
-        };
-
-        let iconName = "home";
-        if (route.name === "community") iconName = "people";
-        if (route.name === "workouts") iconName = "barbell";
-        if (route.name === "profile") iconName = "person";
-
-        const mappedLabel = 
-          route.name === "workouts" ? "My Workouts" : 
-          route.name === "community" ? "Community" :
-          route.name === "profile" ? "Profile" : label;
+    <View style={[styles.navRow, { paddingVertical: spacing.sm, paddingBottom: insets.bottom + 8, borderTopColor: colors.divider }]}>
+      {tabs.map((tab) => {
+        const isActive = pathname === tab.route || pathname.startsWith(tab.route + '/');
 
         return (
           <Pressable
-            key={route.key}
+            key={tab.name}
             style={({ pressed }) => [
               styles.navButton,
-              isFocused && styles.navButtonActive,
+              isActive && styles.navButtonActive,
               pressed && styles.navButtonPressed,
             ]}
-            onPress={onPress}
+            onPress={() => router.push(tab.route)}
+            activeOpacity={0.7}
           >
             <Ionicons
-              name={iconName}
+              name={tab.icon}
               size={iconSizes.navIcon}
-              color={isFocused ? colors.text : colors.textTertiary}
+              color={isActive ? colors.text : colors.textTertiary}
             />
             <Text 
               style={[
                 styles.buttonText, 
-                isFocused && styles.buttonTextActive
+                isActive && styles.buttonTextActive
               ]}
             >
-              {mappedLabel}
+              {tab.label}
             </Text>
           </Pressable>
         );
@@ -121,7 +133,6 @@ const styles = StyleSheet.create({
     width: "100%",
     borderTopWidth: 1,
     backgroundColor: colors.background,
-    paddingBottom: layout.bottomNavPadding,
   },
   navButton: {
     flex: 1,
