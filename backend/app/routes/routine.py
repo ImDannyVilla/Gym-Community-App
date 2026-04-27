@@ -61,7 +61,7 @@ async def create_routine(
     return result.scalars().first()
 
 
-@router.get("/me", response_model=List[RoutineSummary])
+@router.get("/me", response_model=List[RoutineResponse])
 async def get_my_routines(
     db: AsyncSessionDep,
     current_user: CurrentUser
@@ -69,6 +69,7 @@ async def get_my_routines(
     """Get all routines for the current user."""
     result = await db.execute(
         select(Routine)
+        .options(selectinload(Routine.exercises))
         .where(Routine.user_id == current_user.id)
         .order_by(Routine.created_at.desc())
     )

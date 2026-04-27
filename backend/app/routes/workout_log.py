@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, status
-from sqlalchemy import select, func
+from sqlalchemy import select, func, cast, Date, Integer
 from sqlalchemy.orm import selectinload
 from typing import List, Optional
 from uuid import UUID, uuid4
@@ -24,16 +24,15 @@ async def update_user_streak(db: AsyncSessionDep, user_id: UUID):
     Calculate and update user's workout streak based on completed workout logs.
     Counts consecutive calendar days with at least one completed workout.
     """
-    # get all completed workouts for this user, ordered by completion date
-    result = await db.execute(
-        select(WorkoutLog)
+    # 1. Get total completed workouts
+    total_result = await db.execute(
+        select(func.count(WorkoutLog.id))
         .where(WorkoutLog.user_id == user_id)
         .where(WorkoutLog.completed_at.isnot(None))
-        .order_by(WorkoutLog.completed_at.desc())
     )
-    completed_logs = result.scalars().all()
+    total_workouts = total_result.scalar() or 0
     
-    if not completed_logs:
+    if total_workouts == 0:
         # No completed workouts, reset streak
         profile_result = await db.execute(
             select(UserProfile).where(UserProfile.user_id == user_id)
@@ -44,25 +43,25 @@ async def update_user_streak(db: AsyncSessionDep, user_id: UUID):
             profile.total_workouts = 0
             await db.commit()
         return
+
+    # 2. Get unique workout dates, ordered descending
+    dates_result = await db.execute(
+        select(cast(WorkoutLog.completed_at, Date))
+        .where(WorkoutLog.user_id == user_id)
+        .where(WorkoutLog.completed_at.isnot(None))
+        .distinct()
+        .order_by(cast(WorkoutLog.completed_at, Date).desc())
+    )
     
-    # Update total workouts
-    total_workouts = len(completed_logs)
-    
-    # extracting unique workout dates (calendar days, so ignoring time)
-    workout_dates = set()
-    for log in completed_logs:
-        #converting dates (ignoring time component)
-        workout_date = log.completed_at.date()
-        workout_dates.add(workout_date)
-    
-    sorted_dates = sorted(workout_dates, reverse=True)
+    # Extract dates from result tuples
+    sorted_dates = [row[0] for row in dates_result.all()]
     
     # Calculate current streak
     current_streak = 0
     today = datetime.now(timezone.utc).date()
     
     # check if most recent workout was today or yesterday
-    if sorted_dates[0] == today or sorted_dates[0] == today - timedelta(days=1):
+    if sorted_dates and (sorted_dates[0] == today or sorted_dates[0] == today - timedelta(days=1)):
         current_streak = 1
         expected_date = sorted_dates[0] - timedelta(days=1)
         
@@ -74,9 +73,8 @@ async def update_user_streak(db: AsyncSessionDep, user_id: UUID):
             elif sorted_dates[i] < expected_date:
                 # Gap found, streak broken
                 break
-    # else: streak is 0 last workout was more than a day ago
     
-    #uUpdate user profile
+    # Update user profile
     profile_result = await db.execute(
         select(UserProfile).where(UserProfile.user_id == user_id)
     )
@@ -101,6 +99,46 @@ async def start_workout(
         is_public=data.is_public,
     )
     db.add(log)
+    await db.flush()
+
+    if data.routine_id:
+        # Copy exercises from routine
+        routine_result = await db.execute(
+            select(Routine)
+            .options(selectinload(Routine.exercises))
+            .where(Routine.id == data.routine_id)
+        )
+        routine = routine_result.scalars().first()
+        
+        if routine and routine.exercises:
+            for ex in routine.exercises:
+                log_ex = WorkoutLogExercise(
+                    id=uuid4(),
+                    workout_log_id=log.id,
+                    exercise_id=ex.exercise_id,
+                    name=ex.name,
+                    category=ex.category,
+                    target=ex.target,
+                    equipment=ex.equipment,
+                    gif_url=ex.gif_url,
+                    order=ex.order
+                )
+                db.add(log_ex)
+                await db.flush()
+                
+                # Copy sets
+                target_sets = ex.target_sets or 3
+                for i in range(target_sets):
+                    log_set = WorkoutLogSet(
+                        id=uuid4(),
+                        workout_log_exercise_id=log_ex.id,
+                        set_number=i + 1,
+                        reps=ex.target_reps_max or 0,
+                        weight_lbs=ex.target_weight_lbs or 0,
+                        completed=False
+                    )
+                    db.add(log_set)
+
     await db.commit()
 
     # reload with exercises eagerly loaded
@@ -127,6 +165,57 @@ async def get_my_workout_logs(
         .order_by(WorkoutLog.started_at.desc())
     )
     return result.scalars().all()
+
+@router.get("/me/streak")
+async def get_my_workout_streak(
+    db: AsyncSessionDep,
+    current_user: CurrentUser
+):
+    """Get workout streak stats including workouts this week, total workouts, and sets."""
+    # Calculate workouts this week
+    today = datetime.now(timezone.utc)
+    start_of_week = today - timedelta(days=today.weekday())
+    start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    # Workouts this week
+    result = await db.execute(
+        select(func.count(WorkoutLog.id))
+        .where(WorkoutLog.user_id == current_user.id)
+        .where(WorkoutLog.completed_at >= start_of_week)
+    )
+    workouts_this_week = result.scalar() or 0
+    
+    # Total workouts
+    total_result = await db.execute(
+        select(func.count(WorkoutLog.id))
+        .where(WorkoutLog.user_id == current_user.id)
+        .where(WorkoutLog.completed_at.isnot(None))
+    )
+    total_workouts = total_result.scalar() or 0
+    
+    # Total sets done
+    sets_result = await db.execute(
+        select(func.count(WorkoutLogSet.id))
+        .join(WorkoutLogExercise, WorkoutLogExercise.id == WorkoutLogSet.workout_log_exercise_id)
+        .join(WorkoutLog, WorkoutLog.id == WorkoutLogExercise.workout_log_id)
+        .where(WorkoutLog.user_id == current_user.id)
+        .where(WorkoutLogSet.completed == True)
+    )
+    total_sets = sets_result.scalar() or 0
+    
+    # Fetch day streak from profile
+    profile_result = await db.execute(
+        select(UserProfile).where(UserProfile.user_id == current_user.id)
+    )
+    profile = profile_result.scalars().first()
+    day_streak = profile.day_streak if profile else 0
+    
+    return {
+        "workouts_this_week": workouts_this_week,
+        "day_streak": day_streak,
+        "total_workouts": total_workouts,
+        "total_sets": total_sets
+    }
 
 
 @router.get("/{log_id}", response_model=WorkoutLogResponse)

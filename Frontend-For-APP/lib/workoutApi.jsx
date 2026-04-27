@@ -44,6 +44,11 @@ export async function getWorkoutLogs() {
   return fetchWithAuth("/workout-logs/me", { headers: authHeader });
 }
 
+export async function getWorkoutStreak() {
+  const authHeader = await getAuthHeader();
+  return fetchWithAuth("/workout-logs/me/streak", { headers: authHeader });
+}
+
 export async function startWorkout(name, routineId = null, isPublic = false) {
   const authHeader = await getAuthHeader();
   return fetchWithAuth("/workout-logs/", {

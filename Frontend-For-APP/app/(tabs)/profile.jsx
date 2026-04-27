@@ -11,6 +11,28 @@ import {Tabs, MaterialTabBar} from "react-native-collapsible-tab-view";
 import { colors, spacing, layout } from "../../lib/theme";
 import { getToken } from "../../lib/tokenStorage";
 import { getMyProfile, updateMyProfile } from "../../lib/socialApi";
+import { getWorkoutLogs } from "../../lib/workoutApi";
+import { API_BASE_URL } from "../../lib/api";
+
+const formatDate = (isoString) => {
+    if (!isoString) return "--";
+    const date = new Date(isoString);
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+};
+
+const formatTime = (seconds) => {
+    if (!seconds) return "--";
+    const m = Math.floor(seconds / 60);
+    return `${m} min`;
+};
+
+const EmptyState = ({ icon, title, subtitle }) => (
+    <View style={styles.tabContainer}>
+        <Ionicons name={icon} size={48} color={colors.border} />
+        <Text style={styles.emptyText}>{title}</Text>
+        <Text style={styles.emptySubtext}>{subtitle}</Text>
+    </View>
+);
 
 function PostsTab() {
     const [posts, setPosts] = useState([]);
@@ -18,18 +40,9 @@ function PostsTab() {
 
     const fetchPosts = useCallback(async () => {
         try {
-            const token = await getToken();
-            if (!token) return;
-
-            const response = await fetch("https://gym-community-app.onrender.com/workout-logs/me", {
-                headers: { "Authorization": `Bearer ${token}` }
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                const publicPosts = (data || []).filter(log => log.is_public);
-                setPosts(publicPosts);
-            }
+            const logs = await getWorkoutLogs();
+            const publicPosts = (logs || []).filter(log => log.is_public);
+            setPosts(publicPosts);
         } catch (e) {
             console.error("Failed to load posts", e);
         } finally {
@@ -43,18 +56,6 @@ function PostsTab() {
         }, [fetchPosts])
     );
 
-    const formatDate = (isoString) => {
-        if (!isoString) return "--";
-        const date = new Date(isoString);
-        return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-    };
-
-    const formatTime = (seconds) => {
-        if (!seconds) return "--";
-        const m = Math.floor(seconds / 60);
-        return `${m} min`;
-    };
-
     if (isLoading) {
         return (
             <View style={styles.tabContainer}>
@@ -64,59 +65,41 @@ function PostsTab() {
     }
 
     if (posts.length === 0) {
-        return (
-            <View style={styles.tabContainer}>
-                <Ionicons name="share-social-outline" size={48} color={colors.border} />
-                <Text style={styles.emptyText}>No posts yet</Text>
-                <Text style={styles.emptySubtext}>Share a workout to make it public</Text>
-            </View>
-        );
+        return <EmptyState icon="share-social-outline" title="No posts yet" subtitle="Share a workout to make it public" />;
     }
 
     return (
-        <ScrollView
+        <FlatList
             style={styles.scrollView}
             showsVerticalScrollIndicator={false}
-        >
-            <View style={styles.listContent}>
-                {posts.map((item) => (
-                    <View key={item.id} style={styles.postCard}>
-                        <View style={styles.cardHeader}>
-                            <Text style={styles.cardTitle}>{item.name}</Text>
-                            <Text style={styles.cardDate}>{formatDate(item.started_at)}</Text>
-                        </View>
-                        {item.caption && (
-                            <Text style={styles.caption} numberOfLines={3}>{item.caption}</Text>
-                        )}
-                        <View style={styles.statsRow}>
-                            <View style={styles.statChip}>
-                                <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
-                                <Text style={styles.statChipText}>{formatTime(item.duration)}</Text>
-                            </View>
-                            <Text style={styles.exerciseCount}>
-                                {item.exercises?.length || 0} exercises
-                            </Text>
-                        </View>
+            data={posts}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.listContent}
+            renderItem={({ item }) => (
+                <View style={styles.postCard}>
+                    <View style={styles.cardHeader}>
+                        <Text style={styles.cardTitle}>{item.name}</Text>
+                        <Text style={styles.cardDate}>{formatDate(item.started_at)}</Text>
                     </View>
-                ))}
-            </View>
-        </ScrollView>
+                    {item.caption && (
+                        <Text style={styles.caption} numberOfLines={3}>{item.caption}</Text>
+                    )}
+                    <View style={styles.statsRow}>
+                        <View style={styles.statChip}>
+                            <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
+                            <Text style={styles.statChipText}>{formatTime(item.duration)}</Text>
+                        </View>
+                        <Text style={styles.exerciseCount}>
+                            {item.exercises?.length || 0} exercises
+                        </Text>
+                    </View>
+                </View>
+            )}
+        />
     );
 }
 
 function WorkoutsTab({ workoutLogs, isLoading }) {
-    const formatDate = (isoString) => {
-        if (!isoString) return "--";
-        const date = new Date(isoString);
-        return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-    };
-
-    const formatTime = (seconds) => {
-        if (!seconds) return "--";
-        const m = Math.floor(seconds / 60);
-        return `${m} min`;
-    };
-
     if (isLoading) {
         return (
             <View style={styles.tabContainer}>
@@ -126,47 +109,41 @@ function WorkoutsTab({ workoutLogs, isLoading }) {
     }
 
     if (workoutLogs.length === 0) {
-        return (
-            <View style={styles.tabContainer}>
-                <Ionicons name="barbell-outline" size={48} color={colors.border} />
-                <Text style={styles.emptyText}>No workouts yet</Text>
-                <Text style={styles.emptySubtext}>Start a workout to track your progress</Text>
-            </View>
-        );
+        return <EmptyState icon="barbell-outline" title="No workouts yet" subtitle="Start a workout to track your progress" />;
     }
 
     return (
-        <ScrollView
+        <FlatList
             style={styles.scrollView}
             showsVerticalScrollIndicator={false}
-        >
-            <View style={styles.listContent}>
-                {workoutLogs.map((item) => (
-                    <View key={item.id} style={styles.workoutCard}>
-                        <View style={styles.cardHeader}>
-                            <Text style={styles.cardTitle}>{item.name}</Text>
-                            <View style={[
-                                styles.badge,
-                                item.is_public ? styles.badgePublic : styles.badgePrivate
-                            ]}>
-                                <Text style={styles.badgeText}>
-                                    {item.is_public ? '🌎 Public' : '🔒 Private'}
-                                </Text>
-                            </View>
-                        </View>
-                        <Text style={styles.cardDate}>{formatDate(item.started_at)}</Text>
-                        {item.duration && (
-                            <Text style={styles.logDuration}>
-                                ⏱ {formatTime(item.duration)}
+            data={workoutLogs}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.listContent}
+            renderItem={({ item }) => (
+                <View style={styles.workoutCard}>
+                    <View style={styles.cardHeader}>
+                        <Text style={styles.cardTitle}>{item.name}</Text>
+                        <View style={[
+                            styles.badge,
+                            item.is_public ? styles.badgePublic : styles.badgePrivate
+                        ]}>
+                            <Text style={styles.badgeText}>
+                                {item.is_public ? 'Public' : 'Private'}
                             </Text>
-                        )}
-                        {!item.completed_at && (
-                            <Text style={styles.logIncomplete}>Incomplete</Text>
-                        )}
+                        </View>
                     </View>
-                ))}
-            </View>
-        </ScrollView>
+                    <Text style={styles.cardDate}>{formatDate(item.started_at)}</Text>
+                    {item.duration && (
+                        <Text style={styles.logDuration}>
+                             {formatTime(item.duration)}
+                        </Text>
+                    )}
+                    {!item.completed_at && (
+                        <Text style={styles.logIncomplete}>Incomplete</Text>
+                    )}
+                </View>
+            )}
+        />
     );
 }
 
@@ -185,14 +162,8 @@ export default function Profile() {
     const [currentWorkout, setCurrentWorkout] = useState("");
     const [avatarUrl, setAvatarUrl] = useState("");
 
-    const [totalWorkouts, setTotalWorkouts] = useState("0");
-    const [dayStreak, setDayStreak] = useState("0");
-    const [workoutsThisWeek, setWorkoutsThisWeek] = useState("0");
-    const [followersCount, setFollowersCount] = useState(0);
-    const [followingCount, setFollowingCount] = useState(0);
     const [workoutLogs, setWorkoutLogs] = useState([]);
 
-    const [isStreakModalVisible, setStreakModalVisible] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
 
     const currentDate = new Date();
@@ -241,27 +212,10 @@ const loadProfileData = async () => {
                 setLastWorkout(data.profile.last_workout || "");
                 setCurrentWorkout(data.profile.current_workout || "");
                 setAvatarUrl(data.profile.avatar_url || "");
-                setFollowersCount(data.profile.followers_count || 0);
-                setFollowingCount(data.profile.following_count || 0);
-                setTotalWorkouts(data.profile.total_workouts?.toString() || "0");
-                setDayStreak(data.profile.day_streak?.toString() || "0");
-            }
-
-            // Fetch workout streak stats
-            const streakResponse = await fetch(`https://gym-community-app.onrender.com/workout-logs/me/streak`, {
-                method: "GET",
-                headers: {
-                    "Authorization": `Bearer ${token}`
-                }
-            });
-
-            if (streakResponse.ok) {
-                const streakData = await streakResponse.json();
-                setWorkoutsThisWeek(streakData.workouts_this_week?.toString() || "0");
             }
 
             // Fetch workout logs
-            const logsResponse = await fetch(`https://gym-community-app.onrender.com/workout-logs/me`, {
+            const logsResponse = await fetch(`${API_BASE_URL}/workout-logs/me`, {
                 method: "GET",
                 headers: {
                     "Authorization": `Bearer ${token}`
@@ -355,34 +309,6 @@ const loadProfileData = async () => {
                 <Text style={styles.name}>{name}</Text>
                 <Text style={styles.userName}>@{username}</Text>
 
-                {/* Workout Streak Stats */}
-                <View style={styles.streakStatsRow}>
-                    <View style={styles.statBox}>
-                        <Text style={styles.statNumber}>{dayStreak}</Text>
-                        <Text style={styles.statLabel}>Day Streak</Text>
-                    </View>
-                    <View style={styles.statBox}>
-                        <Text style={styles.statNumber}>{totalWorkouts}</Text>
-                        <Text style={styles.statLabel}>Total</Text>
-                    </View>
-                    <View style={styles.statBox}>
-                        <Text style={styles.statNumber}>{workoutsThisWeek}</Text>
-                        <Text style={styles.statLabel}>This Week</Text>
-                    </View>
-                </View>
-
-                {/* Followers/Following */}
-                <View style={styles.followRow}>
-                    <Pressable style={styles.followStat}>
-                        <Text style={styles.followNumber}>{followersCount}</Text>
-                        <Text style={styles.followLabel}>Followers</Text>
-                    </Pressable>
-                    <Pressable style={styles.followStat}>
-                        <Text style={styles.followNumber}>{followingCount}</Text>
-                        <Text style={styles.followLabel}>Following</Text>
-                    </Pressable>
-                </View>
-
                 <View style={styles.editProfile}>
                     <Pressable style={styles.editButton} onPress={() => {router.push({ pathname: "../edit/editProfile", params: {name, username, about, gymLevel, weight, lastWorkout, currentWorkout}})}}>
                         <Text style={styles.edit}>Edit Profile</Text>
@@ -432,43 +358,6 @@ const loadProfileData = async () => {
                     <WorkoutsTab workoutLogs={workoutLogs} isLoading={isLoading} />
                 </Tabs.Tab>
             </Tabs.Container>
-
-            <Modal
-                isVisible={isStreakModalVisible}
-                onSwipeComplete={() => setStreakModalVisible(false)}
-                swipeDirection="down"
-                onBackdropPress={() => setStreakModalVisible(false)}
-                style={styles.bottomModal}
-            >
-                <View style={styles.modalContent}>
-                    <View style={styles.dragHandle} />
-
-                    <View style={styles.calendarContainer}>
-                        <Text style={styles.monthTitle}>{currentMonth} {currentYear}</Text>
-
-                        <View style={styles.weekDaysRow}>
-                            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
-                                <Text key={index} style={styles.weekDayText}>{day}</Text>
-                            ))}
-                        </View>
-
-                        <View style={styles.daysGrid}>
-                            {daysArray.map((day, index) => {
-                                const isToday = day === todayNum;
-                                return (
-                                    <View key={index} style={styles.dayCell}>
-                                        <View style={[styles.dayCircle, isToday && styles.currentDayCircle]}>
-                                            <Text style={[styles.dayText, isToday && styles.currentDayText]}>
-                                                {day !== null ? day : ''}
-                                            </Text>
-                                        </View>
-                                    </View>
-                                );
-                            })}
-                        </View>
-                    </View>
-                </View>
-            </Modal>
         </SafeAreaView>
     );
 }

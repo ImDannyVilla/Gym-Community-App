@@ -4,7 +4,7 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, layout, spacing } from "../../lib/theme";
-import { getMyRoutines, startWorkout } from "../../lib/workoutApi";
+import { getMyRoutines, startWorkout, getWorkoutStreak } from "../../lib/workoutApi";
 import { getMyProfile } from "../../lib/socialApi";
 import { useWorkoutStore } from "../../stores/workoutStore";
 
@@ -26,14 +26,19 @@ export default function WorkoutsScreen() {
       const routinesData = await getMyRoutines();
       setRoutines(routinesData || []);
 
-      // Fetch user profile for stats
-      const profileData = await getMyProfile();
-      if (profileData?.profile) {
-        setStats({
-          totalWorkouts: profileData.profile.total_workouts || 0,
-          setsDone: 0, // TODO: Calculate from workout logs
-          dayStreak: profileData.profile.day_streak || 0,
-        });
+      // Fetch stats (gracefully handle if endpoint not deployed yet)
+      try {
+        const streakData = await getWorkoutStreak();
+        if (streakData) {
+          setStats({
+            totalWorkouts: streakData.total_workouts || 0,
+            setsDone: streakData.total_sets || 0,
+            dayStreak: streakData.day_streak || 0,
+          });
+        }
+      } catch (streakError) {
+        console.log("Streak endpoint not available yet:", streakError.message);
+        // Keep default stats (0 values) if endpoint not deployed
       }
     } catch (e) {
       console.error("Failed to load data:", e.message);
@@ -57,7 +62,7 @@ export default function WorkoutsScreen() {
   const handleStartEmptyWorkout = async () => {
     try {
       const log = await startWorkout("My Workout", null, false);
-      setWorkoutActive(log.id);
+      setWorkoutActive(log);
       router.push("/activeWorkout");
     } catch (e) {
       console.error("Failed to start workout:", e.message);
@@ -68,7 +73,7 @@ export default function WorkoutsScreen() {
   const handleStartRoutine = async (routineId, routineName) => {
     try {
       const log = await startWorkout(routineName, routineId, false);
-      setWorkoutActive(log.id);
+      setWorkoutActive(log);
       router.push("/activeWorkout");
     } catch (e) {
       console.error("Failed to start routine:", e.message);
@@ -96,7 +101,7 @@ export default function WorkoutsScreen() {
           <Text style={styles.statLabel}>Sets Done</Text>
         </View>
         <View style={styles.statBubble}>
-          <Text style={styles.statValue}>{stats.dayStreak} 🔥</Text>
+          <Text style={styles.statValue}>{stats.dayStreak}</Text>
           <Text style={styles.statLabel}>Day Streak</Text>
         </View>
       </View>
@@ -107,7 +112,6 @@ export default function WorkoutsScreen() {
           style={styles.quickStartButtonDashed}
           onPress={handleStartEmptyWorkout}
         >
-          <Text style={styles.quickStartEmoji}>⚡</Text>
           <Text style={styles.quickStartTitle}>Empty Workout</Text>
           <Text style={styles.quickStartSubtitle}>Start fresh</Text>
         </Pressable>
@@ -116,7 +120,6 @@ export default function WorkoutsScreen() {
           style={styles.quickStartButton}
           onPress={() => router.push("/explore")}
         >
-          <Text style={styles.quickStartEmoji}>🔍</Text>
           <Text style={styles.quickStartTitle}>Explore</Text>
           <Text style={styles.quickStartSubtitle}>Find programs</Text>
         </Pressable>

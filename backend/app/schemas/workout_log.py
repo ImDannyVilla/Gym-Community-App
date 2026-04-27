@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
 from typing import Optional, List
 from uuid import UUID
@@ -7,9 +7,9 @@ from uuid import UUID
 # Sets
 
 class WorkoutLogSetCreate(BaseModel):
-    set_number: int
-    reps: int
-    weight_lbs: float
+    set_number: int = Field(ge=1)
+    reps: int = Field(ge=0, le=1000)
+    weight_lbs: float = Field(ge=0.0, le=5000.0)
     completed: bool = False
 
 
@@ -27,12 +27,12 @@ class WorkoutLogSetResponse(BaseModel):
 
 class WorkoutLogExerciseCreate(BaseModel):
     exercise_id: str          # from exercise library
-    name: str
-    category: Optional[str] = None
-    target: Optional[str] = None
-    equipment: Optional[str] = None
+    name: str = Field(min_length=1, max_length=100)
+    category: Optional[str] = Field(None, max_length=50)
+    target: Optional[str] = Field(None, max_length=50)
+    equipment: Optional[str] = Field(None, max_length=50)
     gif_url: Optional[str] = None
-    order: int
+    order: int = Field(ge=0)
     sets: List[WorkoutLogSetCreate] = []
 
 
@@ -53,19 +53,19 @@ class WorkoutLogExerciseResponse(BaseModel):
 # Workout Log
 
 class WorkoutLogCreate(BaseModel):
-    name: str
+    name: str = Field(min_length=1, max_length=100)
     routine_id: Optional[UUID] = None
     is_public: bool = False
 
 
 class WorkoutLogUpdate(BaseModel):
-    name: Optional[str] = None
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
     is_public: Optional[bool] = None
     completed_at: Optional[datetime] = None
-    duration: Optional[int] = None
+    duration: Optional[int] = Field(None, ge=0)
     media_url: Optional[str] = None
-    media_type: Optional[str] = None
-    caption: Optional[str] = None
+    media_type: Optional[str] = Field(None, max_length=50)
+    caption: Optional[str] = Field(None, max_length=1000)
 
 class WorkoutLogSummary(BaseModel):
     """List view — no exercises"""

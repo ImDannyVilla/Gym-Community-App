@@ -192,6 +192,17 @@ export default function LoginScreen() {
               {loading ? "Loading..." : "Admin Pass"}
             </Text>
           </Pressable>
+          
+          <Pressable 
+            style={styles.resetButton} 
+            onPress={async () => {
+              const { clearAllTokens } = await import("../lib/tokenStorage");
+              await clearAllTokens();
+              window.location?.reload?.();
+            }}
+          >
+            <Text style={styles.resetButtonText}>Reset App (Clear Token)</Text>
+          </Pressable>
         </View>
       </View>
     </ScreenContainer>
@@ -327,6 +338,21 @@ const styles = StyleSheet.create({
   forgotSeparator: {
     color: colors.textTertiary,
     fontSize: typography.bodySmall.fontSize,
+  },
+  resetButton: {
+    marginTop: spacing.lg,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.error,
+    borderRadius: 8,
+    marginTop: 20,
+  },
+  resetButtonText: {
+    color: colors.error,
+    fontSize: typography.bodySmall.fontSize,
+    fontWeight: "600",
+    textAlign: "center",
   },
   inputError: {
     borderColor: colors.error,

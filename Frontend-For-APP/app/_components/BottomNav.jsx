@@ -67,7 +67,7 @@ export default function BottomNav({ state, descriptors, navigation }) {
               <Ionicons
                 name={iconName}
                 size={iconSizes.navIcon}
-                color={isFocused ? colors.text : colors.textTertiary}
+                color={isFocused ? colors.primary : colors.textTertiary}
               />
               <Text 
                 style={[
@@ -104,7 +104,7 @@ export default function BottomNav({ state, descriptors, navigation }) {
             <Ionicons
               name={tab.icon}
               size={iconSizes.navIcon}
-              color={isActive ? colors.text : colors.textTertiary}
+              color={isActive ? colors.primary : colors.textTertiary}
             />
             <Text 
               style={[
@@ -142,9 +142,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 2,
   },
   navButtonActive: {
-    backgroundColor: colors.primary,
-    borderRadius: 6,
-    paddingVertical: spacing.sm,
   },
   navButtonPressed: {
     opacity: 0.7,
@@ -156,6 +153,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   buttonTextActive: {
-    color: colors.text,
+    color: colors.primary,
   },
 });
