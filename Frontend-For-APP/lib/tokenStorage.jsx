@@ -13,3 +13,8 @@ export async function getToken() {
 export async function removeToken() {
   await AsyncStorage.removeItem(TOKEN_KEY);
 }
+
+// Call this on app start to clear any stored tokens
+export async function clearAllTokens() {
+  await AsyncStorage.clear();
+}

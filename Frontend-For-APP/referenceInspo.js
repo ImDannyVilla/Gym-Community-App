@@ -29,7 +29,7 @@ const Tag = ({ children, color = C.accent }) => (
 const HIDE_NAV = ["logWorkout", "saveWorkout", "explore", "programDetail"];
 function BottomNav({ active, nav }) {
   if (HIDE_NAV.includes(active)) return null;
-  const tabs = [["feed","⚡","Feed"],["workout","🏋️","Workout"],["checkin","📱","Check In"],["profile","👤","Me"]];
+  const tabs = [["feed","Feed"],["workout","Workout"],["checkin","Check In"],["profile","Me"]];
   return (
     <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 68, background: C.surface, borderTop: `1px solid ${C.border}`, display: "grid", gridTemplateColumns: "repeat(4,1fr)" }}>
       {tabs.map(([id, icon, label]) => (
@@ -46,17 +46,17 @@ function BottomNav({ active, nav }) {
 // ─────────────── SCREENS ───────────────
 function FeedScreen({ nav }) {
   const posts = [
-    { user: "alexfit", time: "2h", desc: "New PR on bench! 225lbs × 5 🔥 feeling unstoppable", workout: "Push Day A", emoji: "🏋️", likes: 42 },
-    { user: "sara_moves", time: "5h", desc: "Morning flow session. Start every day intentional 🌅", workout: null, emoji: "🧘", likes: 31 },
-    { user: "mikegains", time: "8h", desc: "5k in 22min. Back-to-back cardio weeks paying off", workout: "Cardio Burn", emoji: "🏃", likes: 18 },
+    { user: "alexfit", time: "2h", desc: "New PR on bench! 225lbs × 5 feeling unstoppable", workout: "Push Day A", emoji: "", likes: 42 },
+    { user: "sara_moves", time: "5h", desc: "Morning flow session. Start every day intentional", workout: null, emoji: "", likes: 31 },
+    { user: "mikegains", time: "8h", desc: "5k in 22min. Back-to-back cardio weeks paying off", workout: "Cardio Burn", emoji: "", likes: 18 },
   ];
   return (
     <div style={{ background: C.bg, height: "100%", overflowY: "auto", paddingBottom: 68 }}>
       <div style={{ padding: "18px 16px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <span style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 28, color: C.accent, letterSpacing: 3 }}>GRIND</span>
         <div style={{ display: "flex", gap: 14 }}>
-          <span style={{ fontSize: 20, cursor: "pointer" }}>🔔</span>
-          <span style={{ fontSize: 20, cursor: "pointer" }}>✉️</span>
+          <span style={{ fontSize: 20, cursor: "pointer" }}>Notifications</span>
+          <span style={{ fontSize: 20, cursor: "pointer" }}>Messages</span>
         </div>
       </div>
       {/* Stories */}
@@ -83,13 +83,13 @@ function FeedScreen({ nav }) {
           <div style={{ height: 200, background: C.card, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64 }}>{p.emoji}</div>
           <div style={{ padding: "10px 14px" }}>
             <div style={{ display: "flex", gap: 14, marginBottom: 8 }}>
-              {["🤍","💬","↗️"].map(e => <span key={e} style={{ fontSize: 20, cursor: "pointer" }}>{e}</span>)}
+              {["Like","Comment","Share"].map(e => <span key={e} style={{ fontSize: 14, cursor: "pointer" }}>{e}</span>)}
             </div>
             <div style={{ fontSize: 12, fontWeight: 700, color: C.text, marginBottom: 3 }}>{p.likes} likes</div>
             <div style={{ fontSize: 12, color: C.text }}><span style={{ fontWeight: 700 }}>{p.user}</span> {p.desc}</div>
             {p.workout && (
               <div style={{ marginTop: 8, display: "inline-flex", alignItems: "center", gap: 6, background: C.card, border: `1px solid ${C.border}`, borderRadius: 7, padding: "4px 10px" }}>
-                <span style={{ fontSize: 11 }}>🏋️</span>
+                <span style={{ fontSize: 11 }}>Workout</span>
                 <span style={{ fontSize: 11, color: C.accent, fontWeight: 700 }}>{p.workout}</span>
               </div>
             )}
@@ -113,7 +113,7 @@ function WorkoutScreen({ nav }) {
       </div>
       {/* Bubble stats */}
       <div style={{ margin: "12px 16px", background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: "16px 8px", display: "grid", gridTemplateColumns: "1fr 1fr 1fr" }}>
-        {[["47","Workouts"],["384","Sets Done"],["12 🔥","Day Streak"]].map(([v,l]) => (
+        {[["47","Workouts"],["384","Sets Done"],["12","Day Streak"]].map(([v,l]) => (
           <div key={l} style={{ textAlign: "center", padding: "0 4px" }}>
             <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 30, color: C.accent, lineHeight: 1 }}>{v}</div>
             <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.5, marginTop: 2 }}>{l}</div>
@@ -123,12 +123,10 @@ function WorkoutScreen({ nav }) {
       {/* Quick start */}
       <div style={{ padding: "0 16px 14px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         <button onClick={() => nav("logWorkout")} style={{ background: "transparent", border: `2px dashed ${C.border}`, borderRadius: 14, padding: "18px 10px", color: C.text, cursor: "pointer", textAlign: "center" }}>
-          <div style={{ fontSize: 26, marginBottom: 4 }}>⚡</div>
           <div style={{ fontWeight: 800, fontSize: 13 }}>Empty Workout</div>
           <div style={{ fontSize: 10, color: C.muted, marginTop: 3 }}>Start fresh</div>
         </button>
         <button onClick={() => nav("explore")} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: "18px 10px", color: C.text, cursor: "pointer", textAlign: "center" }}>
-          <div style={{ fontSize: 26, marginBottom: 4 }}>🔍</div>
           <div style={{ fontWeight: 800, fontSize: 13 }}>Explore</div>
           <div style={{ fontSize: 10, color: C.muted, marginTop: 3 }}>Find programs</div>
         </button>
@@ -137,7 +135,7 @@ function WorkoutScreen({ nav }) {
       <div style={{ padding: "0 16px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
           <div style={{ fontWeight: 900, fontSize: 15, color: C.text }}>My Routines</div>
-          <button style={{ background: "transparent", border: `1px solid ${C.border}`, borderRadius: 8, padding: "5px 10px", color: C.muted, cursor: "pointer", fontSize: 13 }}>📁 +</button>
+          <button style={{ background: "transparent", border: `1px solid ${C.border}`, borderRadius: 8, padding: "5px 10px", color: C.muted, cursor: "pointer", fontSize: 13 }}>Add Routine +</button>
         </div>
         {routines.map((r, i) => (
           <div key={i} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: "13px 14px", marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -162,7 +160,7 @@ function LogWorkoutScreen({ nav }) {
         <Btn onClick={() => nav("saveWorkout")}>Finish</Btn>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", padding: "13px 16px", borderBottom: `1px solid ${C.border}` }}>
-        {[["⏱","0:14:22","Duration"],["⚖️","1,215 lbs","Volume"],["✅","6","Sets"]].map(([ic,v,l]) => (
+        {[["0:14:22","Duration"],["1,215 lbs","Volume"],["6","Sets"]].map(([ic,v,l]) => (
           <div key={l} style={{ textAlign: "center" }}>
             <div style={{ fontSize: 10, color: C.muted, marginBottom: 2 }}>{l}</div>
             <div style={{ fontWeight: 800, fontSize: 14, color: C.text }}>{v}</div>
@@ -171,8 +169,8 @@ function LogWorkoutScreen({ nav }) {
       </div>
       {/* Empty state */}
       <div style={{ padding: "30px 16px 16px", textAlign: "center" }}>
-        <div style={{ fontSize: 32, marginBottom: 8 }}>💪</div>
-        <div style={{ fontSize: 15, fontWeight: 700, color: C.text, marginBottom: 4 }}>Get Started</div>
+<div style={{ fontSize: 32, marginBottom: 8 }}>Get Started</div>
+         <div style={{ fontSize: 15, fontWeight: 700, color: C.text, marginBottom: 4 }}>Get Started</div>
         <div style={{ fontSize: 12, color: C.muted, marginBottom: 20 }}>Add exercises to begin logging</div>
         <Btn variant="ghost" style={{ width: "100%", padding: "12px", fontSize: 14, borderStyle: "dashed" }}>+ Add Exercise</Btn>
       </div>
@@ -181,12 +179,12 @@ function LogWorkoutScreen({ nav }) {
         <div style={{ padding: "12px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ fontWeight: 800, fontSize: 14, color: C.accent }}>Bench Press</div>
           <div style={{ display: "flex", gap: 10 }}>
-            <span style={{ fontSize: 14, color: C.muted, cursor: "pointer" }}>⏱ Rest</span>
+            <span style={{ fontSize: 14, color: C.muted, cursor: "pointer" }}>Rest</span>
             <span style={{ fontSize: 14, color: C.muted, cursor: "pointer" }}>•••</span>
           </div>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "28px 1fr 62px 56px 30px", gap: 6, padding: "8px 14px", borderBottom: `1px solid ${C.border}` }}>
-          {["Set","Previous","lbs","Reps","✓"].map((h,i) => (
+          {["Set","Previous","lbs","Reps","Done"].map((h,i) => (
             <div key={i} style={{ fontSize: 10, color: C.muted, textAlign: i > 0 ? "center" : "left", textTransform: "uppercase", fontWeight: 700 }}>{h}</div>
           ))}
         </div>
@@ -223,9 +221,9 @@ function SaveWorkoutScreen({ nav }) {
         <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 13, padding: 15 }}>
           <div style={{ fontWeight: 700, fontSize: 11, color: C.muted, marginBottom: 11, textTransform: "uppercase", letterSpacing: 1 }}>Summary</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-            {[["⏱","54 min","Duration"],["⚖️","12,400","Volume"],["✅","24","Sets"]].map(([ic,v,l]) => (
+            {[["Clock","54 min","Duration"],["Scale","12,400","Volume"],["Check","24","Sets"]].map(([ic,v,l]) => (
               <div key={l} style={{ textAlign: "center", background: C.card, borderRadius: 10, padding: "10px 4px" }}>
-                <div style={{ fontSize: 18, marginBottom: 4 }}>{ic}</div>
+                <div style={{ fontSize: 18, marginBottom: 4 }}></div>
                 <div style={{ fontWeight: 900, fontSize: 15, color: C.accent }}>{v}</div>
                 <div style={{ fontSize: 10, color: C.muted }}>{l}</div>
               </div>
@@ -233,16 +231,16 @@ function SaveWorkoutScreen({ nav }) {
           </div>
         </div>
         <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: "13px 15px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: C.text }}>📅 When</span>
+          <span style={{ fontSize: 14, fontWeight: 600, color: C.text }}>When</span>
           <span style={{ fontSize: 13, color: C.muted }}>Wed, March 4, 2026</span>
         </div>
         <div style={{ background: C.surface, border: `2px dashed ${C.border}`, borderRadius: 13, padding: "18px", display: "flex", flexDirection: "column", alignItems: "center", gap: 5, cursor: "pointer" }}>
-          <span style={{ fontSize: 26 }}>📷</span>
+          <span style={{ fontSize: 26 }}>Photo</span>
           <span style={{ fontSize: 12, color: C.muted }}>Add photo or video</span>
         </div>
         <textarea placeholder="Add a description..." rows={3} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: "12px 15px", color: C.text, fontSize: 13, outline: "none", resize: "none", width: "100%", fontFamily: "inherit" }} />
         <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 13, padding: "13px 15px" }}>
-          <div style={{ fontSize: 13, fontWeight: 800, color: C.text, marginBottom: 10 }}>👁 Visibility</div>
+          <div style={{ fontSize: 13, fontWeight: 800, color: C.text, marginBottom: 10 }}>Visibility</div>
           <div style={{ display: "flex", gap: 8 }}>
             {["Everyone","Private"].map(v => (
               <button key={v} onClick={() => setVis(v)} style={{ flex: 1, background: vis === v ? C.accent : "transparent", border: `1px solid ${vis === v ? C.accent : C.border}`, borderRadius: 9, padding: "9px", fontWeight: 800, fontSize: 12, color: vis === v ? "#000" : C.muted, cursor: "pointer" }}>{v}</button>
@@ -257,10 +255,10 @@ function SaveWorkoutScreen({ nav }) {
 
 function ExploreScreen({ nav }) {
   const programs = [
-    { name: "5×5 Strength Builder", level: "Intermediate", routines: 3, desc: "Classic compound-focused strength program", emoji: "🏋️" },
-    { name: "Hypertrophy Max", level: "Advanced", routines: 5, desc: "Volume-based muscle building split", emoji: "💪" },
-    { name: "Beginner Foundations", level: "Beginner", routines: 3, desc: "Start your fitness journey right", emoji: "⚡" },
-    { name: "Athletic Performance", level: "Intermediate", routines: 4, desc: "Power, speed and functional strength", emoji: "🏃" },
+    { name: "5×5 Strength Builder", level: "Intermediate", routines: 3, desc: "Classic compound-focused strength program" },
+    { name: "Hypertrophy Max", level: "Advanced", routines: 5, desc: "Volume-based muscle building split" },
+    { name: "Beginner Foundations", level: "Beginner", routines: 3, desc: "Start your fitness journey right" },
+    { name: "Athletic Performance", level: "Intermediate", routines: 4, desc: "Power, speed and functional strength" },
   ];
   return (
     <div style={{ background: C.bg, height: "100%", overflowY: "auto", paddingBottom: 30 }}>
@@ -269,7 +267,7 @@ function ExploreScreen({ nav }) {
         <div style={{ fontWeight: 900, fontSize: 18, color: C.text }}>Explore Programs</div>
       </div>
       <div style={{ padding: "11px 16px", display: "flex", gap: 7, borderBottom: `1px solid ${C.border}` }}>
-        {[["⚙️ Filters","ghost"],["Level ▾","ghost"],["Duration ▾","ghost"]].map(([label]) => (
+        {[["Filters","ghost"],["Level ▾","ghost"],["Duration ▾","ghost"]].map(([label]) => (
           <button key={label} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 20, padding: "5px 12px", color: C.text, fontSize: 11, cursor: "pointer", fontWeight: 600 }}>{label}</button>
         ))}
       </div>
@@ -286,7 +284,7 @@ function ExploreScreen({ nav }) {
                 <Tag color={C.muted}>{p.routines} routines</Tag>
               </div>
             </div>
-            <div style={{ padding: "10px 10px 0", color: C.muted, fontSize: 16 }}>🔖</div>
+            <div style={{ padding: "10px 10px 0", color: C.muted, fontSize: 16 }}>Bookmark</div>
           </div>
         ))}
       </div>
@@ -305,9 +303,9 @@ function ProgramDetailScreen({ nav }) {
       <div style={{ padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `1px solid ${C.border}` }}>
         <button onClick={() => nav("explore")} style={{ background: "none", border: "none", color: C.text, fontSize: 22, cursor: "pointer" }}>←</button>
         <div style={{ fontWeight: 900, fontSize: 16, color: C.text }}>Program Detail</div>
-        <span style={{ fontSize: 20, cursor: "pointer" }}>🔖</span>
+        <span style={{ fontSize: 20, cursor: "pointer" }}>Bookmark</span>
       </div>
-      <div style={{ height: 150, background: `linear-gradient(135deg, #1A2200 0%, #0B1A00 100%)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64 }}>🏋️</div>
+      <div style={{ height: 150, background: `linear-gradient(135deg, #1A2200 0%, #0B1A00 100%)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64 }}>Program</div>
       <div style={{ padding: 16 }}>
         <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 28, color: C.text, letterSpacing: 1, lineHeight: 1, marginBottom: 8 }}>5×5 STRENGTH BUILDER</div>
         <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.6, marginBottom: 12 }}>Build raw strength with the classic 5×5 methodology. Focused on compound movements and progressive overload. Ideal for lifters ready to push past plateaus.</div>
@@ -358,7 +356,7 @@ function CheckInScreen() {
       </div>
       <div style={{ background: C.surface, border: `1px solid ${C.accent}30`, borderRadius: 12, padding: "14px 20px", textAlign: "center", width: "100%" }}>
         <div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 3 }}>Current Streak</div>
-        <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 36, color: C.accent, lineHeight: 1 }}>12 DAYS 🔥</div>
+        <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 36, color: C.accent, lineHeight: 1 }}>12 DAYS</div>
       </div>
     </div>
   );
@@ -369,12 +367,12 @@ function ProfileScreen() {
   const data = { Duration: [3,5,4,6,3,4,5,3,6,4,5,4], Volume: [4,6,3,5,4,6,5,4,7,5,6,5], Sets: [2,4,3,5,2,4,3,5,4,3,5,4] };
   const vals = data[chartMode];
   const max = Math.max(...vals);
-  const gridItems = ["🏋️","💪","🏃","🧘","⚡","🏋️","💪","🏃","🧘"];
+  const gridItems = ["Workout","Strength","Cardio","Yoga","Energy","Workout","Strength","Cardio","Yoga"];
   return (
     <div style={{ background: C.bg, height: "100%", overflowY: "auto", paddingBottom: 68 }}>
       <div style={{ padding: "18px 16px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1px solid ${C.border}` }}>
         <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 22, color: C.text, letterSpacing: 1 }}>MY PROFILE</div>
-        <span style={{ fontSize: 20, cursor: "pointer" }}>⚙️</span>
+        <span style={{ fontSize: 20, cursor: "pointer" }}>Settings</span>
       </div>
       <div style={{ padding: "18px 16px", display: "flex", gap: 14, alignItems: "center" }}>
         <div style={{ width: 70, height: 70, borderRadius: "50%", background: C.accent, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 28, color: "#000", flexShrink: 0, border: `3px solid ${C.accentDim}` }}>D</div>
@@ -414,7 +412,7 @@ function ProfileScreen() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 3 }}>
           {gridItems.map((emoji, i) => (
             <div key={i} style={{ aspectRatio: "1", background: C.surface, borderRadius: 8, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, cursor: "pointer" }}>
-              <span style={{ fontSize: 26 }}>{emoji}</span>
+              <span style={{ fontSize: 26 }}>{emoji || "Workout"}</span>
               <span style={{ fontSize: 9, color: C.muted }}>Mar {3 - Math.floor(i/3)}</span>
             </div>
           ))}
@@ -473,7 +471,7 @@ function FlowChart({ nav }) {
       <div style={{ border: `1.5px dashed ${C.accentDim}`, borderRadius: 12, padding: "10px 12px", marginBottom: 4 }}>
         <div style={{ fontSize: 10, color: C.accent, fontWeight: 800, letterSpacing: 2, textTransform: "uppercase", textAlign: "center", marginBottom: 10 }}>Bottom Navigation Bar</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6 }}>
-          {[["feed","⚡ Feed",C.accent],["workout","🏋️ Workout",C.accent],["checkin","📱 Check In",C.accent],["profile","👤 Profile",C.accent]].map(([id,label,color]) => (
+          {[["feed","Feed",C.accent],["workout","Workout",C.accent],["checkin","Check In",C.accent],["profile","Profile",C.accent]].map(([id,label,color]) => (
             <Node key={id} id={id} label={label} color={color} onClick={() => nav(id)} />
           ))}
         </div>
@@ -488,8 +486,8 @@ function FlowChart({ nav }) {
       <div style={{ border: `1px solid #5BA4FF40`, borderRadius: 12, padding: "10px 12px", marginBottom: 4 }}>
         <div style={{ fontSize: 10, color: "#5BA4FF", fontWeight: 800, letterSpacing: 2, textTransform: "uppercase", textAlign: "center", marginBottom: 10 }}>Workout Sub-screens</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-          <Node id="logWorkout" label="⚡ Log Workout" color="#5BA4FF" onClick={() => nav("logWorkout")} />
-          <Node id="explore" label="🔍 Explore" color="#5BA4FF" onClick={() => nav("explore")} />
+          <Node id="logWorkout" label="Log Workout" color="#5BA4FF" onClick={() => nav("logWorkout")} />
+          <Node id="explore" label="Explore" color="#5BA4FF" onClick={() => nav("explore")} />
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", padding: "0 20px" }}>
           <Arrow label="Finish" />
@@ -499,8 +497,8 @@ function FlowChart({ nav }) {
         <div style={{ border: `1px solid #FF9F4040`, borderRadius: 10, padding: "10px 10px", background: "#FF9F4008" }}>
           <div style={{ fontSize: 10, color: "#FF9F40", fontWeight: 800, letterSpacing: 2, textTransform: "uppercase", textAlign: "center", marginBottom: 8 }}>Post-workout</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-            <Node id="saveWorkout" label="💾 Save Workout" color="#FF9F40" onClick={() => nav("saveWorkout")} />
-            <Node id="programDetail" label="📋 Program Detail" color="#FF9F40" onClick={() => nav("programDetail")} />
+             <Node id="saveWorkout" label="Save Workout" color="#FF9F40" onClick={() => nav("saveWorkout")} />
+             <Node id="programDetail" label="Program Detail" color="#FF9F40" onClick={() => nav("programDetail")} />
           </div>
         </div>
         {/* Save back to workout */}
@@ -518,8 +516,8 @@ function FlowChart({ nav }) {
       <div style={{ border: `1px solid ${C.border}`, borderRadius: 12, padding: "10px 12px" }}>
         <div style={{ fontSize: 10, color: C.muted, fontWeight: 800, letterSpacing: 2, textTransform: "uppercase", textAlign: "center", marginBottom: 10 }}>Other Tabs</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-          <Node id="checkin" label="📱 Check In" color={C.accent} onClick={() => nav("checkin")} />
-          <Node id="profile" label="👤 Profile" color={C.accent} onClick={() => nav("profile")} />
+          <Node id="checkin" label="Check In" color={C.accent} onClick={() => nav("checkin")} />
+          <Node id="profile" label="Profile" color={C.accent} onClick={() => nav("profile")} />
         </div>
       </div>
     </div>
@@ -563,7 +561,7 @@ export default function GymAppProto() {
         <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 28, color: C.text, letterSpacing: 2, lineHeight: 1, marginBottom: 16 }}>FRONTEND BLUEPRINT</div>
         {/* View toggle */}
         <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-          {[["flowchart","📊 Flow Map"],["screens","📱 Screens"]].map(([v, label]) => (
+           {[["flowchart","Flow Map"],["screens","Screens"]].map(([v, label]) => (
             <button key={v} onClick={() => setView(v)} style={{ flex: 1, background: view === v ? C.accent : C.surface, border: `1px solid ${view === v ? C.accent : C.border}`, borderRadius: 10, padding: "10px", fontWeight: 900, fontSize: 13, color: view === v ? "#000" : C.muted, cursor: "pointer", letterSpacing: 0.5, fontFamily: "'Barlow',sans-serif", transition: "all 0.2s" }}>{label}</button>
           ))}
         </div>
@@ -592,7 +590,7 @@ export default function GymAppProto() {
               <div style={{ width: 80, height: 20, background: "#111", borderRadius: 10 }} />
               <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
                 <span style={{ fontSize: 11, color: C.text }}>●●●</span>
-                <span style={{ fontSize: 11, color: C.text }}>🔋</span>
+                <span style={{ fontSize: 11, color: C.text }}>Battery</span>
               </div>
             </div>
             {/* Screen */}

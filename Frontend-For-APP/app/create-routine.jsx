@@ -257,7 +257,7 @@ export default function CreateRoutineScreen() {
                 }}
                 style={{ paddingLeft: 12 }}
               >
-                <Text style={{ color: '#DC2626', fontSize: 18 }}>✕</Text>
+                <Text style={{ color: '#DC2626', fontSize: 18 }}>X</Text>
               </TouchableOpacity>
             </TouchableOpacity>
           );

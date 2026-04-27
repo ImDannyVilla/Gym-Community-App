@@ -1,5 +1,5 @@
 import "react-native-reanimated";
-import { Stack } from "expo-router";
+import { Stack, usePathname } from "expo-router";
 import { View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
@@ -8,6 +8,10 @@ import { useWorkoutStore } from "../stores/workoutStore";
 
 export default function Layout() {
   const isWorkoutActive = useWorkoutStore(state => state.isActive);
+  const pathname = usePathname();
+  
+  // Do not show bottom nav on auth screens
+  const isAuthScreen = pathname === '/' || pathname === '/signup' || pathname === '/forgot-password' || pathname === '/forgot-email';
 
   return (
     <SafeAreaProvider>
@@ -31,7 +35,7 @@ export default function Layout() {
           <Stack.Screen name="create-routine" />
           <Stack.Screen name="exercise-search" />
         </Stack>
-        {!isWorkoutActive && <BottomNav />}
+        {!isWorkoutActive && !isAuthScreen && <BottomNav />}
       </View>
     </SafeAreaProvider>
   );

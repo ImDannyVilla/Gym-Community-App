@@ -7,6 +7,7 @@ import Modal from "react-native-modal"
 import {getToken} from "../../lib/tokenStorage"
 import { colors } from "../../lib/theme"
 import { API_BASE_URL } from "../../lib/api"
+import { updateMyProfile } from "../../lib/socialApi"
 
 export default function editProfile()
 {
@@ -50,19 +51,9 @@ export default function editProfile()
                 current_workout: newCurrentWorkout
             };
 
-            const token = await getToken();
-            console.log("Token retrieved:", token);
-
-            const response = await fetch(`https://gym-community-app.onrender.com/users/me/profile`, {
-                method: "PUT", 
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
-                },
-                body: JSON.stringify(payload)
-            });
+            const response = await updateMyProfile(payload);
             
-            if(response.ok)
+            if(response)
             {
                 const returnPayload = {
                     name: newName,

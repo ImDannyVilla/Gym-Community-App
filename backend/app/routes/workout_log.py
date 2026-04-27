@@ -128,6 +128,36 @@ async def get_my_workout_logs(
     )
     return result.scalars().all()
 
+@router.get("/me/streak")
+async def get_my_workout_streak(
+    db: AsyncSessionDep,
+    current_user: CurrentUser
+):
+    """Get workout streak stats including workouts this week."""
+    # Calculate workouts this week
+    today = datetime.now(timezone.utc)
+    start_of_week = today - timedelta(days=today.weekday())
+    start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    result = await db.execute(
+        select(func.count(WorkoutLog.id))
+        .where(WorkoutLog.user_id == current_user.id)
+        .where(WorkoutLog.completed_at >= start_of_week)
+    )
+    workouts_this_week = result.scalar() or 0
+    
+    # Also fetch day streak from profile
+    profile_result = await db.execute(
+        select(UserProfile).where(UserProfile.user_id == current_user.id)
+    )
+    profile = profile_result.scalars().first()
+    day_streak = profile.day_streak if profile else 0
+    
+    return {
+        "workouts_this_week": workouts_this_week,
+        "day_streak": day_streak
+    }
+
 
 @router.get("/{log_id}", response_model=WorkoutLogResponse)
 async def get_workout_log(

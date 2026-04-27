@@ -9,8 +9,6 @@ import { useRoutineStore } from '../stores/routineStore';
 import { useWorkoutStore } from '../stores/workoutStore';
 import ExerciseConfigSheet from './_components/ExerciseConfigSheet';
 
-const API_BASE = 'https://gym-community-app.onrender.com';
-
 // Available filter options matching our exercise library
 const CATEGORIES = ['strength', 'cardio', 'plyometrics', 'powerlifting', 'olympic weightlifting', 'stretching', 'strongman'];
 const EQUIPMENT = ['barbell', 'dumbbell', 'cable', 'machine', 'bodyweight', 'kettlebell', 'band', 'ez barbell'];

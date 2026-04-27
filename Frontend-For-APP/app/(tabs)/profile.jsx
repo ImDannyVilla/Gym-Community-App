@@ -11,6 +11,8 @@ import {Tabs, MaterialTabBar} from "react-native-collapsible-tab-view";
 import { colors, spacing, layout } from "../../lib/theme";
 import { getToken } from "../../lib/tokenStorage";
 import { getMyProfile, updateMyProfile } from "../../lib/socialApi";
+import { getWorkoutLogs } from "../../lib/workoutApi";
+import { API_BASE_URL } from "../../lib/api";
 
 function PostsTab() {
     const [posts, setPosts] = useState([]);
@@ -21,7 +23,7 @@ function PostsTab() {
             const token = await getToken();
             if (!token) return;
 
-            const response = await fetch("https://gym-community-app.onrender.com/workout-logs/me", {
+            const response = await fetch(`${API_BASE_URL}/workout-logs/me`, {
                 headers: { "Authorization": `Bearer ${token}` }
             });
 
@@ -150,14 +152,14 @@ function WorkoutsTab({ workoutLogs, isLoading }) {
                                 item.is_public ? styles.badgePublic : styles.badgePrivate
                             ]}>
                                 <Text style={styles.badgeText}>
-                                    {item.is_public ? '🌎 Public' : '🔒 Private'}
+                                    {item.is_public ? 'Public' : 'Private'}
                                 </Text>
                             </View>
                         </View>
                         <Text style={styles.cardDate}>{formatDate(item.started_at)}</Text>
                         {item.duration && (
-                            <Text style={styles.logDuration}>
-                                ⏱ {formatTime(item.duration)}
+<Text style={styles.logDuration}>
+                                 {formatTime(item.duration)}
                             </Text>
                         )}
                         {!item.completed_at && (
@@ -247,21 +249,8 @@ const loadProfileData = async () => {
                 setDayStreak(data.profile.day_streak?.toString() || "0");
             }
 
-            // Fetch workout streak stats
-            const streakResponse = await fetch(`https://gym-community-app.onrender.com/workout-logs/me/streak`, {
-                method: "GET",
-                headers: {
-                    "Authorization": `Bearer ${token}`
-                }
-            });
-
-            if (streakResponse.ok) {
-                const streakData = await streakResponse.json();
-                setWorkoutsThisWeek(streakData.workouts_this_week?.toString() || "0");
-            }
-
             // Fetch workout logs
-            const logsResponse = await fetch(`https://gym-community-app.onrender.com/workout-logs/me`, {
+            const logsResponse = await fetch(`${API_BASE_URL}/workout-logs/me`, {
                 method: "GET",
                 headers: {
                     "Authorization": `Bearer ${token}`
@@ -271,6 +260,23 @@ const loadProfileData = async () => {
             if (logsResponse.ok) {
                 const logsData = await logsResponse.json();
                 setWorkoutLogs(logsData || []);
+            }
+
+            // Fetch workout streak stats
+            try {
+                const streakResponse = await fetch(`${API_BASE_URL}/workout-logs/me/streak`, {
+                    method: "GET",
+                    headers: {
+                        "Authorization": `Bearer ${token}`
+                    }
+                });
+
+                if (streakResponse.ok) {
+                    const streakData = await streakResponse.json();
+                    setWorkoutsThisWeek(streakData.workouts_this_week?.toString() || "0");
+                }
+            } catch (e) {
+                console.log("Streak endpoint not available");
             }
         } catch (error) {
             console.log("Failed to load profile data (Network error)", error);

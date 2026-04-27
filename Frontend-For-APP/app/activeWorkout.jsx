@@ -223,7 +223,7 @@ export default function ActiveWorkout() {
                 <Text style={styles.setColSet}>Set</Text>
                 <Text style={styles.setColLbs}>lbs</Text>
                 <Text style={styles.setColReps}>Reps</Text>
-                <Text style={styles.setColCheck}>✓</Text>
+                <Text style={styles.setColCheck}>Done</Text>
               </View>
 
               {/* Sets Rows */}

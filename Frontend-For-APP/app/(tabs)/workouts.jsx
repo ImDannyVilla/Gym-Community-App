@@ -96,7 +96,7 @@ export default function WorkoutsScreen() {
           <Text style={styles.statLabel}>Sets Done</Text>
         </View>
         <View style={styles.statBubble}>
-          <Text style={styles.statValue}>{stats.dayStreak} 🔥</Text>
+          <Text style={styles.statValue}>{stats.dayStreak}</Text>
           <Text style={styles.statLabel}>Day Streak</Text>
         </View>
       </View>
@@ -107,7 +107,6 @@ export default function WorkoutsScreen() {
           style={styles.quickStartButtonDashed}
           onPress={handleStartEmptyWorkout}
         >
-          <Text style={styles.quickStartEmoji}>⚡</Text>
           <Text style={styles.quickStartTitle}>Empty Workout</Text>
           <Text style={styles.quickStartSubtitle}>Start fresh</Text>
         </Pressable>
@@ -116,7 +115,6 @@ export default function WorkoutsScreen() {
           style={styles.quickStartButton}
           onPress={() => router.push("/explore")}
         >
-          <Text style={styles.quickStartEmoji}>🔍</Text>
           <Text style={styles.quickStartTitle}>Explore</Text>
           <Text style={styles.quickStartSubtitle}>Find programs</Text>
         </Pressable>
