@@ -6,6 +6,37 @@ from datetime import datetime
 from typing import Optional
 
 
+def validate_password(v: str) -> str:
+    if len(v) == 0:
+        raise ValueError("Password cannot be empty")
+    if len(v) < 8:
+        raise ValueError("Password must be at least 8 characters long")
+    if len(v) > 20:
+        raise ValueError("Password must be less than 20 characters long")
+    if not any(c.isupper() for c in v):
+        raise ValueError("Password must contain at least one uppercase letter")
+    if not any(c.isdigit() for c in v):
+        raise ValueError("Password must contain at least one digit")
+    if not any(c.islower() for c in v):
+        raise ValueError("Password must contain at least one lowercase letter")
+    if not any(c.isalpha() for c in v):
+        raise ValueError("Password must contain at least one letter")
+    if not any(not c.isalnum() for c in v):
+        raise ValueError("Password must contain at least one special character")
+    if any(c.isspace() for c in v):
+        raise ValueError("Password must not contain any spaces")
+    return v
+
+def validate_username(v: str) -> str:
+    if v is not None:
+        if len(v) < 3:
+            raise ValueError("Username must be at least 3 characters long")
+        if len(v) > 20:
+            raise ValueError("Username must be less than 20 characters long")
+        if not v.replace("_", "").replace("-", "").isalnum():
+            raise ValueError("Username must contain only letters, numbers, underscores, and hyphens")
+    return v
+
 #INPUT SCHEMAS
 
 class UserRegister(BaseModel):
@@ -19,38 +50,12 @@ class UserRegister(BaseModel):
 
     @field_validator("user_name")
     def username_length(cls, v):
-        if len(v) < 3:
-            raise ValueError("Username must be at least 3 characters long")
-        if len(v) > 20:
-            raise ValueError("Username must be less than 20 characters long")
-        if not v.replace("_", "").replace("-", "").isalnum():
-            raise ValueError("Username must contain only letters, numbers, underscores, and hyphens")
-        return v
+        return validate_username(v)
 
     @field_validator("password")
     @classmethod
     def password_strength(cls, v):
-        if len(v) == 0:
-            raise ValueError("Password cannot be empty")
-        if len(v) < 8:
-            raise ValueError("Password must be at least 8 characters long")
-        if len(v) > 20:
-            raise ValueError("Password must be less than 20 characters long")
-        if not any(c.isupper() for c in v):
-            raise ValueError("Password must contain at least one uppercase letter")
-        if not any(c.isdigit() for c in v):
-            raise ValueError("Password must contain at least one digit")
-        if not any(c.islower() for c in v):
-            raise ValueError("Password must contain at least one lowercase letter")
-        if not any(c.isalpha() for c in v):
-            raise ValueError("Password must contain at least one letter")
-        if not any(not c.isalnum() for c in v):
-            raise ValueError("Password must contain at least one special character")
-        if any(c.isspace() for c in v):
-            raise ValueError(
-                "Password must not contain any spaces"
-            )
-        return v
+        return validate_password(v)
 
 
 class UserLogin(BaseModel):
@@ -123,14 +128,7 @@ class UserUpdate(BaseModel):
     
     @field_validator("user_name")
     def username_length(cls, v):
-        if v is not None:
-            if len(v) < 3:
-                raise ValueError("Username must be at least 3 characters long")
-            if len(v) > 20:
-                raise ValueError("Username must be less than 20 characters long")
-            if not v.replace("_", "").replace("-", "").isalnum():
-                raise ValueError("Username must contain only letters, numbers, underscores, and hyphens")
-        return v
+        return validate_username(v)
 
 class PasswordUpdate(BaseModel):
     current_password: str
@@ -138,27 +136,7 @@ class PasswordUpdate(BaseModel):
 
     @field_validator("new_password")
     def password_strength(cls, v):
-        if len(v) == 0:
-            raise ValueError("Password cannot be empty")
-        if len(v) < 8:
-            raise ValueError("Password must be at least 8 characters long")
-        if len(v) > 20:
-            raise ValueError("Password must be less than 20 characters long")
-        if not any(c.isupper() for c in v):
-            raise ValueError("Password must contain at least one uppercase letter")
-        if not any(c.isdigit() for c in v):
-            raise ValueError("Password must contain at least one digit")
-        if not any(c.islower() for c in v):
-            raise ValueError("Password must contain at least one lowercase letter")
-        if not any(c.isalpha() for c in v):
-            raise ValueError("Password must contain at least one letter")
-        if not any(not c.isalnum() for c in v):
-            raise ValueError("Password must contain at least one special character")
-        if any(c.isspace() for c in v):
-            raise ValueError(
-                "Password must not contain any spaces"
-            )
-        return v
+        return validate_password(v)
 
 class PasswordResetRequest(BaseModel):
     email: EmailStr
@@ -169,25 +147,7 @@ class PasswordReset(BaseModel):
 
     @field_validator("new_password")
     def password_strength(cls, v):
-        if len(v) == 0:
-            raise ValueError("Password cannot be empty")
-        if len(v) < 8:
-            raise ValueError("Password must be at least 8 characters long")
-        if len(v) > 20:
-            raise ValueError("Password must be less than 20 characters long")
-        if not any(c.isupper() for c in v):
-            raise ValueError("Password must contain at least one uppercase letter")
-        if not any(c.isdigit() for c in v):
-            raise ValueError("Password must contain at least one digit")
-        if not any(c.islower() for c in v):
-            raise ValueError("Password must contain at least one lowercase letter")
-        if not any(c.isalpha() for c in v):
-            raise ValueError("Password must contain at least one letter")
-        if not any(not c.isalnum() for c in v):
-            raise ValueError("Password must contain at least one special character")
-        if any(c.isspace() for c in v):
-            raise ValueError("Password must not contain any spaces")
-        return v
+        return validate_password(v)
 
 class EmailUpdate(BaseModel):
     new_email: EmailStr

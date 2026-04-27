@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, SafeAreaView, KeyboardAvoidingView, Platform, Alert } from "react-native";
+import React, { useState, useEffect, useCallback, memo } from "react";
+import { View, Text, TextInput, Pressable, StyleSheet, FlatList, SafeAreaView, KeyboardAvoidingView, Platform, Alert } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Modal from "react-native-modal";
@@ -26,32 +26,130 @@ const EXERCISE_LIST = [
   { category: "Arms/Shoulders", name: "Tricep Extensions" },
 ];
 
+// Memoized Set Row to prevent re-renders when other inputs change
+const SetRow = memo(({ set, setIndex, exerciseId, handleUpdateSet, handleToggleComplete }) => (
+  <View style={[styles.setRow, set.completed && styles.setRowCompleted]}>
+    <Text style={styles.setIndex}>{setIndex + 1}</Text>
+    <TextInput
+      style={[styles.inputBox, set.completed && styles.inputBoxCompleted]}
+      keyboardType="numeric"
+      value={set.weight}
+      onChangeText={(val) => handleUpdateSet(exerciseId, set.id, "weight", val)}
+      placeholder="-"
+      editable={!set.completed}
+    />
+    <TextInput
+      style={[styles.inputBox, set.completed && styles.inputBoxCompleted]}
+      keyboardType="numeric"
+      value={set.reps}
+      onChangeText={(val) => handleUpdateSet(exerciseId, set.id, "reps", val)}
+      placeholder="-"
+      editable={!set.completed}
+    />
+    <Pressable 
+      style={[styles.checkButton, set.completed && styles.checkButtonActive]}
+      onPress={() => handleToggleComplete(exerciseId, set.id)}
+    >
+      <Ionicons name="checkmark" size={16} color={set.completed ? "white" : colors.textSecondary} />
+    </Pressable>
+  </View>
+));
+
+// Memoized Exercise Card
+const ExerciseCard = memo(({ ex, handleUpdateSet, handleToggleComplete, handleAddSet }) => (
+  <View style={styles.exerciseCard}>
+    <Text style={styles.exerciseTitle}>{ex.name}</Text>
+
+    {/* Sets Header */}
+    <View style={styles.setRowHeader}>
+      <Text style={styles.setColSet}>Set</Text>
+      <Text style={styles.setColLbs}>lbs</Text>
+      <Text style={styles.setColReps}>Reps</Text>
+      <Text style={styles.setColCheck}>Done</Text>
+    </View>
+
+    {/* Sets Rows */}
+    {ex.sets.map((set, setIndex) => (
+      <SetRow 
+        key={set.id} 
+        set={set} 
+        setIndex={setIndex} 
+        exerciseId={ex.id} 
+        handleUpdateSet={handleUpdateSet} 
+        handleToggleComplete={handleToggleComplete} 
+      />
+    ))}
+
+    {/* Add Set Button */}
+    <Pressable style={styles.addSetButton} onPress={() => handleAddSet(ex.id)}>
+      <Text style={styles.addSetButtonText}>+ Add Set</Text>
+    </Pressable>
+  </View>
+));
+
 export default function ActiveWorkout() {
   const [workoutName, setWorkoutName] = useState("New Workout");
   const [startTime] = useState(Date.now());
   const [timer, setTimer] = useState(0);
-  const [exercises, setExercises] = useState([]);
   const [currentLogId, setCurrentLogId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [exerciseList, setExerciseList] = useState([]);
   const [isModalVisible, setModalVisible] = useState(false);
   const [showCancelAlert, setShowCancelAlert] = useState(false);
   const [showEmptyAlert, setShowEmptyAlert] = useState(false);
-  const { endWorkout } = useWorkoutStore();
+  
+  const { 
+    activeLogId,
+    exercises, 
+    updateSet, 
+    toggleSetComplete, 
+    addSet, 
+    endWorkout,
+    startWorkout: storeStartWorkout
+  } = useWorkoutStore();
+
+  const handleUpdateSet = useCallback((exerciseId, setId, field, value) => {
+    updateSet(exerciseId, setId, field, value);
+  }, [updateSet]);
+
+  const handleToggleComplete = useCallback((exerciseId, setId) => {
+    toggleSetComplete(exerciseId, setId);
+  }, [toggleSetComplete]);
+
+  const handleAddSet = useCallback((exerciseId) => {
+    addSet(exerciseId);
+  }, [addSet]);
 
   useEffect(() => {
-    initWorkout();
-  }, []);
+    let isMounted = true;
+    
+    const initWorkout = async () => {
+      // If we already have a log ID from workouts.jsx, just use it
+      if (activeLogId) {
+        if (isMounted) setCurrentLogId(activeLogId);
+        return;
+      }
 
-  const initWorkout = async () => {
-    try {
-      const log = await startWorkout(workoutName);
-      setCurrentLogId(log.id);
-    } catch (e) {
-      console.error("Failed to start workout:", e.message);
-      Alert.alert("Error", "Failed to start workout session. Please try again.");
-    }
-  };
+      try {
+        const log = await startWorkout(workoutName);
+        if (isMounted) {
+          setCurrentLogId(log.id);
+          storeStartWorkout(log);
+        }
+      } catch (e) {
+        console.error("Failed to start workout:", e.message);
+        if (isMounted) {
+          Alert.alert("Error", "Failed to start workout session. Please try again.");
+        }
+      }
+    };
+
+    initWorkout();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [activeLogId]);
 
   const loadExerciseOptions = async (query = "") => {
     try {
@@ -83,61 +181,6 @@ export default function ActiveWorkout() {
     const s = (seconds % 60).toString().padStart(2, "0");
     return `${m}:${s}`;
   };
-
-  const handleAddExercise = (exerciseName) => {
-    const newExercise = {
-      id: Date.now().toString(),
-      name: exerciseName,
-      sets: [
-        { id: Date.now().toString() + "-1", weight: "", reps: "", completed: false }
-      ]
-    };
-    setExercises([...exercises, newExercise]);
-    setModalVisible(false);
-  };
-
-  const handleAddSet = (exerciseId) => {
-    setExercises(exercises.map(ex => {
-      if (ex.id === exerciseId) {
-        const lastSet = ex.sets[ex.sets.length - 1];
-        return {
-          ...ex,
-          sets: [...ex.sets, { 
-            id: Date.now().toString(), 
-            weight: lastSet ? lastSet.weight : "", 
-            reps: lastSet ? lastSet.reps : "", 
-            completed: false 
-          }]
-        };
-      }
-      return ex;
-    }));
-  };
-
-  const handleUpdateSet = (exerciseId, setId, field, value) => {
-    setExercises(exercises.map(ex => {
-      if (ex.id === exerciseId) {
-        return {
-          ...ex,
-          sets: ex.sets.map(set => set.id === setId ? { ...set, [field]: value } : set)
-        };
-      }
-      return ex;
-    }));
-  };
-
-  const handleToggleComplete = (exerciseId, setId) => {
-    setExercises(exercises.map(ex => {
-      if (ex.id === exerciseId) {
-        return {
-          ...ex,
-          sets: ex.sets.map(set => set.id === setId ? { ...set, completed: !set.completed } : set)
-        };
-      }
-      return ex;
-    }));
-  };
-
   const handleFinish = async () => {
     const completedExercises = exercises.map(ex => ({
       ...ex,
@@ -213,65 +256,30 @@ export default function ActiveWorkout() {
         </View>
 
         {/* Exercises List */}
-        <ScrollView style={styles.exercisesScroll} contentContainerStyle={styles.exercisesContent}>
-          {exercises.map((ex, exIndex) => (
-            <View key={ex.id} style={styles.exerciseCard}>
-              <Text style={styles.exerciseTitle}>{ex.name}</Text>
-
-              {/* Sets Header */}
-              <View style={styles.setRowHeader}>
-                <Text style={styles.setColSet}>Set</Text>
-                <Text style={styles.setColLbs}>lbs</Text>
-                <Text style={styles.setColReps}>Reps</Text>
-                <Text style={styles.setColCheck}>Done</Text>
-              </View>
-
-              {/* Sets Rows */}
-              {ex.sets.map((set, setIndex) => (
-                <View key={set.id} style={[styles.setRow, set.completed && styles.setRowCompleted]}>
-                  <Text style={styles.setIndex}>{setIndex + 1}</Text>
-                  <TextInput
-                    style={[styles.inputBox, set.completed && styles.inputBoxCompleted]}
-                    keyboardType="numeric"
-                    value={set.weight}
-                    onChangeText={(val) => handleUpdateSet(ex.id, set.id, "weight", val)}
-                    placeholder="-"
-                    editable={!set.completed}
-                  />
-                  <TextInput
-                    style={[styles.inputBox, set.completed && styles.inputBoxCompleted]}
-                    keyboardType="numeric"
-                    value={set.reps}
-                    onChangeText={(val) => handleUpdateSet(ex.id, set.id, "reps", val)}
-                    placeholder="-"
-                    editable={!set.completed}
-                  />
-                  <Pressable 
-                    style={[styles.checkButton, set.completed && styles.checkButtonActive]}
-                    onPress={() => handleToggleComplete(ex.id, set.id)}
-                  >
-                    <Ionicons name="checkmark" size={16} color={set.completed ? "white" : colors.textSecondary} />
-                  </Pressable>
-                </View>
-              ))}
-
-              {/* Add Set Button */}
-              <Pressable style={styles.addSetButton} onPress={() => handleAddSet(ex.id)}>
-                <Text style={styles.addSetButtonText}>+ Add Set</Text>
-              </Pressable>
-            </View>
-          ))}
-
-          {/* Add Exercise Button */}
-          <Pressable 
-            style={[styles.addExerciseButton, !currentLogId && styles.addExerciseButtonDisabled]} 
-            onPress={handleOpenModal}
-            disabled={!currentLogId}
-          >
-            <Ionicons name="add" size={20} color={colors.primary} />
-            <Text style={styles.addExerciseButtonText}>Add Exercise</Text>
-          </Pressable>
-        </ScrollView>
+        <FlatList
+          style={styles.exercisesScroll}
+          contentContainerStyle={styles.exercisesContent}
+          data={exercises}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <ExerciseCard 
+              ex={item} 
+              handleUpdateSet={handleUpdateSet} 
+              handleToggleComplete={handleToggleComplete} 
+              handleAddSet={handleAddSet} 
+            />
+          )}
+          ListFooterComponent={
+            <Pressable 
+              style={[styles.addExerciseButton, !currentLogId && styles.addExerciseButtonDisabled]} 
+              onPress={handleOpenModal}
+              disabled={!currentLogId}
+            >
+              <Ionicons name="add" size={20} color={colors.primary} />
+              <Text style={styles.addExerciseButtonText}>Add Exercise</Text>
+            </Pressable>
+          }
+        />
       </KeyboardAvoidingView>
 
       {/* Exercise Selector Modal */}

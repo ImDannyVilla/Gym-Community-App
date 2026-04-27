@@ -15,8 +15,7 @@ from app.schemas.user import (
     UserwithProfile
 )
 from app.dependencies import AsyncSessionDep, CurrentUser
-from app.core.supabase_client import supabase, supabase_admin
-
+from app.core.supabase_client import get_auth_client
 
 router = APIRouter(prefix="/auth", tags=["auth"]) #all routes start with /auth; in API they are grouped under auth
 
@@ -36,7 +35,8 @@ async def register(
 
 
         # create user in supabase auth (skip email confirmation)
-        auth_response = supabase.auth.sign_up({
+        auth_client = get_auth_client()
+        auth_response = auth_client.auth.sign_up({
             "email": user_data.email,
             "password": user_data.password,
             "options": {
@@ -84,7 +84,8 @@ async def register(
 @router.post("/login", response_model=Token)
 async def login(db: AsyncSessionDep, credentials: OAuth2PasswordRequestForm = Depends()):
     try:
-        auth_response = supabase.auth.sign_in_with_password({
+        auth_client = get_auth_client()
+        auth_response = auth_client.auth.sign_in_with_password({
             "email": credentials.username,
             "password": credentials.password
         })
@@ -110,7 +111,8 @@ async def login(db: AsyncSessionDep, credentials: OAuth2PasswordRequestForm = De
 @router.post("/request-password-reset")
 async def request_password_reset(data: PasswordResetRequest):
     try:
-        supabase.auth.reset_password_for_email(
+        auth_client = get_auth_client()
+        auth_client.auth.reset_password_for_email(
             email= data.email,
             options={
                 "redirect_to": "gym_app://reset-password"
@@ -143,9 +145,9 @@ async def forgot_email(username: str, db: AsyncSessionDep):
         else:
             masked_email = email
 
-        return {"email": email, "masked_email": masked_email}
+        return {"masked_email": masked_email, "message": "Email found"}
     except Exception as e:
-        return {"email": None, "message": "No account found with this username"}
+        return {"masked_email": None, "message": "No account found with this username"}
 
 @router.post("/update-password")
 async def update_password(
@@ -153,11 +155,18 @@ async def update_password(
     authorization: str = Header(...)
 ):
     try:
+        auth_client = get_auth_client()
         access_token = authorization.replace("Bearer ", "").strip()
-        user_response = supabase.auth.get_user(access_token)
+        
+        # We need to set the session for this local client instance so update_user works
+        user_response = auth_client.auth.get_user(access_token)
         if not user_response.user:
             raise HTTPException(status_code=401, detail="Invalid token")
-        result = supabase.auth.update_user(
+        
+        # update_user requires an active session
+        auth_client.auth.set_session(access_token, "") # Set token for this specific client
+        
+        result = auth_client.auth.update_user(
             {"password": password_data.new_password}
         )
         if not result.user:
@@ -171,7 +180,8 @@ async def update_password(
 @router.post("/resend-confirmation")
 async def resend_confirmation(data: ResetConfirmation):
     try:
-        supabase.auth.resend({
+        auth_client = get_auth_client()
+        auth_client.auth.resend({
             "type": "signup",
             "email": data.email,
             "options": {

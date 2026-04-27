@@ -7,7 +7,7 @@ from sqlalchemy.orm import selectinload
 from app.dependencies import get_current_user, AsyncSessionDep, CurrentUser
 from app.models.user import User, UserProfile
 from app.schemas.user import UserResponse, UserwithProfile, ProfileUpdate, ProfileResponse, PasswordUpdate, EmailUpdate
-from app.core.supabase_client import supabase, supabase_admin
+from app.core.supabase_client import get_auth_client, supabase_admin
 router = APIRouter(prefix="/users", tags=["Users"])
 
 #(.get, .put, .post, .delete)
@@ -119,8 +119,9 @@ async def update_password(
         current_user: CurrentUser
 ):
     try:
+        auth_client = get_auth_client()
         # Verify current password
-        sign_in = supabase.auth.sign_in_with_password({
+        sign_in = auth_client.auth.sign_in_with_password({
             "email": current_user.email,
             "password": password_data.current_password
         })
@@ -155,9 +156,11 @@ async def change_email(
 ):
     try:
         #update in Supabase Auth
-        supabase.auth.update_user({
-            "email": email_data.new_email
-        })
+        # Note: changing email requires an active session, but supabase_admin can bypass it
+        supabase_admin.auth.admin.update_user_by_id(
+            str(current_user.id),
+            {"email": email_data.new_email}
+        )
 
         #update in our db
         current_user.email = email_data.new_email

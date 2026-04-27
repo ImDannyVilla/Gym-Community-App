@@ -4,7 +4,7 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, layout, spacing } from "../../lib/theme";
-import { getMyRoutines, startWorkout } from "../../lib/workoutApi";
+import { getMyRoutines, startWorkout, getWorkoutStreak } from "../../lib/workoutApi";
 import { getMyProfile } from "../../lib/socialApi";
 import { useWorkoutStore } from "../../stores/workoutStore";
 
@@ -26,13 +26,13 @@ export default function WorkoutsScreen() {
       const routinesData = await getMyRoutines();
       setRoutines(routinesData || []);
 
-      // Fetch user profile for stats
-      const profileData = await getMyProfile();
-      if (profileData?.profile) {
+      // Fetch stats
+      const streakData = await getWorkoutStreak();
+      if (streakData) {
         setStats({
-          totalWorkouts: profileData.profile.total_workouts || 0,
-          setsDone: 0, // TODO: Calculate from workout logs
-          dayStreak: profileData.profile.day_streak || 0,
+          totalWorkouts: streakData.total_workouts || 0,
+          setsDone: streakData.total_sets || 0,
+          dayStreak: streakData.day_streak || 0,
         });
       }
     } catch (e) {
@@ -57,7 +57,7 @@ export default function WorkoutsScreen() {
   const handleStartEmptyWorkout = async () => {
     try {
       const log = await startWorkout("My Workout", null, false);
-      setWorkoutActive(log.id);
+      setWorkoutActive(log);
       router.push("/activeWorkout");
     } catch (e) {
       console.error("Failed to start workout:", e.message);
@@ -68,7 +68,7 @@ export default function WorkoutsScreen() {
   const handleStartRoutine = async (routineId, routineName) => {
     try {
       const log = await startWorkout(routineName, routineId, false);
-      setWorkoutActive(log.id);
+      setWorkoutActive(log);
       router.push("/activeWorkout");
     } catch (e) {
       console.error("Failed to start routine:", e.message);
