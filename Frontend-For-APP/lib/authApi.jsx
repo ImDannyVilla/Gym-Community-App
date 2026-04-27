@@ -8,7 +8,7 @@ export async function registerUser({ email, username, password, full_name }) {
     },
     body: JSON.stringify({
       email,
-      username,
+      user_name: username,
       password,
       full_name
     }),

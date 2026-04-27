@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, ScrollView, Image, ActivityIndicator, Pressable } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Image, ActivityIndicator, Pressable, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "../../lib/theme";
 import { API_BASE_URL } from "../../lib/api";
+import { saveSeededWorkoutAsRoutine } from "../../lib/workoutApi";
 
 export default function WorkoutDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -79,6 +80,23 @@ export default function WorkoutDetailScreen() {
     );
   }
 
+  const handleSaveRoutine = async () => {
+    try {
+      await saveSeededWorkoutAsRoutine(id);
+      Alert.alert(
+        "Success",
+        `"${workout.name}" has been saved to your routines!`,
+        [
+          { text: "View Routines", onPress: () => router.push("/(tabs)/workouts") },
+          { text: "OK", style: "cancel" }
+        ]
+      );
+    } catch (error) {
+      console.error("Failed to save routine:", error);
+      Alert.alert("Error", "Failed to save routine. Please try again.");
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
@@ -87,8 +105,8 @@ export default function WorkoutDetailScreen() {
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </Pressable>
         <Text style={styles.headerTitle}>Workout Detail</Text>
-        <Pressable style={styles.bookmarkButton}>
-          <Ionicons name="bookmark-outline" size={24} color={colors.text} />
+        <Pressable style={styles.bookmarkButton} onPress={handleSaveRoutine}>
+          <Ionicons name="bookmark-outline" size={24} color={colors.primary} />
         </Pressable>
       </View>
 
@@ -217,7 +235,7 @@ export default function WorkoutDetailScreen() {
 
       {/* Bottom Action Button */}
       <View style={styles.bottomAction}>
-        <Pressable style={styles.saveButton}>
+        <Pressable style={styles.saveButton} onPress={handleSaveRoutine}>
           <Text style={styles.saveButtonText}>Save Program</Text>
         </Pressable>
       </View>

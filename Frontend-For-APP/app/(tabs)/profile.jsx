@@ -358,43 +358,6 @@ const loadProfileData = async () => {
                     <WorkoutsTab workoutLogs={workoutLogs} isLoading={isLoading} />
                 </Tabs.Tab>
             </Tabs.Container>
-
-            <Modal
-                isVisible={isStreakModalVisible}
-                onSwipeComplete={() => setStreakModalVisible(false)}
-                swipeDirection="down"
-                onBackdropPress={() => setStreakModalVisible(false)}
-                style={styles.bottomModal}
-            >
-                <View style={styles.modalContent}>
-                    <View style={styles.dragHandle} />
-
-                    <View style={styles.calendarContainer}>
-                        <Text style={styles.monthTitle}>{currentMonth} {currentYear}</Text>
-
-                        <View style={styles.weekDaysRow}>
-                            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
-                                <Text key={index} style={styles.weekDayText}>{day}</Text>
-                            ))}
-                        </View>
-
-                        <View style={styles.daysGrid}>
-                            {daysArray.map((day, index) => {
-                                const isToday = day === todayNum;
-                                return (
-                                    <View key={index} style={styles.dayCell}>
-                                        <View style={[styles.dayCircle, isToday && styles.currentDayCircle]}>
-                                            <Text style={[styles.dayText, isToday && styles.currentDayText]}>
-                                                {day !== null ? day : ''}
-                                            </Text>
-                                        </View>
-                                    </View>
-                                );
-                            })}
-                        </View>
-                    </View>
-                </View>
-            </Modal>
         </SafeAreaView>
     );
 }
