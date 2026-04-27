@@ -17,7 +17,6 @@ export default function Layout() {
   useEffect(() => {
     const checkAuth = async () => {
       const token = await getToken();
-      console.log("Auth check - token exists:", !!token);
       setIsAuthenticated(!!token);
     };
     checkAuth();
