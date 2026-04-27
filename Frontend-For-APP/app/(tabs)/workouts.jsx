@@ -26,14 +26,19 @@ export default function WorkoutsScreen() {
       const routinesData = await getMyRoutines();
       setRoutines(routinesData || []);
 
-      // Fetch stats
-      const streakData = await getWorkoutStreak();
-      if (streakData) {
-        setStats({
-          totalWorkouts: streakData.total_workouts || 0,
-          setsDone: streakData.total_sets || 0,
-          dayStreak: streakData.day_streak || 0,
-        });
+      // Fetch stats (gracefully handle if endpoint not deployed yet)
+      try {
+        const streakData = await getWorkoutStreak();
+        if (streakData) {
+          setStats({
+            totalWorkouts: streakData.total_workouts || 0,
+            setsDone: streakData.total_sets || 0,
+            dayStreak: streakData.day_streak || 0,
+          });
+        }
+      } catch (streakError) {
+        console.log("Streak endpoint not available yet:", streakError.message);
+        // Keep default stats (0 values) if endpoint not deployed
       }
     } catch (e) {
       console.error("Failed to load data:", e.message);

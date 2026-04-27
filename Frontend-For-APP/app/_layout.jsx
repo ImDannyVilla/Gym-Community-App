@@ -5,7 +5,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import BottomNav from "./_components/BottomNav";
 import { useWorkoutStore } from "../stores/workoutStore";
-import { getToken } from "../lib/tokenStorage";
+import { getToken, removeToken } from "../lib/tokenStorage";
 import { useEffect, useState } from "react";
 
 export default function Layout() {
@@ -17,6 +17,7 @@ export default function Layout() {
   useEffect(() => {
     const checkAuth = async () => {
       const token = await getToken();
+      console.log("Auth check - token exists:", !!token);
       setIsAuthenticated(!!token);
     };
     checkAuth();
