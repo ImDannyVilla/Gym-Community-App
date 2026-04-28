@@ -1,4 +1,6 @@
 import { getToken } from "./tokenStorage";
+import { removeToken } from "./tokenStorage";
+import { router } from "expo-router";
 
 export const API_BASE_URL = "https://gym-community-app.onrender.com";
 
@@ -17,6 +19,12 @@ export async function apiFetch(endpoint, options = {}) {
       ...options.headers,
     },
   });
+
+  if (response.status === 401) {
+    await removeToken();
+    router.replace("/");
+    throw new Error("Session expired. Please log in again.");
+  }
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ detail: "Request failed" }));

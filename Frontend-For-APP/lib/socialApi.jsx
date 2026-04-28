@@ -1,4 +1,6 @@
 import { API_BASE_URL, getAuthHeader } from "./api";
+import { removeToken } from "./tokenStorage";
+import { router } from "expo-router";
 
 async function fetchWithAuth(endpoint, options = {}) {
   const authHeader = await getAuthHeader();
@@ -11,6 +13,12 @@ async function fetchWithAuth(endpoint, options = {}) {
       ...options.headers,
     },
   });
+
+  if (response.status === 401) {
+    await removeToken();
+    router.replace("/");
+    throw new Error("Session expired. Please log in again.");
+  }
 
   const data = await response.json();
 

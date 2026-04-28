@@ -1,4 +1,3 @@
-import "react-native-reanimated";
 import { Stack, useRouter, useSegments, usePathname } from "expo-router";
 import { View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -46,15 +45,16 @@ export default function Layout() {
     setHasCheckedAuth(true);
   }, []);
 
-  // Check auth on mount and whenever the pathname changes to an auth screen
-  // (i.e., after login calls router.replace, or after logout)
+  // Check auth on mount only. The checkAuth call sets hasCheckedAuth=true.
+  // Re-check when user explicitly navigates to an auth screen (e.g. after logout/back).
   useEffect(() => {
-    const authScreens = ['/', '/signup', '/forgot-password', '/forgot-email'];
-    // Only validate token on mount or when arriving at an auth screen (post-login/logout)
-    if (!hasCheckedAuth || authScreens.includes(pathname) || pathname.includes('/workouts')) {
+    const authScreens = ['index', 'signup', 'forgot-password', 'forgot-email'];
+    const inAuthGroup = authScreens.includes(segments[0]) || segments.length === 0;
+
+    if (!hasCheckedAuth || inAuthGroup) {
       checkAuth();
     }
-  }, [pathname]);
+  }, [segments]);
 
   useEffect(() => {
     if (!hasCheckedAuth) return;

@@ -37,11 +37,17 @@ export default function WorkoutsScreen() {
           });
         }
       } catch (streakError) {
-        console.log("Streak endpoint not available yet:", streakError.message);
-        // Keep default stats (0 values) if endpoint not deployed
+        // Don't show error for 401 — fetchWithAuth handles the redirect
+        if (!streakError.message?.includes("Session expired")) {
+          console.log("Streak endpoint not available yet:", streakError.message);
+        }
+        // Keep default stats (0 values) if endpoint not deployed or auth fails
       }
     } catch (e) {
-      console.error("Failed to load data:", e.message);
+      // Don't show error for 401 — fetchWithAuth handles the redirect
+      if (!e.message?.includes("Session expired")) {
+        console.error("Failed to load data:", e.message);
+      }
     } finally {
       setIsLoading(false);
     }
