@@ -1,11 +1,11 @@
 import "react-native-reanimated";
 import { Stack, useRouter, useSegments, usePathname } from "expo-router";
-import { View } from "react-native";
+import { View, ActivityIndicator } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import BottomNav from "./_components/BottomNav";
 import { useWorkoutStore } from "../stores/workoutStore";
-import { getToken } from "../lib/tokenStorage";
+import { getToken, removeToken } from "../lib/tokenStorage";
 import { useEffect, useState, useCallback } from "react";
 
 export default function Layout() {
@@ -14,6 +14,16 @@ export default function Layout() {
   const pathname = usePathname();
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(null);
+
+  // TEMPORARY: Clear token on app startup to force login screen to show
+  // Remove this useEffect once you've verified the login screen works
+  useEffect(() => {
+    const clearToken = async () => {
+      await removeToken();
+      console.log("Token cleared - you should now see the login screen");
+    };
+    clearToken();
+  }, []);
 
   // Re-check auth token whenever the route changes (covers post-login/register navigation)
   const checkAuth = useCallback(async () => {
@@ -38,7 +48,13 @@ export default function Layout() {
     }
   }, [isAuthenticated, segments]);
 
-  if (isAuthenticated === null) return null;
+  if (isAuthenticated === null) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#1a1a1a' }}>
+        <ActivityIndicator size="large" color="#fff" />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaProvider>
