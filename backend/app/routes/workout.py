@@ -81,6 +81,22 @@ async def save_seeded_workout_as_routine(
     await db.flush()
 
     for ex in workout.exercises:
+        # Parse reps - handle both int and string formats (e.g. 10 or "8-12")
+        reps_val = ex.reps
+        if isinstance(reps_val, int):
+            reps_min = reps_val
+            reps_max = reps_val
+        elif isinstance(reps_val, str) and "-" in reps_val:
+            parts = reps_val.split("-")
+            reps_min = int(parts[0])
+            reps_max = int(parts[1])
+        elif isinstance(reps_val, str) and reps_val.isdigit():
+            reps_min = int(reps_val)
+            reps_max = int(reps_val)
+        else:
+            reps_min = 8
+            reps_max = 12
+
         routine_ex = RoutineExercise(
             id=uuid4(),
             routine_id=new_routine.id,
@@ -92,8 +108,8 @@ async def save_seeded_workout_as_routine(
             equipment=ex.exercise_library.equipment if ex.exercise_library else None,
             order=ex.order,
             target_sets=ex.sets,
-            target_reps_min=int(ex.reps.split("-")[0]) if ex.reps and "-" in ex.reps else (int(ex.reps) if ex.reps and ex.reps.isdigit() else 8),
-            target_reps_max=int(ex.reps.split("-")[1]) if ex.reps and "-" in ex.reps else (int(ex.reps) if ex.reps and ex.reps.isdigit() else 12),
+            target_reps_min=reps_min,
+            target_reps_max=reps_max,
             target_weight_lbs=None,
             notes=ex.notes,
         )

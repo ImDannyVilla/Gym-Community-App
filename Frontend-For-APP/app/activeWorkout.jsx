@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, memo } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet, FlatList, SafeAreaView, KeyboardAvoidingView, Platform, Alert } from "react-native";
+import { View, Text, TextInput, Pressable, StyleSheet, FlatList, SafeAreaView, KeyboardAvoidingView, Platform, Alert, ScrollView } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Modal from "react-native-modal";
@@ -281,33 +281,6 @@ export default function ActiveWorkout() {
           }
         />
       </KeyboardAvoidingView>
-
-      {/* Exercise Selector Modal */}
-      <Modal
-        isVisible={isModalVisible}
-        onSwipeComplete={() => setModalVisible(false)}
-        swipeDirection="down"
-        onBackdropPress={() => setModalVisible(false)}
-        style={styles.bottomModal}
-        avoidKeyboard
-      >
-        <View style={styles.modalContent}>
-          <View style={styles.dragHandle} />
-          <Text style={styles.modalHeader}>Select Exercise</Text>
-          <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
-            {(exerciseList.length > 0 ? exerciseList : EXERCISE_LIST).map((item, idx) => (
-              <Pressable 
-                key={idx} 
-                style={styles.modalExerciseRow}
-                onPress={() => handleAddExercise(item.name)}
-              >
-                <Text style={styles.modalExerciseName}>{item.name}</Text>
-                <Text style={styles.modalExerciseCategory}>{item.target || item.category}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-        </View>
-      </Modal>
 
       {/* Cancel Workout Alert Modal */}
       <Modal

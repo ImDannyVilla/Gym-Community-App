@@ -12,7 +12,16 @@ async function fetchWithAuth(endpoint, options = {}) {
     },
   });
 
-  const data = await response.json();
+  // Safely parse response - handle non-JSON error responses (e.g. 500 plain text)
+  let data;
+  try {
+    data = await response.json();
+  } catch (parseError) {
+    if (!response.ok) {
+      throw new Error(`Server error (${response.status})`);
+    }
+    throw new Error("Invalid response from server");
+  }
 
   if (!response.ok) {
     throw new Error(data.detail || "Request failed");

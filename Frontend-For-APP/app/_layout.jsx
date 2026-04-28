@@ -13,12 +13,15 @@ export default function Layout() {
   const segments = useSegments();
   const pathname = usePathname();
   const router = useRouter();
-  const [isAuthenticated, setIsAuthenticated] = useState(null);
+  // Start as false so login screen renders immediately (not a blank screen)
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
 
   // Re-check auth token whenever the route changes (covers post-login/register navigation)
   const checkAuth = useCallback(async () => {
     const token = await getToken();
     setIsAuthenticated(!!token);
+    setHasCheckedAuth(true);
   }, []);
 
   useEffect(() => {
@@ -26,7 +29,7 @@ export default function Layout() {
   }, [pathname, checkAuth]);
 
   useEffect(() => {
-    if (isAuthenticated === null) return;
+    if (!hasCheckedAuth) return;
     
     const authScreens = ['index', 'signup', 'forgot-password', 'forgot-email'];
     const inAuthGroup = authScreens.includes(segments[0]) || segments.length === 0;
@@ -36,9 +39,7 @@ export default function Layout() {
     } else if (isAuthenticated && inAuthGroup) {
       router.replace('/workouts');
     }
-  }, [isAuthenticated, segments]);
-
-  if (isAuthenticated === null) return null;
+  }, [isAuthenticated, hasCheckedAuth, segments]);
 
   return (
     <SafeAreaProvider>
