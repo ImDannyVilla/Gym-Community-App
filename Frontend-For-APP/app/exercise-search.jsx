@@ -65,6 +65,27 @@ export default function ExerciseSearchScreen() {
   };
 
   const handleSelectExercise = (exercise) => {
+    if (context === 'active-workout') {
+      addExerciseToWorkout({
+        exercise_id: exercise.exercise_id || exercise.id,
+        name: exercise.name,
+        gif_url: exercise.gif_url,
+        category: exercise.category,
+        target: exercise.target,
+        equipment: exercise.equipment,
+        instructions: exercise.instructions,
+        secondary_muscles: exercise.secondary_muscles,
+        target_sets: 1,
+        target_reps_min: null,
+        target_reps_max: null,
+        target_weight_lbs: null,
+        rest_seconds: null,
+        workout_mode: true,
+      });
+      router.back();
+      return;
+    }
+
     setSelectedExercise(exercise);
     setShowConfig(true);
   };

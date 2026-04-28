@@ -14,7 +14,6 @@ export default function TabLayout() {
           animation: 'none'
         }}
     >
-      <SwipeableTabs.Screen name="community" />
       <SwipeableTabs.Screen name="workouts" />
       <SwipeableTabs.Screen name="profile" />
     </SwipeableTabs>

@@ -1,12 +1,17 @@
 from pydantic import BaseModel, ConfigDict
-from datetime import datetime
 from typing import Optional, List
 from uuid import UUID
 
 class SeededWorkoutExerciseResponse(BaseModel):
     id: UUID
     exercise_library_id: UUID
+    exercise_id: Optional[str] = None
     name: str
+    category: Optional[str] = None
+    target: Optional[str] = None
+    equipment: Optional[str] = None
+    secondary_muscles: Optional[str] = None
+    instructions: Optional[str] = None
     sets: int
     reps: int
     rest_period_seconds: Optional[int] = None

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, status
-from sqlalchemy import select, func, cast, Date, Integer
+from sqlalchemy import select, func, cast, Date
 from sqlalchemy.orm import selectinload
 from typing import List, Optional
 from uuid import UUID, uuid4
@@ -11,7 +11,7 @@ from app.models.user import UserProfile
 from app.schemas.routine import RoutineResponse
 from app.schemas.workout_log import (
     WorkoutLogCreate, WorkoutLogUpdate,
-    WorkoutLogSummary, WorkoutLogResponse,
+    WorkoutLogResponse,
     WorkoutLogExerciseCreate
 )
 from app.dependencies import AsyncSessionDep, CurrentUser
@@ -153,16 +153,21 @@ async def start_workout(
     return result.scalars().first()
 
 
-@router.get("/me", response_model=List[WorkoutLogSummary])
+@router.get("/me", response_model=List[WorkoutLogResponse])
 async def get_my_workout_logs(
     db: AsyncSessionDep,
     current_user: CurrentUser
 ):
-    """Get all workout logs for the current user."""
+    """Get completed workout logs for the current user."""
     result = await db.execute(
         select(WorkoutLog)
+        .options(
+            selectinload(WorkoutLog.exercises)
+            .selectinload(WorkoutLogExercise.sets)
+        )
         .where(WorkoutLog.user_id == current_user.id)
-        .order_by(WorkoutLog.started_at.desc())
+        .where(WorkoutLog.completed_at.isnot(None))
+        .order_by(WorkoutLog.completed_at.desc())
     )
     return result.scalars().all()
 
@@ -325,30 +330,62 @@ async def add_exercise_to_log(
     if not log:
         raise HTTPException(status_code=404, detail="Workout log not found")
 
-    exercise = WorkoutLogExercise(
-        id=uuid4(),
-        workout_log_id=log_id,
-        exercise_id=data.exercise_id,
-        name=data.name,
-        category=data.category,
-        target=data.target,
-        equipment=data.equipment,
-        gif_url=data.gif_url,
-        order=data.order,
+    exercise_query = (
+        select(WorkoutLogExercise)
+        .options(selectinload(WorkoutLogExercise.sets))
+        .where(WorkoutLogExercise.workout_log_id == log_id)
+        .where(WorkoutLogExercise.order == data.order)
     )
-    db.add(exercise)
-    await db.flush()
+
+    if data.exercise_id:
+        exercise_query = exercise_query.where(WorkoutLogExercise.exercise_id == data.exercise_id)
+    else:
+        exercise_query = exercise_query.where(WorkoutLogExercise.name == data.name)
+
+    existing_result = await db.execute(exercise_query)
+    exercise = existing_result.scalars().first()
+
+    if exercise:
+        exercise.exercise_id = data.exercise_id
+        exercise.name = data.name
+        exercise.category = data.category
+        exercise.target = data.target
+        exercise.equipment = data.equipment
+        exercise.gif_url = data.gif_url
+        exercise.order = data.order
+    else:
+        exercise = WorkoutLogExercise(
+            id=uuid4(),
+            workout_log_id=log_id,
+            exercise_id=data.exercise_id,
+            name=data.name,
+            category=data.category,
+            target=data.target,
+            equipment=data.equipment,
+            gif_url=data.gif_url,
+            order=data.order,
+        )
+        db.add(exercise)
+        await db.flush()
+
+    existing_sets = {workout_set.set_number: workout_set for workout_set in exercise.sets}
 
     for set_data in data.sets:
-        workout_set = WorkoutLogSet(
-            id=uuid4(),
-            workout_log_exercise_id=exercise.id,
-            set_number=set_data.set_number,
-            reps=set_data.reps,
-            weight_lbs=set_data.weight_lbs,
-            completed=set_data.completed,
-        )
-        db.add(workout_set)
+        workout_set = existing_sets.get(set_data.set_number)
+        if workout_set:
+            workout_set.reps = set_data.reps
+            workout_set.weight_lbs = set_data.weight_lbs
+            workout_set.completed = set_data.completed
+        else:
+            workout_set = WorkoutLogSet(
+                id=uuid4(),
+                workout_log_exercise_id=getattr(exercise, "id"),
+                set_number=set_data.set_number,
+                reps=set_data.reps,
+                weight_lbs=set_data.weight_lbs,
+                completed=set_data.completed,
+            )
+            db.add(workout_set)
 
     await db.commit()
 

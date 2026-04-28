@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, Pressable, FlatList, Image, ActivityIndicator, TextInput, Alert } from "react-native";
+import { View, Text, StyleSheet, Pressable, FlatList, Image, ActivityIndicator, TextInput } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing } from "../lib/theme";
 import { API_BASE_URL } from "../lib/api";
-import { saveSeededWorkoutAsRoutine } from "../lib/workoutApi";
 
 // Map workout names to local assets
 const WORKOUT_COVERS = {
@@ -75,23 +74,6 @@ export default function ExploreScreen() {
     router.push(`/programs/pushpulllegscore?id=${workoutId}`);
   };
 
-  const handleSaveRoutine = async (workoutId, workoutName) => {
-    try {
-      await saveSeededWorkoutAsRoutine(workoutId);
-      Alert.alert(
-        "Success",
-        `"${workoutName}" has been saved to your routines!`,
-        [
-          { text: "View Routines", onPress: () => router.push("/(tabs)/workouts") },
-          { text: "OK", style: "cancel" }
-        ]
-      );
-    } catch (error) {
-      console.error("Failed to save routine:", error);
-      Alert.alert("Error", "Failed to save routine. Please try again.");
-    }
-  };
-
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
@@ -99,7 +81,7 @@ export default function ExploreScreen() {
         <Pressable onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </Pressable>
-        <Text style={styles.headerTitle}>Explore Programs</Text>
+        <Text style={styles.headerTitle}>Explore Workouts</Text>
         <View style={styles.placeholder} />
       </View>
 
@@ -171,18 +153,9 @@ export default function ExploreScreen() {
                   </Text>
                 </View>
               </Pressable>
-              
-              {/* Save Routine Button */}
-              <Pressable
-                style={styles.saveButton}
-                onPress={() => handleSaveRoutine(item.id, item.name)}
-              >
-                <Ionicons name="bookmark-outline" size={20} color={colors.primary} />
-                <Text style={styles.saveButtonText}>Save</Text>
-              </Pressable>
-            </View>
-          )}
-          keyExtractor={(item) => item.id}
+              </View>
+            )}
+            keyExtractor={(item) => item.id}
         />
       )}
     </SafeAreaView>
@@ -300,6 +273,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     marginHorizontal: 16,
     marginBottom: 12,
+    height: 120,
     flexDirection: "column",
   },
   workoutCardContent: {
@@ -325,20 +299,5 @@ const styles = StyleSheet.create({
   workoutMeta: {
     fontSize: 12,
     color: colors.textSecondary,
-  },
-  saveButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    gap: 6,
-  },
-  saveButtonText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: colors.primary,
   },
 });

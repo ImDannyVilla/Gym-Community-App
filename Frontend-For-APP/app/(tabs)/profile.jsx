@@ -5,14 +5,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import * as NavigationBar from "expo-navigation-bar";
 import Modal from "react-native-modal";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
-import {Tabs, MaterialTabBar} from "react-native-collapsible-tab-view";
 import { colors, spacing, layout } from "../../lib/theme";
 import { getToken } from "../../lib/tokenStorage";
 import { getMyProfile, updateMyProfile } from "../../lib/socialApi";
 import { getWorkoutLogs } from "../../lib/workoutApi";
-import { API_BASE_URL } from "../../lib/api";
 
 const formatDate = (isoString) => {
     if (!isoString) return "--";
@@ -20,10 +17,27 @@ const formatDate = (isoString) => {
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 };
 
+const formatDateTime = (isoString) => {
+    if (!isoString) return "--";
+    const date = new Date(isoString);
+    return date.toLocaleString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+    });
+};
+
 const formatTime = (seconds) => {
     if (!seconds) return "--";
     const m = Math.floor(seconds / 60);
     return `${m} min`;
+};
+
+const formatLastWorkout = (log) => {
+    if (!log) return "No completed workouts yet";
+    return `${log.name || "Workout"} • ${formatDateTime(log.completed_at || log.started_at)}`;
 };
 
 const EmptyState = ({ icon, title, subtitle }) => (
@@ -33,71 +47,6 @@ const EmptyState = ({ icon, title, subtitle }) => (
         <Text style={styles.emptySubtext}>{subtitle}</Text>
     </View>
 );
-
-function PostsTab() {
-    const [posts, setPosts] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
-
-    const fetchPosts = useCallback(async () => {
-        try {
-            const logs = await getWorkoutLogs();
-            const publicPosts = (logs || []).filter(log => log.is_public);
-            setPosts(publicPosts);
-        } catch (e) {
-            console.error("Failed to load posts", e);
-        } finally {
-            setIsLoading(false);
-        }
-    }, []);
-
-    useFocusEffect(
-        useCallback(() => {
-            fetchPosts();
-        }, [fetchPosts])
-    );
-
-    if (isLoading) {
-        return (
-            <View style={styles.tabContainer}>
-                <ActivityIndicator size="small" color={colors.primary} />
-            </View>
-        );
-    }
-
-    if (posts.length === 0) {
-        return <EmptyState icon="share-social-outline" title="No posts yet" subtitle="Share a workout to make it public" />;
-    }
-
-    return (
-        <FlatList
-            style={styles.scrollView}
-            showsVerticalScrollIndicator={false}
-            data={posts}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.listContent}
-            renderItem={({ item }) => (
-                <View style={styles.postCard}>
-                    <View style={styles.cardHeader}>
-                        <Text style={styles.cardTitle}>{item.name}</Text>
-                        <Text style={styles.cardDate}>{formatDate(item.started_at)}</Text>
-                    </View>
-                    {item.caption && (
-                        <Text style={styles.caption} numberOfLines={3}>{item.caption}</Text>
-                    )}
-                    <View style={styles.statsRow}>
-                        <View style={styles.statChip}>
-                            <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
-                            <Text style={styles.statChipText}>{formatTime(item.duration)}</Text>
-                        </View>
-                        <Text style={styles.exerciseCount}>
-                            {item.exercises?.length || 0} exercises
-                        </Text>
-                    </View>
-                </View>
-            )}
-        />
-    );
-}
 
 function WorkoutsTab({ workoutLogs, isLoading }) {
     if (isLoading) {
@@ -115,34 +64,31 @@ function WorkoutsTab({ workoutLogs, isLoading }) {
     return (
         <FlatList
             style={styles.scrollView}
+            scrollEnabled={false}
             showsVerticalScrollIndicator={false}
             data={workoutLogs}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.listContent}
-            renderItem={({ item }) => (
-                <View style={styles.workoutCard}>
-                    <View style={styles.cardHeader}>
-                        <Text style={styles.cardTitle}>{item.name}</Text>
-                        <View style={[
-                            styles.badge,
-                            item.is_public ? styles.badgePublic : styles.badgePrivate
-                        ]}>
-                            <Text style={styles.badgeText}>
-                                {item.is_public ? 'Public' : 'Private'}
-                            </Text>
+            renderItem={({ item }) => {
+                const completedExerciseCount = (item.exercises || [])
+                    .filter(exercise => exercise.sets?.some(set => set.completed))
+                    .length;
+
+                return (
+                    <View style={styles.workoutCard}>
+                        <View style={styles.cardHeader}>
+                            <Text style={styles.cardTitle}>{item.name}</Text>
+                            <Text style={styles.exerciseCount}>{completedExerciseCount} exercises</Text>
                         </View>
+                        <Text style={styles.cardDate}>Finished {formatDateTime(item.completed_at || item.started_at)}</Text>
+                        {item.duration && (
+                            <Text style={styles.logDuration}>
+                                 {formatTime(item.duration)}
+                            </Text>
+                        )}
                     </View>
-                    <Text style={styles.cardDate}>{formatDate(item.started_at)}</Text>
-                    {item.duration && (
-                        <Text style={styles.logDuration}>
-                             {formatTime(item.duration)}
-                        </Text>
-                    )}
-                    {!item.completed_at && (
-                        <Text style={styles.logIncomplete}>Incomplete</Text>
-                    )}
-                </View>
-            )}
+                );
+            }}
         />
     );
 }
@@ -158,29 +104,11 @@ export default function Profile() {
     const [about, setAbout] = useState("");
     const [gymLevel, setGymLevel] = useState("");
     const [weight, setWeight] = useState("");
-    const [lastWorkout, setLastWorkout] = useState("");
-    const [currentWorkout, setCurrentWorkout] = useState("");
     const [avatarUrl, setAvatarUrl] = useState("");
 
     const [workoutLogs, setWorkoutLogs] = useState([]);
 
     const [isLoading, setIsLoading] = useState(true);
-
-    const currentDate = new Date();
-    const currentMonth = currentDate.toLocaleString('default', { month: 'long' });
-    const currentYear = currentDate.getFullYear();
-    const todayNum = currentDate.getDate();
-
-    const daysInMonth = new Date(currentYear, currentDate.getMonth() + 1, 0).getDate();
-    const firstDayOfMonth = new Date(currentYear, currentDate.getMonth(), 1).getDay();
-
-    const daysArray = [];
-    for (let i = 0; i < firstDayOfMonth; i++) {
-        daysArray.push(null);
-    }
-    for (let i = 1; i <= daysInMonth; i++) {
-        daysArray.push(i);
-    }
 
     useEffect(() => {
         if(params.name) {
@@ -209,23 +137,14 @@ const loadProfileData = async () => {
                 setAbout(data.profile.bio || "This is a little about me.");
                 setGymLevel(data.profile.gym_level || "");
                 setWeight(data.profile.weight?.toString() || "");
-                setLastWorkout(data.profile.last_workout || "");
-                setCurrentWorkout(data.profile.current_workout || "");
                 setAvatarUrl(data.profile.avatar_url || "");
             }
 
-            // Fetch workout logs
-            const logsResponse = await fetch(`${API_BASE_URL}/workout-logs/me`, {
-                method: "GET",
-                headers: {
-                    "Authorization": `Bearer ${token}`
-                }
-            });
-
-            if (logsResponse.ok) {
-                const logsData = await logsResponse.json();
-                setWorkoutLogs(logsData || []);
-            }
+            const logsData = await getWorkoutLogs();
+            const completedLogs = (logsData || [])
+                .filter(log => log.completed_at)
+                .sort((a, b) => new Date(b.completed_at) - new Date(a.completed_at));
+            setWorkoutLogs(completedLogs);
         } catch (error) {
             console.log("Failed to load profile data (Network error)", error);
         } finally {
@@ -310,7 +229,7 @@ const loadProfileData = async () => {
                 <Text style={styles.userName}>@{username}</Text>
 
                 <View style={styles.editProfile}>
-                    <Pressable style={styles.editButton} onPress={() => {router.push({ pathname: "../edit/editProfile", params: {name, username, about, gymLevel, weight, lastWorkout, currentWorkout}})}}>
+                    <Pressable style={styles.editButton} onPress={() => {router.push({ pathname: "../edit/editProfile", params: {name, username, about, gymLevel, weight}})}}>
                         <Text style={styles.edit}>Edit Profile</Text>
                     </Pressable>
                 </View>
@@ -323,6 +242,15 @@ const loadProfileData = async () => {
         );
     };
 
+    const completedWorkouts = workoutLogs;
+    const totalDuration = completedWorkouts.reduce((total, log) => total + (log.duration || 0), 0);
+    const totalSets = completedWorkouts.reduce((total, log) => (
+        total + (log.exercises || []).reduce((exerciseTotal, exercise) => (
+            exerciseTotal + (exercise.sets || []).filter(set => set.completed).length
+        ), 0)
+    ), 0);
+    const lastCompletedWorkout = [...completedWorkouts].sort((a, b) => new Date(b.completed_at) - new Date(a.completed_at))[0];
+
     if (isLoading) {
         return (
             <SafeAreaView style={[styles.scrollWindow, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]} edges={['top']}>
@@ -333,31 +261,43 @@ const loadProfileData = async () => {
 
     return (
         <SafeAreaView style={[styles.scrollWindow, { backgroundColor: colors.background }]} edges={['top']}>
-            <Tabs.Container
-                renderHeader={profileHeader}
-                headerContainerStyle={{paddingTop: 10, backgroundColor: colors.background, elevation: 0, shadowOpacity: 0}}
-                renderTabBar={(props) => (
-                    <MaterialTabBar
-                        {...props}
-                        activeColor={colors.text}
-                        inactiveColor={colors.textSecondary}
-                        indicatorStyle={{
-                            backgroundColor: colors.primary,
-                            height: 3,
-                            borderRadius: 4,
-                        }}
-                        style={{ backgroundColor: colors.background }}
-                    />
-                )}
-            >
-                <Tabs.Tab name="posts" label="Posts">
-                    <PostsTab/>
-                </Tabs.Tab>
+            <ScrollView style={styles.scrollView} contentContainerStyle={styles.profileContent} showsVerticalScrollIndicator={false}>
+                {profileHeader()}
 
-                <Tabs.Tab name="workouts" label="Workouts">
+                <View style={styles.dashboardCard}>
+                    <Text style={styles.sectionTitle}>My Progress</Text>
+                    <View style={styles.dashboardGrid}>
+                        <View style={styles.dashboardStat}>
+                            <Text style={styles.dashboardValue}>{completedWorkouts.length}</Text>
+                            <Text style={styles.dashboardLabel}>Completed</Text>
+                        </View>
+                        <View style={styles.dashboardStat}>
+                            <Text style={styles.dashboardValue}>{workoutLogs.length}</Text>
+                            <Text style={styles.dashboardLabel}>Logged</Text>
+                        </View>
+                        <View style={styles.dashboardStat}>
+                            <Text style={styles.dashboardValue}>{totalSets}</Text>
+                            <Text style={styles.dashboardLabel}>Sets</Text>
+                        </View>
+                        <View style={styles.dashboardStat}>
+                            <Text style={styles.dashboardValue}>{Math.floor(totalDuration / 60)}</Text>
+                            <Text style={styles.dashboardLabel}>Minutes</Text>
+                        </View>
+                    </View>
+                    <View style={styles.lastWorkoutCard}>
+                        <Ionicons name="calendar-outline" size={18} color={colors.primary} />
+                        <View style={styles.lastWorkoutTextWrap}>
+                            <Text style={styles.dashboardLabel}>Last workout</Text>
+                            <Text style={styles.lastWorkoutText}>{formatLastWorkout(lastCompletedWorkout)}</Text>
+                        </View>
+                    </View>
+                </View>
+
+                <View style={styles.historySection}>
+                    <Text style={styles.sectionTitle}>Workout History</Text>
                     <WorkoutsTab workoutLogs={workoutLogs} isLoading={isLoading} />
-                </Tabs.Tab>
-            </Tabs.Container>
+                </View>
+            </ScrollView>
         </SafeAreaView>
     );
 }
@@ -374,6 +314,12 @@ const styles = StyleSheet.create({
         paddingTop: "5%",
         paddingBottom: "10%",
         backgroundColor: colors.background
+    },
+
+    profileContent: {
+        paddingTop: 10,
+        paddingBottom: 120,
+        alignItems: "center",
     },
 
     photoContainer: {
@@ -480,6 +426,74 @@ const styles = StyleSheet.create({
         fontSize: 16,
         width: "90%",
         color: colors.textSecondary,
+    },
+
+    dashboardCard: {
+        width: "90%",
+        backgroundColor: colors.surface,
+        borderRadius: layout.borderRadius,
+        padding: spacing.md,
+        marginBottom: spacing.lg,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+
+    sectionTitle: {
+        color: colors.text,
+        fontSize: 18,
+        fontWeight: "bold",
+        marginBottom: spacing.md,
+    },
+
+    dashboardGrid: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: spacing.sm,
+        marginBottom: spacing.md,
+    },
+
+    dashboardStat: {
+        flexBasis: "48%",
+        backgroundColor: colors.background,
+        borderRadius: layout.borderRadius,
+        padding: spacing.md,
+        alignItems: "center",
+    },
+
+    dashboardValue: {
+        color: colors.primary,
+        fontSize: 24,
+        fontWeight: "bold",
+    },
+
+    dashboardLabel: {
+        color: colors.textSecondary,
+        fontSize: 12,
+        marginTop: 2,
+    },
+
+    lastWorkoutCard: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: spacing.sm,
+        backgroundColor: colors.background,
+        borderRadius: layout.borderRadius,
+        padding: spacing.md,
+    },
+
+    lastWorkoutTextWrap: {
+        flex: 1,
+    },
+
+    lastWorkoutText: {
+        color: colors.text,
+        fontSize: 14,
+        fontWeight: "600",
+        marginTop: 2,
+    },
+
+    historySection: {
+        width: "90%",
     },
 
     cardContainer: 

@@ -97,6 +97,23 @@ export default function WorkoutDetailScreen() {
     }
   };
 
+  const handleExercisePress = (exercise) => {
+    router.push({
+      pathname: "/exercise-detail",
+      params: {
+        exerciseId: exercise.exercise_id || "",
+        libraryId: exercise.exercise_library_id || "",
+        name: exercise.name,
+        category: exercise.category || "",
+        target: exercise.target || "",
+        equipment: exercise.equipment || "",
+        gifUrl: exercise.gif_url || "",
+        instructions: exercise.instructions || "",
+        secondaryMuscles: exercise.secondary_muscles || "",
+      },
+    });
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
@@ -105,12 +122,10 @@ export default function WorkoutDetailScreen() {
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </Pressable>
         <Text style={styles.headerTitle}>Workout Detail</Text>
-        <Pressable style={styles.bookmarkButton} onPress={handleSaveRoutine}>
-          <Ionicons name="bookmark-outline" size={24} color={colors.primary} />
-        </Pressable>
+        <View style={styles.placeholder} />
       </View>
 
-      <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Cover Image */}
         {workout.cover_image_url ? (
           <Image
@@ -152,6 +167,10 @@ export default function WorkoutDetailScreen() {
               </Text>
             </View>
           </View>
+
+          <Pressable style={styles.addRoutineButton} onPress={handleSaveRoutine}>
+            <Text style={styles.addRoutineButtonText}>+ Add as routine</Text>
+          </Pressable>
         </View>
 
         {/* Exercises List */}
@@ -161,7 +180,7 @@ export default function WorkoutDetailScreen() {
             workout.exercises
               .sort((a, b) => a.order - b.order)
               .map((exercise, index) => (
-                <View key={exercise.id} style={styles.exerciseCard}>
+                <Pressable key={exercise.id} style={styles.exerciseCard} onPress={() => handleExercisePress(exercise)}>
                   {/* Exercise Header */}
                   <View style={styles.exerciseHeader}>
                     <View style={styles.exerciseNumber}>
@@ -181,6 +200,7 @@ export default function WorkoutDetailScreen() {
                         )}
                       </View>
                     </View>
+                    <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
                   </View>
 
                   {/* Exercise GIF */}
@@ -222,7 +242,7 @@ export default function WorkoutDetailScreen() {
                       </View>
                     )}
                   </View>
-                </View>
+                </Pressable>
               ))
           ) : (
             <View style={styles.emptyExercises}>
@@ -233,12 +253,6 @@ export default function WorkoutDetailScreen() {
         </View>
       </ScrollView>
 
-      {/* Bottom Action Button */}
-      <View style={styles.bottomAction}>
-        <Pressable style={styles.saveButton} onPress={handleSaveRoutine}>
-          <Text style={styles.saveButtonText}>Save Program</Text>
-        </Pressable>
-      </View>
     </SafeAreaView>
   );
 }
@@ -264,9 +278,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "900",
     color: colors.text,
-  },
-  bookmarkButton: {
-    padding: 4,
   },
   placeholder: {
     width: 32,
@@ -310,6 +321,9 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
+  scrollContent: {
+    paddingBottom: 24,
+  },
   coverImage: {
     width: "100%",
     height: 200,
@@ -340,6 +354,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 7,
+    marginBottom: 14,
   },
   tag: {
     backgroundColor: `${colors.primary}18`,
@@ -477,23 +492,15 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: 8,
   },
-  bottomAction: {
-    padding: 12,
-    paddingBottom: 16,
-    backgroundColor: colors.background,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  saveButton: {
+  addRoutineButton: {
     backgroundColor: colors.primary,
-    paddingVertical: 14,
+    padding: 16,
     borderRadius: 12,
     alignItems: "center",
   },
-  saveButtonText: {
-    color: "#000",
-    fontSize: 15,
-    fontWeight: "800",
-    letterSpacing: 1,
+  addRoutineButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 16,
   },
 });

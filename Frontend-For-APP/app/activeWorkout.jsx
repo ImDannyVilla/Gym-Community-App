@@ -4,36 +4,37 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Modal from "react-native-modal";
 import { colors, layout, typography, spacing } from "../lib/theme";
-import { startWorkout, updateWorkoutLog, addExerciseToLog, searchExercises } from "../lib/workoutApi";
+import { startWorkout, updateWorkoutLog, addExerciseToLog, deleteWorkoutLog, getExerciseHistory } from "../lib/workoutApi";
 import { useWorkoutStore } from "../stores/workoutStore";
 
-const EXERCISE_LIST = [
-  { category: "Chest", name: "Bench Press" },
-  { category: "Chest", name: "Incline Dumbbell Press" },
-  { category: "Chest", name: "Push-ups" },
-  { category: "Chest", name: "Cable Crossover" },
-  { category: "Back", name: "Deadlift" },
-  { category: "Back", name: "Pull-ups" },
-  { category: "Back", name: "Barbell Row" },
-  { category: "Back", name: "Lat Pulldown" },
-  { category: "Legs", name: "Barbell Squat" },
-  { category: "Legs", name: "Leg Press" },
-  { category: "Legs", name: "Lunges" },
-  { category: "Legs", name: "Calf Raises" },
-  { category: "Arms/Shoulders", name: "Overhead Press" },
-  { category: "Arms/Shoulders", name: "Lateral Raises" },
-  { category: "Arms/Shoulders", name: "Bicep Curls" },
-  { category: "Arms/Shoulders", name: "Tricep Extensions" },
+const REST_TIMER_OPTIONS = [
+  { label: "Off", value: 0 },
+  { label: "30s", value: 30 },
+  { label: "60s", value: 60 },
+  { label: "90s", value: 90 },
+  { label: "2 min", value: 120 },
+  { label: "3 min", value: 180 },
 ];
 
+const formatPreviousSet = (set) => {
+  if (!set) return "—";
+  const weight = set.weight_lbs ?? set.weight;
+  const reps = set.reps;
+  if ((weight === null || weight === undefined || weight === "") && !reps) return "—";
+  return `${weight || 0} × ${reps || 0}`;
+};
+
 // Memoized Set Row to prevent re-renders when other inputs change
-const SetRow = memo(({ set, setIndex, exerciseId, handleUpdateSet, handleToggleComplete }) => (
+const SetRow = memo(({ set, setIndex, exerciseId, previousSet, handleUpdateSet, handleToggleComplete, handleSetOptions }) => (
   <View style={[styles.setRow, set.completed && styles.setRowCompleted]}>
-    <Text style={styles.setIndex}>{setIndex + 1}</Text>
+    <Pressable style={styles.setIndexButton} onPress={() => handleSetOptions(exerciseId, set.id, set)}>
+      <Text style={[styles.setIndex, set.warmup && styles.setIndexWarmup]}>{set.warmup ? "W" : setIndex + 1}</Text>
+    </Pressable>
+    <Text style={styles.previousSetText} numberOfLines={1}>{formatPreviousSet(previousSet)}</Text>
     <TextInput
       style={[styles.inputBox, set.completed && styles.inputBoxCompleted]}
       keyboardType="numeric"
-      value={set.weight}
+      value={String(set.weight ?? set.weight_lbs ?? "")}
       onChangeText={(val) => handleUpdateSet(exerciseId, set.id, "weight", val)}
       placeholder="-"
       editable={!set.completed}
@@ -41,7 +42,7 @@ const SetRow = memo(({ set, setIndex, exerciseId, handleUpdateSet, handleToggleC
     <TextInput
       style={[styles.inputBox, set.completed && styles.inputBoxCompleted]}
       keyboardType="numeric"
-      value={set.reps}
+      value={String(set.reps ?? "")}
       onChangeText={(val) => handleUpdateSet(exerciseId, set.id, "reps", val)}
       placeholder="-"
       editable={!set.completed}
@@ -56,13 +57,23 @@ const SetRow = memo(({ set, setIndex, exerciseId, handleUpdateSet, handleToggleC
 ));
 
 // Memoized Exercise Card
-const ExerciseCard = memo(({ ex, handleUpdateSet, handleToggleComplete, handleAddSet }) => (
-  <View style={styles.exerciseCard}>
-    <Text style={styles.exerciseTitle}>{ex.name}</Text>
+const ExerciseCard = memo(({ ex, exerciseHistory, handleUpdateSet, handleToggleComplete, handleAddSet, handleSetOptions, handleOpenExerciseDetails }) => {
+  const previousSets = exerciseHistory?.sets || [];
+
+  return (
+    <View style={styles.exerciseCard}>
+    <Pressable style={styles.exerciseTitleRow} onPress={() => handleOpenExerciseDetails(ex)}>
+      <View style={styles.exerciseTitleTextWrap}>
+        <Text style={styles.exerciseTitle}>{ex.name}</Text>
+        <Text style={styles.exerciseMeta}>Tap for summary, records, and history</Text>
+      </View>
+      <Ionicons name="information-circle-outline" size={20} color={colors.textSecondary} />
+    </Pressable>
 
     {/* Sets Header */}
     <View style={styles.setRowHeader}>
       <Text style={styles.setColSet}>Set</Text>
+      <Text style={styles.setColPrevious}>Previous</Text>
       <Text style={styles.setColLbs}>lbs</Text>
       <Text style={styles.setColReps}>Reps</Text>
       <Text style={styles.setColCheck}>Done</Text>
@@ -75,8 +86,10 @@ const ExerciseCard = memo(({ ex, handleUpdateSet, handleToggleComplete, handleAd
         set={set} 
         setIndex={setIndex} 
         exerciseId={ex.id} 
+        previousSet={previousSets[setIndex]}
         handleUpdateSet={handleUpdateSet} 
         handleToggleComplete={handleToggleComplete} 
+        handleSetOptions={handleSetOptions}
       />
     ))}
 
@@ -84,37 +97,103 @@ const ExerciseCard = memo(({ ex, handleUpdateSet, handleToggleComplete, handleAd
     <Pressable style={styles.addSetButton} onPress={() => handleAddSet(ex.id)}>
       <Text style={styles.addSetButtonText}>+ Add Set</Text>
     </Pressable>
-  </View>
-));
+    </View>
+  );
+});
 
 export default function ActiveWorkout() {
   const [workoutName, setWorkoutName] = useState("New Workout");
-  const [startTime] = useState(Date.now());
+  const [startTime, setStartTime] = useState(Date.now());
   const [timer, setTimer] = useState(0);
   const [currentLogId, setCurrentLogId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [exerciseList, setExerciseList] = useState([]);
-  const [isModalVisible, setModalVisible] = useState(false);
-  const [showCancelAlert, setShowCancelAlert] = useState(false);
   const [showEmptyAlert, setShowEmptyAlert] = useState(false);
+  const [exerciseHistoryById, setExerciseHistoryById] = useState({});
+  const [restDuration, setRestDuration] = useState(90);
+  const [restRemaining, setRestRemaining] = useState(0);
+  const [showRestTimer, setShowRestTimer] = useState(false);
   
   const { 
     activeLogId,
+    activeWorkoutName,
+    activeWorkoutStartTime,
     exercises, 
     updateSet, 
     toggleSetComplete, 
     addSet, 
+    removeSet,
+    toggleWarmupSet,
     endWorkout,
-    startWorkout: storeStartWorkout
+    startWorkout: storeStartWorkout,
+    setWorkoutName: setStoreWorkoutName,
   } = useWorkoutStore();
+
+  const getStartTimeMs = useCallback((value) => {
+    if (!value) return Date.now();
+    const parsedTime = new Date(value).getTime();
+    return Number.isNaN(parsedTime) ? Date.now() : parsedTime;
+  }, []);
+
+  const handleWorkoutNameChange = useCallback((name) => {
+    setWorkoutName(name);
+    setStoreWorkoutName(name);
+  }, [setStoreWorkoutName]);
 
   const handleUpdateSet = useCallback((exerciseId, setId, field, value) => {
     updateSet(exerciseId, setId, field, value);
   }, [updateSet]);
 
   const handleToggleComplete = useCallback((exerciseId, setId) => {
+    const exercise = exercises.find(ex => ex.id === exerciseId);
+    const targetSet = exercise?.sets?.find(set => set.id === setId);
+    const shouldStartRest = targetSet && !targetSet.completed && restDuration > 0;
+
     toggleSetComplete(exerciseId, setId);
-  }, [toggleSetComplete]);
+
+    if (shouldStartRest) {
+      setRestRemaining(restDuration);
+      setShowRestTimer(true);
+    }
+  }, [exercises, restDuration, toggleSetComplete]);
+
+  const handleSetOptions = useCallback((exerciseId, setId, set) => {
+    Alert.alert("Set Options", "Choose an action for this set.", [
+      {
+        text: set?.warmup ? "Remove Warmup Label" : "Mark as Warmup",
+        onPress: () => toggleWarmupSet(exerciseId, setId),
+      },
+      {
+        text: "Remove Set",
+        style: "destructive",
+        onPress: () => removeSet(exerciseId, setId),
+      },
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+    ]);
+  }, [removeSet, toggleWarmupSet]);
+
+  const handleOpenExerciseDetails = useCallback((exercise) => {
+    router.push({
+      pathname: "/exercise-detail",
+      params: {
+        exerciseId: exercise.exercise_id || exercise.id,
+        name: exercise.name,
+        category: exercise.category || "",
+        target: exercise.target || "",
+        equipment: exercise.equipment || "",
+        gifUrl: exercise.gif_url || "",
+        instructions: exercise.instructions || "",
+        secondaryMuscles: exercise.secondary_muscles || "",
+      },
+    });
+  }, []);
+
+  const handleSkipRestTimer = useCallback(() => {
+    setShowRestTimer(false);
+    setRestRemaining(0);
+  }, []);
 
   const handleAddSet = useCallback((exerciseId) => {
     addSet(exerciseId);
@@ -122,19 +201,59 @@ export default function ActiveWorkout() {
 
   useEffect(() => {
     let isMounted = true;
+    const exerciseIds = [...new Set(exercises.map(ex => ex.exercise_id).filter(Boolean))];
+    const missingExerciseIds = exerciseIds.filter(id => !Object.prototype.hasOwnProperty.call(exerciseHistoryById, id));
+
+    if (missingExerciseIds.length === 0) return undefined;
+
+    const loadExerciseHistory = async () => {
+      const historyEntries = await Promise.all(missingExerciseIds.map(async (exerciseId) => {
+        try {
+          const history = await getExerciseHistory(exerciseId);
+          return [exerciseId, history];
+        } catch (error) {
+          console.error("Failed to load exercise history:", error);
+          return [exerciseId, null];
+        }
+      }));
+
+      if (isMounted) {
+        setExerciseHistoryById(prev => ({
+          ...prev,
+          ...Object.fromEntries(historyEntries),
+        }));
+      }
+    };
+
+    loadExerciseHistory();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [exercises, exerciseHistoryById]);
+
+  useEffect(() => {
+    let isMounted = true;
     
     const initWorkout = async () => {
       // If we already have a log ID from workouts.jsx, just use it
       if (activeLogId) {
-        if (isMounted) setCurrentLogId(activeLogId);
+        if (isMounted) {
+          setCurrentLogId(activeLogId);
+          if (activeWorkoutName) setWorkoutName(activeWorkoutName);
+          if (activeWorkoutStartTime) setStartTime(getStartTimeMs(activeWorkoutStartTime));
+        }
         return;
       }
 
       try {
         const log = await startWorkout(workoutName);
         if (isMounted) {
+          const workoutStartTime = log.started_at || Date.now();
           setCurrentLogId(log.id);
-          storeStartWorkout(log);
+          setWorkoutName(log.name);
+          setStartTime(getStartTimeMs(workoutStartTime));
+          storeStartWorkout(log, workoutStartTime);
         }
       } catch (e) {
         console.error("Failed to start workout:", e.message);
@@ -149,17 +268,7 @@ export default function ActiveWorkout() {
     return () => {
       isMounted = false;
     };
-  }, [activeLogId]);
-
-  const loadExerciseOptions = async (query = "") => {
-    try {
-      const data = await searchExercises(query);
-      setExerciseList(data || []);
-    } catch (e) {
-      console.error("Failed to load exercises:", e.message);
-      setExerciseList(EXERCISE_LIST);
-    }
-  };
+  }, [activeLogId, activeWorkoutName, activeWorkoutStartTime, getStartTimeMs]);
 
   const handleOpenModal = () => {
     router.push({
@@ -176,6 +285,27 @@ export default function ActiveWorkout() {
     return () => clearInterval(interval);
   }, [startTime]);
 
+  useEffect(() => {
+    if (!showRestTimer) return undefined;
+
+    if (restRemaining <= 0) {
+      setShowRestTimer(false);
+      return undefined;
+    }
+
+    const interval = setInterval(() => {
+      setRestRemaining(prev => {
+        if (prev <= 1) {
+          setShowRestTimer(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [showRestTimer, restRemaining]);
+
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60).toString().padStart(2, "0");
     const s = (seconds % 60).toString().padStart(2, "0");
@@ -184,7 +314,7 @@ export default function ActiveWorkout() {
   const handleFinish = async () => {
     const completedExercises = exercises.map(ex => ({
       ...ex,
-      sets: ex.sets.filter(s => s.completed && s.weight && s.reps)
+      sets: ex.sets.filter(s => s.completed && (s.weight ?? s.weight_lbs) !== "" && s.reps)
     })).filter(ex => ex.sets.length > 0);
 
     if (completedExercises.length === 0 || !currentLogId) {
@@ -194,12 +324,7 @@ export default function ActiveWorkout() {
 
     setIsLoading(true);
     try {
-      await updateWorkoutLog(currentLogId, {
-        name: workoutName,
-        completed_at: new Date().toISOString(),
-        duration: timer,
-        is_public: false,
-      });
+      const completedAt = new Date().toISOString();
 
       for (const ex of completedExercises) {
         await addExerciseToLog(currentLogId, {
@@ -212,11 +337,18 @@ export default function ActiveWorkout() {
           sets: ex.sets.map((s, i) => ({
             set_number: i + 1,
             reps: parseInt(s.reps) || 0,
-            weight_lbs: parseFloat(s.weight) || 0,
+            weight_lbs: parseFloat(s.weight ?? s.weight_lbs) || 0,
             completed: s.completed,
           })),
         });
       }
+
+      await updateWorkoutLog(currentLogId, {
+        name: workoutName,
+        completed_at: completedAt,
+        duration: timer,
+        is_public: false,
+      });
 
       endWorkout();
       router.back();
@@ -227,8 +359,34 @@ export default function ActiveWorkout() {
     }
   };
 
-  const handleCancel = () => {
-    setShowCancelAlert(true);
+  const handleMinimize = () => {
+    router.replace("/(tabs)/workouts");
+  };
+
+  const handleDiscardWorkout = async () => {
+    const logIdToDiscard = currentLogId || activeLogId;
+
+    setIsLoading(true);
+    try {
+      if (logIdToDiscard) {
+        await deleteWorkoutLog(logIdToDiscard);
+      }
+      setShowEmptyAlert(false);
+      endWorkout();
+      router.replace("/(tabs)/workouts");
+    } catch (e) {
+      if (e.status === 404) {
+        setShowEmptyAlert(false);
+        endWorkout();
+        router.replace("/(tabs)/workouts");
+        return;
+      }
+
+      console.error("Failed to discard workout:", e.message);
+      Alert.alert("Error", "Failed to discard workout. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -237,14 +395,14 @@ export default function ActiveWorkout() {
         
         {/* Header */}
         <View style={styles.header}>
-          <Pressable onPress={handleCancel} style={styles.headerButton}>
-            <Text style={styles.headerButtonText}>Cancel</Text>
+          <Pressable onPress={handleMinimize} style={styles.minimizeButton} accessibilityLabel="Minimize workout">
+            <Ionicons name="chevron-down" size={24} color={colors.primary} />
           </Pressable>
           <View style={styles.headerCenter}>
             <TextInput
               style={styles.workoutNameInput}
               value={workoutName}
-              onChangeText={setWorkoutName}
+              onChangeText={handleWorkoutNameChange}
               placeholder="Workout Name"
               placeholderTextColor={colors.textTertiary}
             />
@@ -264,77 +422,55 @@ export default function ActiveWorkout() {
           renderItem={({ item }) => (
             <ExerciseCard 
               ex={item} 
+              exerciseHistory={exerciseHistoryById[item.exercise_id]}
               handleUpdateSet={handleUpdateSet} 
               handleToggleComplete={handleToggleComplete} 
               handleAddSet={handleAddSet} 
+              handleSetOptions={handleSetOptions}
+              handleOpenExerciseDetails={handleOpenExerciseDetails}
             />
           )}
           ListFooterComponent={
-            <Pressable 
-              style={[styles.addExerciseButton, !currentLogId && styles.addExerciseButtonDisabled]} 
-              onPress={handleOpenModal}
-              disabled={!currentLogId}
-            >
-              <Ionicons name="add" size={20} color={colors.primary} />
-              <Text style={styles.addExerciseButtonText}>Add Exercise</Text>
-            </Pressable>
+            <View style={styles.footerControls}>
+              {showRestTimer && (
+                <View style={styles.restTimerCard}>
+                  <View>
+                    <Text style={styles.restTimerLabel}>Rest Timer</Text>
+                    <Text style={styles.restTimerValue}>{formatTime(restRemaining)}</Text>
+                  </View>
+                  <Pressable style={styles.skipRestButton} onPress={handleSkipRestTimer}>
+                    <Text style={styles.skipRestButtonText}>Skip</Text>
+                  </Pressable>
+                </View>
+              )}
+
+              <View style={styles.restSettingsCard}>
+                <Text style={styles.restSettingsTitle}>Rest Timer</Text>
+                <View style={styles.restOptionsRow}>
+                  {REST_TIMER_OPTIONS.map(option => (
+                    <Pressable
+                      key={option.value}
+                      style={[styles.restOption, restDuration === option.value && styles.restOptionActive]}
+                      onPress={() => setRestDuration(option.value)}
+                    >
+                      <Text style={[styles.restOptionText, restDuration === option.value && styles.restOptionTextActive]}>{option.label}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+
+              <Pressable 
+                style={[styles.addExerciseButton, !currentLogId && styles.addExerciseButtonDisabled]} 
+                onPress={handleOpenModal}
+                disabled={!currentLogId}
+              >
+                <Ionicons name="add" size={20} color={colors.primary} />
+                <Text style={styles.addExerciseButtonText}>Add Exercise</Text>
+              </Pressable>
+            </View>
           }
         />
       </KeyboardAvoidingView>
-
-      {/* Exercise Selector Modal */}
-      <Modal
-        isVisible={isModalVisible}
-        onSwipeComplete={() => setModalVisible(false)}
-        swipeDirection="down"
-        onBackdropPress={() => setModalVisible(false)}
-        style={styles.bottomModal}
-        avoidKeyboard
-      >
-        <View style={styles.modalContent}>
-          <View style={styles.dragHandle} />
-          <Text style={styles.modalHeader}>Select Exercise</Text>
-          <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
-            {(exerciseList.length > 0 ? exerciseList : EXERCISE_LIST).map((item, idx) => (
-              <Pressable 
-                key={idx} 
-                style={styles.modalExerciseRow}
-                onPress={() => handleAddExercise(item.name)}
-              >
-                <Text style={styles.modalExerciseName}>{item.name}</Text>
-                <Text style={styles.modalExerciseCategory}>{item.target || item.category}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-        </View>
-      </Modal>
-
-      {/* Cancel Workout Alert Modal */}
-      <Modal
-        isVisible={showCancelAlert}
-        backdropOpacity={0.6}
-        animationIn="fadeIn"
-        animationOut="fadeOut"
-        useNativeDriver={true}
-        onBackdropPress={() => setShowCancelAlert(false)}
-      >
-        <View style={styles.alertBox}>
-          <Text style={styles.alertTitle}>Cancel Workout</Text>
-          <Text style={styles.alertMessage}>Are you sure you want to cancel? This workout will not be saved.</Text>
-          <View style={styles.alertButtonRow}>
-            <Pressable style={styles.alertCancelBtn} onPress={() => setShowCancelAlert(false)}>
-              <Text style={styles.alertCancelBtnText}>Keep Going</Text>
-            </Pressable>
-            <Pressable style={styles.alertDestructiveBtn} onPress={() => {
-              setShowCancelAlert(false);
-              endWorkout();
-              router.back();
-            }}>
-              <Text style={styles.alertDestructiveBtnText}>Discard</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
 
       {/* Empty Workout Alert Modal */}
       <Modal
@@ -352,11 +488,7 @@ export default function ActiveWorkout() {
             <Pressable style={styles.alertCancelBtn} onPress={() => setShowEmptyAlert(false)}>
               <Text style={styles.alertCancelBtnText}>Cancel</Text>
             </Pressable>
-            <Pressable style={styles.alertDestructiveBtn} onPress={() => {
-              setShowEmptyAlert(false);
-              endWorkout();
-              router.back();
-            }}>
+            <Pressable style={styles.alertDestructiveBtn} onPress={handleDiscardWorkout} disabled={isLoading}>
               <Text style={styles.alertDestructiveBtnText}>Discard</Text>
             </Pressable>
           </View>
@@ -383,13 +515,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.divider,
   },
-  headerButton: {
+  minimizeButton: {
     padding: spacing.xs,
-  },
-  headerButtonText: {
-    color: colors.primary,
-    fontSize: 16,
-    fontWeight: "500",
+    minWidth: 48,
+    alignItems: "flex-start",
   },
   finishButton: {
     backgroundColor: colors.primary,
@@ -432,21 +561,36 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  exerciseTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: spacing.sm,
+  },
+  exerciseTitleTextWrap: {
+    flex: 1,
+    paddingRight: spacing.sm,
+  },
   exerciseTitle: {
     fontSize: 18,
     fontWeight: "bold",
     color: colors.primary,
-    marginBottom: spacing.sm,
+  },
+  exerciseMeta: {
+    fontSize: 11,
+    color: colors.textTertiary,
+    marginTop: 2,
   },
   setRowHeader: {
     flexDirection: "row",
     marginBottom: spacing.xs,
     paddingHorizontal: spacing.sm,
   },
-  setColSet: { flex: 1, fontSize: 12, color: colors.textTertiary, fontWeight: "bold", textAlign: "center" },
-  setColLbs: { flex: 2, fontSize: 12, color: colors.textTertiary, fontWeight: "bold", textAlign: "center" },
-  setColReps: { flex: 2, fontSize: 12, color: colors.textTertiary, fontWeight: "bold", textAlign: "center" },
-  setColCheck: { flex: 1, fontSize: 12, color: colors.textTertiary, fontWeight: "bold", textAlign: "center" },
+  setColSet: { flex: 0.9, fontSize: 12, color: colors.textTertiary, fontWeight: "bold", textAlign: "center" },
+  setColPrevious: { flex: 1.7, fontSize: 12, color: colors.textTertiary, fontWeight: "bold", textAlign: "center" },
+  setColLbs: { flex: 1.4, fontSize: 12, color: colors.textTertiary, fontWeight: "bold", textAlign: "center" },
+  setColReps: { flex: 1.4, fontSize: 12, color: colors.textTertiary, fontWeight: "bold", textAlign: "center" },
+  setColCheck: { flex: 0.9, fontSize: 12, color: colors.textTertiary, fontWeight: "bold", textAlign: "center" },
   
   setRow: {
     flexDirection: "row",
@@ -456,15 +600,30 @@ const styles = StyleSheet.create({
   setRowCompleted: {
     opacity: 0.6,
   },
+  setIndexButton: {
+    flex: 0.9,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 30,
+  },
   setIndex: {
-    flex: 1,
     textAlign: "center",
     fontSize: 14,
     fontWeight: "bold",
     color: colors.textSecondary,
   },
+  setIndexWarmup: {
+    color: colors.warning || colors.primary,
+  },
+  previousSetText: {
+    flex: 1.7,
+    textAlign: "center",
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginHorizontal: spacing.xs,
+  },
   inputBox: {
-    flex: 2,
+    flex: 1.4,
     backgroundColor: colors.background,
     marginHorizontal: spacing.xs,
     borderRadius: 6,
@@ -480,7 +639,7 @@ const styles = StyleSheet.create({
     borderColor: "transparent",
   },
   checkButton: {
-    flex: 1,
+    flex: 0.9,
     alignItems: "center",
     justifyContent: "center",
     height: 30,
@@ -501,7 +660,81 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "bold",
   },
-addExerciseButton: {
+  footerControls: {
+    gap: spacing.md,
+  },
+  restTimerCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: `${colors.primary}18`,
+    borderWidth: 1,
+    borderColor: `${colors.primary}40`,
+    borderRadius: 12,
+    padding: spacing.md,
+  },
+  restTimerLabel: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontWeight: "bold",
+    textTransform: "uppercase",
+  },
+  restTimerValue: {
+    fontSize: 24,
+    color: colors.primary,
+    fontWeight: "900",
+    marginTop: 2,
+  },
+  skipRestButton: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: 8,
+    backgroundColor: colors.primary,
+  },
+  skipRestButtonText: {
+    color: "white",
+    fontSize: 14,
+    fontWeight: "bold",
+  },
+  restSettingsCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  restSettingsTitle: {
+    fontSize: 14,
+    color: colors.text,
+    fontWeight: "bold",
+    marginBottom: spacing.sm,
+  },
+  restOptionsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.xs,
+  },
+  restOption: {
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.background,
+  },
+  restOptionActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  restOptionText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontWeight: "bold",
+  },
+  restOptionTextActive: {
+    color: "white",
+  },
+  addExerciseButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",

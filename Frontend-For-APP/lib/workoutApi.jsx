@@ -12,10 +12,22 @@ async function fetchWithAuth(endpoint, options = {}) {
     },
   });
 
-  const data = await response.json();
+  const responseText = await response.text();
+  let data = null;
+
+  if (responseText) {
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      data = responseText;
+    }
+  }
 
   if (!response.ok) {
-    throw new Error(data.detail || "Request failed");
+    const message = data?.detail || (typeof data === "string" && data) || "Request failed";
+    const error = new Error(message);
+    error.status = response.status;
+    throw error;
   }
 
   return data;

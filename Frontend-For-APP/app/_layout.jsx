@@ -3,6 +3,7 @@ import { Stack, useRouter, useSegments, usePathname } from "expo-router";
 import { View, ActivityIndicator } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
+import ActiveWorkoutMiniWidget from "./_components/ActiveWorkoutMiniWidget";
 import BottomNav from "./_components/BottomNav";
 import { useWorkoutStore } from "../stores/workoutStore";
 import { getToken, removeToken } from "../lib/tokenStorage";
@@ -14,6 +15,7 @@ export default function Layout() {
   const pathname = usePathname();
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(null);
+  const isActiveWorkoutScreen = pathname === '/activeWorkout';
 
   // TEMPORARY: Clear token on app startup to force login screen to show
   // Remove this useEffect once you've verified the login screen works
@@ -78,7 +80,8 @@ export default function Layout() {
           <Stack.Screen name="create-routine" />
           <Stack.Screen name="exercise-search" />
         </Stack>
-        {!isWorkoutActive && isAuthenticated && <BottomNav />}
+        {isWorkoutActive && isAuthenticated && !isActiveWorkoutScreen && <ActiveWorkoutMiniWidget />}
+        {isAuthenticated && !isActiveWorkoutScreen && <BottomNav />}
       </View>
     </SafeAreaProvider>
   );

@@ -1,15 +1,14 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import { View, Text, StyleSheet, Pressable, ScrollView, Alert } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, layout, spacing } from "../../lib/theme";
-import { getMyRoutines, startWorkout, getWorkoutStreak } from "../../lib/workoutApi";
+import { getMyRoutines, startWorkout, getWorkoutStreak, deleteWorkoutLog } from "../../lib/workoutApi";
 import { getMyProfile } from "../../lib/socialApi";
 import { useWorkoutStore } from "../../stores/workoutStore";
 
 export default function WorkoutsScreen() {
-  const insets = useSafeAreaInsets();
   const [routines, setRoutines] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -17,7 +16,13 @@ export default function WorkoutsScreen() {
     setsDone: 0,
     dayStreak: 0,
   });
-  const { startWorkout: setWorkoutActive } = useWorkoutStore();
+  const {
+    isActive: hasActiveWorkout,
+    activeLogId,
+    startWorkout: setWorkoutActive,
+    endWorkout,
+    hasWorkoutActivity,
+  } = useWorkoutStore();
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -59,26 +64,70 @@ export default function WorkoutsScreen() {
     return date.toLocaleDateString('en-US', options);
   };
 
-  const handleStartEmptyWorkout = async () => {
+  const startNewWorkout = async (name, routineId, errorMessage) => {
     try {
-      const log = await startWorkout("My Workout", null, false);
+      const log = await startWorkout(name, routineId, false);
       setWorkoutActive(log);
       router.push("/activeWorkout");
     } catch (e) {
-      console.error("Failed to start workout:", e.message);
-      Alert.alert("Error", "Failed to start workout. Please try again.");
+      console.error(errorMessage, e.message);
+      Alert.alert("Error", `${errorMessage}. Please try again.`);
     }
   };
 
-  const handleStartRoutine = async (routineId, routineName) => {
-    try {
-      const log = await startWorkout(routineName, routineId, false);
-      setWorkoutActive(log);
-      router.push("/activeWorkout");
-    } catch (e) {
-      console.error("Failed to start routine:", e.message);
-      Alert.alert("Error", "Failed to start routine. Please try again.");
+  const discardActiveWorkout = async () => {
+    if (activeLogId) {
+      try {
+        await deleteWorkoutLog(activeLogId);
+      } catch (e) {
+        if (e.status !== 404) throw e;
+      }
     }
+    endWorkout();
+  };
+
+  const confirmStartWorkout = (name, routineId, errorMessage) => {
+    if (!hasActiveWorkout) {
+      startNewWorkout(name, routineId, errorMessage);
+      return;
+    }
+
+    const activeWorkoutHasActivity = hasWorkoutActivity();
+
+    Alert.alert(
+      "Workout in Progress",
+      activeWorkoutHasActivity
+        ? "You have a workout in progress. If you start a new workout, your old workout will be permanently deleted."
+        : "You have an empty workout in progress. If you start a new workout, the empty workout will be discarded without being saved.",
+      [
+        {
+          text: "Resume workout in progress",
+          onPress: () => router.push("/activeWorkout"),
+        },
+        {
+          text: "Start new workout",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await discardActiveWorkout();
+              await startNewWorkout(name, routineId, errorMessage);
+            } catch (e) {
+              console.error("Failed to delete workout in progress:", e.message);
+              Alert.alert("Error", "Failed to delete the workout in progress. Please try again.");
+            }
+          },
+        },
+        { text: "Cancel", style: "cancel" },
+      ]
+    );
+  };
+
+  const handleStartEmptyWorkout = () => {
+    confirmStartWorkout("My Workout", null, "Failed to start workout");
+  };
+
+  const handleStartRoutine = (routineId, routineName) => {
+    confirmStartWorkout(routineName, routineId, "Failed to start routine");
   };
 
   return (
@@ -121,9 +170,16 @@ export default function WorkoutsScreen() {
           onPress={() => router.push("/explore")}
         >
           <Text style={styles.quickStartTitle}>Explore</Text>
-          <Text style={styles.quickStartSubtitle}>Find programs</Text>
+          <Text style={styles.quickStartSubtitle}>Find Workout</Text>
         </Pressable>
       </View>
+
+      <Pressable 
+        style={styles.addRoutineButton}
+        onPress={() => router.push("/create-routine")}
+      >
+        <Text style={styles.addRoutineButtonText}>+ Add Routine</Text>
+      </Pressable>
 
       {/* My Routines */}
       <View style={styles.routinesSection}>
@@ -167,14 +223,6 @@ export default function WorkoutsScreen() {
         )}
       </View>
       </ScrollView>
-
-      {/* Add Routine Button - Fixed above bottom nav */}
-      <Pressable 
-        style={[styles.addRoutineButton, { bottom: 60 + insets.bottom + 12 }]}
-        onPress={() => router.push("/create-routine")}
-      >
-        <Text style={styles.addRoutineButtonText}>+ Add Routine</Text>
-      </Pressable>
     </SafeAreaView>
   );
 }
@@ -373,16 +421,12 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   addRoutineButton: {
-    position: "absolute",
-    bottom: 80,
-    left: 16,
-    right: 16,
+    marginHorizontal: 16,
+    marginBottom: 18,
     backgroundColor: colors.primary,
     borderRadius: 12,
     padding: 16,
     alignItems: "center",
-    zIndex: 100,
-    elevation: 5,
   },
   addRoutineButtonText: {
     color: "#fff",

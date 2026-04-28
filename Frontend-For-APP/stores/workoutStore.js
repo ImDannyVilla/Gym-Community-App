@@ -1,24 +1,58 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
 
-export const useWorkoutStore = create((set, get) => ({
+const hasStartedWorkout = (exercises = []) => (
+  exercises.some(ex => ex.sets?.some(set => set.started || set.completed))
+);
+
+export const useWorkoutStore = create(persist((set, get) => ({
+  hasHydrated: false,
   isActive: false,
   activeLogId: null,
+  activeWorkoutName: null,
+  activeWorkoutStartTime: null,
   exercises: [],
+
+  setHasHydrated: (hasHydrated) => set({ hasHydrated }),
   
-  startWorkout: (log) => set({ isActive: true, activeLogId: log.id, exercises: log.exercises || [] }),
-  endWorkout: () => set({ isActive: false, activeLogId: null, exercises: [] }),
+  startWorkout: (log, startTime = null) => set({
+    isActive: true,
+    activeLogId: log.id,
+    activeWorkoutName: log.name,
+    activeWorkoutStartTime: startTime || log.started_at || Date.now(),
+    exercises: log.exercises || []
+  }),
+
+  setWorkoutName: (name) => set({ activeWorkoutName: name }),
+
+  hasWorkoutActivity: () => hasStartedWorkout(get().exercises),
+
+  endWorkout: () => set({
+    isActive: false,
+    activeLogId: null,
+    activeWorkoutName: null,
+    activeWorkoutStartTime: null,
+    exercises: []
+  }),
   
   addExercise: (exerciseWithConfig) => {
+    const isActiveWorkoutAdd = exerciseWithConfig.workout_mode === true;
+    const setCount = isActiveWorkoutAdd ? 1 : exerciseWithConfig.target_sets || 3;
+    const exerciseInstanceId = Date.now().toString();
+
     // Generate a unique ID for the exercise instance
     const newExercise = {
       ...exerciseWithConfig,
-      id: Date.now().toString(),
-      sets: Array.from({ length: exerciseWithConfig.target_sets || 3 }, (_, i) => ({
-        id: Date.now().toString() + "-" + i,
+      id: exerciseInstanceId,
+      sets: Array.from({ length: setCount }, (_, i) => ({
+        id: `${exerciseInstanceId}-${i}`,
         set_number: i + 1,
-        reps: exerciseWithConfig.target_reps_max || "",
-        weight_lbs: exerciseWithConfig.target_weight_lbs || "",
+        reps: isActiveWorkoutAdd ? "" : exerciseWithConfig.target_reps_max || "",
+        weight_lbs: isActiveWorkoutAdd ? "" : exerciseWithConfig.target_weight_lbs || "",
         completed: false,
+        warmup: false,
+        started: false,
       }))
     };
     
@@ -33,7 +67,7 @@ export const useWorkoutStore = create((set, get) => ({
         if (ex.id === exerciseId) {
           return {
             ...ex,
-            sets: ex.sets.map(s => s.id === setId ? { ...s, [field]: value } : s)
+            sets: ex.sets.map(s => s.id === setId ? { ...s, [field]: value, started: true } : s)
           };
         }
         return ex;
@@ -47,7 +81,7 @@ export const useWorkoutStore = create((set, get) => ({
         if (ex.id === exerciseId) {
           return {
             ...ex,
-            sets: ex.sets.map(s => s.id === setId ? { ...s, completed: !s.completed } : s)
+            sets: ex.sets.map(s => s.id === setId ? { ...s, completed: !s.completed, started: true } : s)
           };
         }
         return ex;
@@ -59,16 +93,19 @@ export const useWorkoutStore = create((set, get) => ({
     set((state) => ({
       exercises: state.exercises.map(ex => {
         if (ex.id === exerciseId) {
+          const setId = `${Date.now()}-${ex.sets.length}`;
           return {
             ...ex,
             sets: [
               ...ex.sets,
               { 
-                id: Date.now().toString() + "-" + ex.sets.length, 
+                id: setId,
                 set_number: ex.sets.length + 1, 
                 reps: "", 
                 weight_lbs: "", 
-                completed: false 
+                completed: false,
+                warmup: false,
+                started: false,
               }
             ]
           };
@@ -77,6 +114,50 @@ export const useWorkoutStore = create((set, get) => ({
       })
     }));
   },
+
+  removeSet: (exerciseId, setId) => {
+    set((state) => ({
+      exercises: state.exercises.map(ex => {
+        if (ex.id !== exerciseId) return ex;
+
+        const remainingSets = ex.sets.filter(s => s.id !== setId);
+
+        return {
+          ...ex,
+          sets: remainingSets.map((s, index) => ({
+            ...s,
+            set_number: index + 1,
+          })),
+        };
+      })
+    }));
+  },
+
+  toggleWarmupSet: (exerciseId, setId) => {
+    set((state) => ({
+      exercises: state.exercises.map(ex => {
+        if (ex.id !== exerciseId) return ex;
+
+        return {
+          ...ex,
+          sets: ex.sets.map(s => s.id === setId ? { ...s, warmup: !s.warmup } : s),
+        };
+      })
+    }));
+  },
   
   clearExercises: () => set({ exercises: [] }),
+}), {
+  name: 'active-workout-storage',
+  storage: createJSONStorage(() => AsyncStorage),
+  partialize: (state) => ({
+    isActive: state.isActive,
+    activeLogId: state.activeLogId,
+    activeWorkoutName: state.activeWorkoutName,
+    activeWorkoutStartTime: state.activeWorkoutStartTime,
+    exercises: state.exercises,
+  }),
+  onRehydrateStorage: () => (state) => {
+    state?.setHasHydrated(true);
+  },
 }));

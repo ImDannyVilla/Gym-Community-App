@@ -4,25 +4,20 @@ import {SafeAreaProvider, SafeAreaView} from "react-native-safe-area-context"
 import {MaterialCommunityIcons} from "@expo/vector-icons"
 import {useLocalSearchParams, useRouter} from "expo-router"
 import Modal from "react-native-modal"
-import {getToken} from "../../lib/tokenStorage"
 import { colors } from "../../lib/theme"
-import { API_BASE_URL } from "../../lib/api"
 import { updateMyProfile } from "../../lib/socialApi"
 
 export default function editProfile()
 {
     const router = useRouter();
 
-    const {name, username, about, gymLevel, weight, lastWorkout, currentWorkout} = useLocalSearchParams();
+    const {name, username, about, gymLevel, weight} = useLocalSearchParams();
 
     const [newName, setNewName] = useState(name || "");
     const [newUsername, setNewUsername] = useState(username || "");
     const [newAbout, setNewAbout] = useState(about || "");
     const [newGymLevel, setNewGymLevel] = useState(gymLevel || "");
     const [newWeight, setNewWeight] = useState(weight || "");
-    const [newLastWorkout, setNewLastWorkout] = useState(lastWorkout || "");
-    const [newCurrentWorkout, setNewCurrentWorkout] = useState(currentWorkout || "");
-
     const [inputHeight, setInputHeight] = useState(60);
 
     const [errorModalVisible, setErrorModalVisible] = useState(false);
@@ -46,9 +41,7 @@ export default function editProfile()
                 user_name: newUsername, 
                 bio: newAbout,
                 gym_level: newGymLevel,
-                weight: isNaN(numericWeight) ? null : numericWeight,
-                last_workout: newLastWorkout,
-                current_workout: newCurrentWorkout
+                weight: isNaN(numericWeight) ? null : numericWeight
             };
 
             const response = await updateMyProfile(payload);
@@ -60,9 +53,7 @@ export default function editProfile()
                     username: newUsername, 
                     about: newAbout,
                     gymLevel: newGymLevel,
-                    weight: newWeight,
-                    lastWorkout: newLastWorkout,
-                    currentWorkout: newCurrentWorkout
+                    weight: newWeight
                 };
 
                 router.navigate({
@@ -149,23 +140,6 @@ export default function editProfile()
                         placeholderTextColor={colors.textSecondary}
                     />
 
-                    <Text style={styles.text}>Last Workout:</Text>
-                    <TextInput 
-                        style={styles.input} 
-                        onChangeText={setNewLastWorkout}
-                        value={newLastWorkout} 
-                        placeholder="e.g. Chest & Triceps"
-                        placeholderTextColor={colors.textSecondary}
-                    />
-
-                    <Text style={styles.text}>Current Workout:</Text>
-                    <TextInput 
-                        style={styles.input} 
-                        onChangeText={setNewCurrentWorkout}
-                        value={newCurrentWorkout} 
-                        placeholder="e.g. Back & Biceps"
-                        placeholderTextColor={colors.textSecondary}
-                    />
                 </ScrollView>
             </SafeAreaView>
 
