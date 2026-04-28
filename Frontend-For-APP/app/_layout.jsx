@@ -5,7 +5,8 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import BottomNav from "./_components/BottomNav";
 import { useWorkoutStore } from "../stores/workoutStore";
-import { getToken } from "../lib/tokenStorage";
+import { getToken, removeToken } from "../lib/tokenStorage";
+import { API_BASE_URL } from "../lib/api";
 import { useEffect, useState, useCallback } from "react";
 
 export default function Layout() {
@@ -17,16 +18,43 @@ export default function Layout() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
 
-  // Re-check auth token whenever the route changes (covers post-login/register navigation)
+  // Check token exists AND is still valid by hitting /users/me
   const checkAuth = useCallback(async () => {
     const token = await getToken();
-    setIsAuthenticated(!!token);
+    if (!token) {
+      setIsAuthenticated(false);
+      setHasCheckedAuth(true);
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/users/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setIsAuthenticated(true);
+      } else {
+        // Token is expired or invalid — clear it
+        await removeToken();
+        setIsAuthenticated(false);
+      }
+    } catch {
+      // Network error — keep token but don't auto-redirect
+      // User will see login, can retry
+      setIsAuthenticated(false);
+    }
     setHasCheckedAuth(true);
   }, []);
 
+  // Check auth on mount and whenever the pathname changes to an auth screen
+  // (i.e., after login calls router.replace, or after logout)
   useEffect(() => {
-    checkAuth();
-  }, [pathname, checkAuth]);
+    const authScreens = ['/', '/signup', '/forgot-password', '/forgot-email'];
+    // Only validate token on mount or when arriving at an auth screen (post-login/logout)
+    if (!hasCheckedAuth || authScreens.includes(pathname) || pathname.includes('/workouts')) {
+      checkAuth();
+    }
+  }, [pathname]);
 
   useEffect(() => {
     if (!hasCheckedAuth) return;
