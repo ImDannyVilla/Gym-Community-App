@@ -48,6 +48,8 @@ async def get_seeded_workout(workout_id: UUID, db: AsyncSessionDep):
     if not workout:
         raise HTTPException(status_code=404, detail="Workout not found")
 
+    return workout
+
 @router.post("/seeded/{workout_id}/save-as-routine", response_model=RoutineResponse, status_code=status.HTTP_201_CREATED)
 async def save_seeded_workout_as_routine(
     workout_id: UUID,

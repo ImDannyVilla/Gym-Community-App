@@ -1,32 +1,35 @@
 import "react-native-reanimated";
-import { Stack, useRouter, useSegments } from "expo-router";
+import { Stack, useRouter, useSegments, usePathname } from "expo-router";
 import { View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import BottomNav from "./_components/BottomNav";
 import { useWorkoutStore } from "../stores/workoutStore";
-import { getToken, removeToken } from "../lib/tokenStorage";
-import { useEffect, useState } from "react";
+import { getToken } from "../lib/tokenStorage";
+import { useEffect, useState, useCallback } from "react";
 
 export default function Layout() {
   const isWorkoutActive = useWorkoutStore(state => state.isActive);
   const segments = useSegments();
+  const pathname = usePathname();
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(null);
 
-  useEffect(() => {
-    const checkAuth = async () => {
-      const token = await getToken();
-      setIsAuthenticated(!!token);
-    };
-    checkAuth();
+  // Re-check auth token whenever the route changes (covers post-login/register navigation)
+  const checkAuth = useCallback(async () => {
+    const token = await getToken();
+    setIsAuthenticated(!!token);
   }, []);
+
+  useEffect(() => {
+    checkAuth();
+  }, [pathname, checkAuth]);
 
   useEffect(() => {
     if (isAuthenticated === null) return;
     
-    const inAuthGroup = segments[0] === 'index' || segments[0] === 'signup' || 
-                        segments[0] === 'forgot-password' || segments[0] === 'forgot-email' || segments.length === 0;
+    const authScreens = ['index', 'signup', 'forgot-password', 'forgot-email'];
+    const inAuthGroup = authScreens.includes(segments[0]) || segments.length === 0;
     
     if (!isAuthenticated && !inAuthGroup) {
       router.replace('/');
