@@ -113,6 +113,8 @@ export default function Profile() {
 
     const [workoutLogs, setWorkoutLogs] = useState([]);
 
+    const [prData, setPrData] = useState({ "bench press": 0, "squat": 0, "deadlift": 0 });
+
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
@@ -150,13 +152,30 @@ const loadProfileData = async () => {
                 .filter(log => log.completed_at)
                 .sort((a, b) => new Date(b.completed_at) - new Date(a.completed_at));
             setWorkoutLogs(completedLogs);
+            // Calculate PRs for Bench, Squat, Deadlift
+                const prExercises = ["bench press", "squat", "deadlift"];
+                const prs = { "bench press": 0, "squat": 0, "deadlift": 0 };
+
+                (logsData || []).forEach(log => {
+                (log.exercises || []).forEach(exercise => {
+                    const name = (exercise.name || "").toLowerCase();
+                    const matchedKey = prExercises.find(key => name.includes(key));
+                    if (matchedKey) {
+                        (exercise.sets || []).forEach(set => {
+                            if (set.completed && set.weight_lbs > prs[matchedKey]) {
+                                prs[matchedKey] = set.weight_lbs;
+                            }
+                        });
+                    }
+                });
+        });
+        setPrData(prs);
         } catch (error) {
             console.log("Failed to load profile data (Network error)", error);
         } finally {
             setIsLoading(false);
         }
-    };
-
+    }
     useFocusEffect(
         useCallback(() => {
             loadProfileData();
@@ -296,6 +315,23 @@ const loadProfileData = async () => {
                             <Text style={styles.lastWorkoutText}>{formatLastWorkout(lastCompletedWorkout)}</Text>
                         </View>
                     </View>
+                </View>
+
+                {/* Personal Records */}
+                <View style={styles.dashboardCard}>
+                    <Text style={styles.sectionTitle}>Personal Records </Text>
+                    {[
+                        { key: "bench press", label: "Bench Press" },
+                        { key: "squat", label: "Squat" },
+                        { key: "deadlift", label: "Deadlift" },
+                        ].map(({ key, label }) => (
+                    <View key={key} style={styles.prRow}>
+                        <Text style={styles.prLabel}>{label}</Text>
+                        <Text style={styles.prValue}>
+                            {prData[key] > 0 ? `${prData[key]} lbs` : "--"}
+                        </Text>
+                    </View>
+                    ))}
                 </View>
 
                 <View style={styles.historySection}>
@@ -760,5 +796,23 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: '#F59E0B',
         marginTop: 4,
+    },
+    prRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    },
+    prLabel: {
+    fontSize: 14,
+    color: colors.text,
+    fontWeight: "600",
+    },
+    prValue: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: colors.primary,  
     },
 });
