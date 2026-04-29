@@ -255,7 +255,7 @@ export default function ActiveWorkout() {
     return () => {
       isMounted = false;
     };
-  }, [exercises, exerciseHistoryById]);
+  }, [exercises]);
 
   useEffect(() => {
     let isMounted = true;
