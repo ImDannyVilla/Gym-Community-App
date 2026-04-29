@@ -49,6 +49,7 @@ const EmptyState = ({ icon, title, subtitle }) => (
 );
 
 function WorkoutsTab({ workoutLogs, isLoading }) {
+    const router = useRouter();
     if (isLoading) {
         return (
             <View style={styles.tabContainer}>
@@ -75,18 +76,22 @@ function WorkoutsTab({ workoutLogs, isLoading }) {
                     .length;
 
                 return (
-                    <View style={styles.workoutCard}>
+                    <Pressable 
+                        style={styles.workoutCard}
+                        onPress={() => router.push({ pathname: "/workout-detail", params: { logId: item.id } })}
+                    >
                         <View style={styles.cardHeader}>
                             <Text style={styles.cardTitle}>{item.name}</Text>
                             <Text style={styles.exerciseCount}>{completedExerciseCount} exercises</Text>
                         </View>
-                        <Text style={styles.cardDate}>Finished {formatDateTime(item.completed_at || item.started_at)}</Text>
+                    <Text style={styles.cardDate}>Finished {formatDateTime(item.completed_at || item.started_at)}</Text>
                         {item.duration && (
-                            <Text style={styles.logDuration}>
-                                 {formatTime(item.duration)}
-                            </Text>
-                        )}
-                    </View>
+                    <Text style={styles.logDuration}>
+                        {formatTime(item.duration)}
+                    </Text>
+                )}
+                    <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={{ position: "absolute", right: 12, top: "50%" }} />
+                    </Pressable>
                 );
             }}
         />

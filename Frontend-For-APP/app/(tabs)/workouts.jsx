@@ -4,7 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, layout, spacing } from "../../lib/theme";
-import { getMyRoutines, startWorkout, getWorkoutStreak, deleteWorkoutLog, getRoutine, addExerciseToLog } from "../../lib/workoutApi";
+import { getMyRoutines, startWorkout, getWorkoutStreak, deleteWorkoutLog, getRoutine, addExerciseToLog,  getWorkoutLogs} from "../../lib/workoutApi";
 import { getMyProfile } from "../../lib/socialApi";
 import { useWorkoutStore } from "../../stores/workoutStore";
 
