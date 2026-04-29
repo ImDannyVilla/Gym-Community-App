@@ -96,20 +96,19 @@ async def save_seeded_workout_as_routine(
     await db.flush()
 
     for ex in workout.exercises:
-        library_exercise = ex.exercise_library
         routine_ex = RoutineExercise(
             id=uuid4(),
             routine_id=new_routine.id,
-            exercise_id=library_exercise.exercise_id if library_exercise else str(ex.exercise_library_id),
-            name=(library_exercise.name if library_exercise else ex.name) or "Exercise",
-            gif_url=library_exercise.gif_url if library_exercise else ex.gif_url,
-            category=library_exercise.category if library_exercise else ex.category,
-            target=library_exercise.target if library_exercise else ex.target,
-            equipment=library_exercise.equipment if library_exercise else None,
+            exercise_id=str(ex.exercise_library_id),
+            name=ex.name,
+            gif_url=ex.gif_url,
+            category=ex.category,
+            target=ex.target,
+            equipment=None,
             order=ex.order,
             target_sets=ex.sets,
-            target_reps_min=int(ex.reps.split("-")[0]) if ex.reps and "-" in ex.reps else (int(ex.reps) if ex.reps and ex.reps.isdigit() else 8),
-            target_reps_max=int(ex.reps.split("-")[1]) if ex.reps and "-" in ex.reps else (int(ex.reps) if ex.reps and ex.reps.isdigit() else 12),
+            target_reps_min=ex.reps if ex.reps else 8,
+            target_reps_max=ex.reps if ex.reps else 12,
             target_weight_lbs=None,
             notes=ex.notes,
         )
