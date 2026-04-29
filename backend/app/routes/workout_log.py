@@ -41,7 +41,6 @@ async def update_user_streak(db: AsyncSessionDep, user_id: UUID):
         if profile:
             profile.day_streak = 0
             profile.total_workouts = 0
-            await db.commit()
         return
 
     # 2. Get unique workout dates, ordered descending
@@ -83,7 +82,19 @@ async def update_user_streak(db: AsyncSessionDep, user_id: UUID):
     if profile:
         profile.day_streak = current_streak
         profile.total_workouts = total_workouts
-        await db.commit()
+
+
+async def load_workout_log_response(db: AsyncSessionDep, log_id: UUID, user_id: UUID):
+    result = await db.execute(
+        select(WorkoutLog)
+        .options(
+            selectinload(WorkoutLog.exercises)
+            .selectinload(WorkoutLogExercise.sets)
+        )
+        .where(WorkoutLog.id == log_id)
+        .where(WorkoutLog.user_id == user_id)
+    )
+    return result.scalars().first()
 
 @router.post("/", response_model=WorkoutLogResponse, status_code=status.HTTP_201_CREATED)
 async def start_workout(
@@ -270,6 +281,7 @@ async def update_workout_log(
         log.is_public = data.is_public
     if data.completed_at is not None:
         log.completed_at = data.completed_at
+        await db.flush()
         await update_user_streak(db, current_user.id)
         
     if data.duration is not None:
@@ -283,15 +295,7 @@ async def update_workout_log(
 
     await db.commit()
 
-    result = await db.execute(
-        select(WorkoutLog)
-        .options(
-            selectinload(WorkoutLog.exercises)
-            .selectinload(WorkoutLogExercise.sets)
-        )
-        .where(WorkoutLog.id == log_id)
-    )
-    return result.scalars().first()
+    return await load_workout_log_response(db, log_id, current_user.id)
 
 
 @router.delete("/{log_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -323,6 +327,10 @@ async def add_exercise_to_log(
     """Add an exercise with sets to a workout log."""
     result = await db.execute(
         select(WorkoutLog)
+        .options(
+            selectinload(WorkoutLog.exercises)
+            .selectinload(WorkoutLogExercise.sets)
+        )
         .where(WorkoutLog.id == log_id)
         .where(WorkoutLog.user_id == current_user.id)
     )
@@ -330,20 +338,16 @@ async def add_exercise_to_log(
     if not log:
         raise HTTPException(status_code=404, detail="Workout log not found")
 
-    exercise_query = (
-        select(WorkoutLogExercise)
-        .options(selectinload(WorkoutLogExercise.sets))
-        .where(WorkoutLogExercise.workout_log_id == log_id)
-        .where(WorkoutLogExercise.order == data.order)
-    )
-
-    if data.exercise_id:
-        exercise_query = exercise_query.where(WorkoutLogExercise.exercise_id == data.exercise_id)
-    else:
-        exercise_query = exercise_query.where(WorkoutLogExercise.name == data.name)
-
-    existing_result = await db.execute(exercise_query)
-    exercise = existing_result.scalars().first()
+    # Find the exercise in the already loaded exercises
+    exercise = None
+    for ex in log.exercises:
+        if ex.order == data.order:
+            if data.exercise_id and ex.exercise_id == data.exercise_id:
+                exercise = ex
+                break
+            elif not data.exercise_id and ex.name == data.name:
+                exercise = ex
+                break
 
     if exercise:
         exercise.exercise_id = data.exercise_id
@@ -353,6 +357,7 @@ async def add_exercise_to_log(
         exercise.equipment = data.equipment
         exercise.gif_url = data.gif_url
         exercise.order = data.order
+        existing_sets = {workout_set.set_number: workout_set for workout_set in exercise.sets}
     else:
         exercise = WorkoutLogExercise(
             id=uuid4(),
@@ -367,8 +372,7 @@ async def add_exercise_to_log(
         )
         db.add(exercise)
         await db.flush()
-
-    existing_sets = {workout_set.set_number: workout_set for workout_set in exercise.sets}
+        existing_sets = {}
 
     for set_data in data.sets:
         workout_set = existing_sets.get(set_data.set_number)
@@ -390,15 +394,7 @@ async def add_exercise_to_log(
     await db.commit()
 
     # return full log with exercises
-    result = await db.execute(
-        select(WorkoutLog)
-        .options(
-            selectinload(WorkoutLog.exercises)
-            .selectinload(WorkoutLogExercise.sets)
-        )
-        .where(WorkoutLog.id == log_id)
-    )
-    return result.scalars().first()
+    return await load_workout_log_response(db, log_id, current_user.id)
 
 @router.post("/{log_id}/save-as-routine", response_model=RoutineResponse, status_code=status.HTTP_201_CREATED)
 async def save_log_as_routine(

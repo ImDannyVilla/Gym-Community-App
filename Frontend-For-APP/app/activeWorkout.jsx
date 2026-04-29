@@ -24,6 +24,31 @@ const formatPreviousSet = (set) => {
   return `${weight || 0} × ${reps || 0}`;
 };
 
+const hasSetInput = (value) => value !== null && value !== undefined && String(value).trim() !== "";
+
+const normalizeCompletedSet = (set) => {
+  const weightValue = set.weight ?? set.weight_lbs;
+
+  if (!set.completed || !hasSetInput(weightValue) || !hasSetInput(set.reps)) {
+    return null;
+  }
+
+  const reps = Number.parseInt(String(set.reps), 10);
+  const weight_lbs = Number.parseFloat(String(weightValue));
+
+  if (Number.isNaN(reps) || Number.isNaN(weight_lbs)) {
+    return null;
+  }
+
+  return {
+    reps,
+    weight_lbs,
+    completed: true,
+  };
+};
+
+const getExerciseLibraryId = (exercise) => exercise.exercise_id || exercise.library_exercise_id || null;
+
 // Memoized Set Row to prevent re-renders when other inputs change
 const SetRow = memo(({ set, setIndex, exerciseId, previousSet, handleUpdateSet, handleToggleComplete, handleSetOptions }) => (
   <View style={[styles.setRow, set.completed && styles.setRowCompleted]}>
@@ -314,7 +339,7 @@ export default function ActiveWorkout() {
   const handleFinish = async () => {
     const completedExercises = exercises.map(ex => ({
       ...ex,
-      sets: ex.sets.filter(s => s.completed && (s.weight ?? s.weight_lbs) !== "" && s.reps)
+      sets: ex.sets.map(normalizeCompletedSet).filter(Boolean)
     })).filter(ex => ex.sets.length > 0);
 
     if (completedExercises.length === 0 || !currentLogId) {
@@ -327,8 +352,14 @@ export default function ActiveWorkout() {
       const completedAt = new Date().toISOString();
 
       for (const ex of completedExercises) {
+        const exerciseLibraryId = getExerciseLibraryId(ex);
+
+        if (!exerciseLibraryId) {
+          throw new Error(`Missing exercise library id for ${ex.name || "exercise"}`);
+        }
+
         await addExerciseToLog(currentLogId, {
-          exercise_id: ex.exercise_id || ex.id,
+          exercise_id: exerciseLibraryId,
           name: ex.name,
           category: ex.category,
           target: ex.target,
@@ -336,8 +367,8 @@ export default function ActiveWorkout() {
           order: exercises.findIndex(e => e.id === ex.id),
           sets: ex.sets.map((s, i) => ({
             set_number: i + 1,
-            reps: parseInt(s.reps) || 0,
-            weight_lbs: parseFloat(s.weight ?? s.weight_lbs) || 0,
+            reps: s.reps,
+            weight_lbs: s.weight_lbs,
             completed: s.completed,
           })),
         });
@@ -353,6 +384,7 @@ export default function ActiveWorkout() {
       endWorkout();
       router.back();
     } catch (e) {
+      console.error("Failed to save workout:", e.message);
       Alert.alert("Error", "Failed to save workout.");
     } finally {
       setIsLoading(false);
