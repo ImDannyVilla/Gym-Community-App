@@ -50,36 +50,50 @@ const normalizeCompletedSet = (set) => {
 const getExerciseLibraryId = (exercise) => exercise.exercise_id || exercise.library_exercise_id || null;
 
 // Memoized Set Row to prevent re-renders when other inputs change
-const SetRow = memo(({ set, setIndex, exerciseId, previousSet, handleUpdateSet, handleToggleComplete, handleSetOptions }) => (
-  <View style={[styles.setRow, set.completed && styles.setRowCompleted]}>
-    <Pressable style={styles.setIndexButton} onPress={() => handleSetOptions(exerciseId, set.id, set)}>
-      <Text style={[styles.setIndex, set.warmup && styles.setIndexWarmup]}>{set.warmup ? "W" : setIndex + 1}</Text>
-    </Pressable>
-    <Text style={styles.previousSetText} numberOfLines={1}>{formatPreviousSet(previousSet)}</Text>
-    <TextInput
-      style={[styles.inputBox, set.completed && styles.inputBoxCompleted]}
-      keyboardType="numeric"
-      value={String(set.weight ?? set.weight_lbs ?? "")}
-      onChangeText={(val) => handleUpdateSet(exerciseId, set.id, "weight", val)}
-      placeholder="-"
-      editable={!set.completed}
-    />
-    <TextInput
-      style={[styles.inputBox, set.completed && styles.inputBoxCompleted]}
-      keyboardType="numeric"
-      value={String(set.reps ?? "")}
-      onChangeText={(val) => handleUpdateSet(exerciseId, set.id, "reps", val)}
-      placeholder="-"
-      editable={!set.completed}
-    />
-    <Pressable 
-      style={[styles.checkButton, set.completed && styles.checkButtonActive]}
-      onPress={() => handleToggleComplete(exerciseId, set.id)}
-    >
-      <Ionicons name="checkmark" size={16} color={set.completed ? "white" : colors.textSecondary} />
-    </Pressable>
-  </View>
-));
+const SetRow = memo(({ set, setIndex, exerciseId, exercise, previousSet, handleUpdateSet, handleToggleComplete, handleSetOptions }) => {
+  const targetReps = exercise.target_reps_min === exercise.target_reps_max
+    ? `${exercise.target_reps_min}`
+    : `${exercise.target_reps_min}-${exercise.target_reps_max}`;
+
+  return (
+    <View style={[styles.setRow, set.completed && styles.setRowCompleted]}>
+      <Pressable style={styles.setIndexButton} onPress={() => handleSetOptions(exerciseId, set.id, set)}>
+        <Text style={[styles.setIndex, set.warmup && styles.setIndexWarmup]}>{set.warmup ? "W" : setIndex + 1}</Text>
+      </Pressable>
+      
+      <View style={styles.targetHintContainer}>
+        <Text style={styles.targetHintText}>
+          {exercise.target_reps_min ? `${targetReps}` : formatPreviousSet(previousSet)}
+        </Text>
+      </View>
+
+      <TextInput
+        style={[styles.inputBox, set.completed && styles.inputBoxCompleted]}
+        keyboardType="decimal-pad"
+        value={set.weight_lbs > 0 ? set.weight_lbs.toString() : ''}
+        onChangeText={(val) => handleUpdateSet(exerciseId, set.id, "weight_lbs", parseFloat(val) || 0)}
+        placeholder="-"
+        placeholderTextColor="#666"
+        editable={!set.completed}
+      />
+      <TextInput
+        style={[styles.inputBox, set.completed && styles.inputBoxCompleted]}
+        keyboardType="number-pad"
+        value={set.reps > 0 ? set.reps.toString() : ''}
+        onChangeText={(val) => handleUpdateSet(exerciseId, set.id, "reps", parseInt(val) || 0)}
+        placeholder="-"
+        placeholderTextColor="#666"
+        editable={!set.completed}
+      />
+      <Pressable 
+        style={[styles.checkButton, set.completed && styles.checkButtonActive]}
+        onPress={() => handleToggleComplete(exerciseId, set.id)}
+      >
+        <Ionicons name="checkmark" size={16} color={set.completed ? "white" : colors.textSecondary} />
+      </Pressable>
+    </View>
+  );
+});
 
 // Memoized Exercise Card
 const ExerciseCard = memo(({ ex, exerciseHistory, handleUpdateSet, handleToggleComplete, handleAddSet, handleSetOptions, handleOpenExerciseDetails }) => {
@@ -97,11 +111,11 @@ const ExerciseCard = memo(({ ex, exerciseHistory, handleUpdateSet, handleToggleC
 
     {/* Sets Header */}
     <View style={styles.setRowHeader}>
-      <Text style={styles.setColSet}>Set</Text>
-      <Text style={styles.setColPrevious}>Previous</Text>
-      <Text style={styles.setColLbs}>lbs</Text>
-      <Text style={styles.setColReps}>Reps</Text>
-      <Text style={styles.setColCheck}>Done</Text>
+      <Text style={styles.setColSet}>SET</Text>
+      <Text style={styles.setColPrevious}>TARGET</Text>
+      <Text style={styles.setColLbs}>LBS</Text>
+      <Text style={styles.setColReps}>REPS</Text>
+      <Text style={styles.setColCheck}>✓</Text>
     </View>
 
     {/* Sets Rows */}
@@ -111,6 +125,7 @@ const ExerciseCard = memo(({ ex, exerciseHistory, handleUpdateSet, handleToggleC
         set={set} 
         setIndex={setIndex} 
         exerciseId={ex.id} 
+        exercise={ex}
         previousSet={previousSets[setIndex]}
         handleUpdateSet={handleUpdateSet} 
         handleToggleComplete={handleToggleComplete} 
@@ -165,7 +180,9 @@ export default function ActiveWorkout() {
   }, [setStoreWorkoutName]);
 
   const handleUpdateSet = useCallback((exerciseId, setId, field, value) => {
-    updateSet(exerciseId, setId, field, value);
+    // Convert 'weight' from old UI to 'weight_lbs' if necessary
+    const targetField = field === 'weight' ? 'weight_lbs' : field;
+    updateSet(exerciseId, setId, targetField, value);
   }, [updateSet]);
 
   const handleToggleComplete = useCallback((exerciseId, setId) => {
@@ -365,6 +382,10 @@ export default function ActiveWorkout() {
           target: ex.target,
           equipment: ex.equipment,
           order: exercises.findIndex(e => e.id === ex.id),
+          target_sets: ex.target_sets,
+          target_reps_min: ex.target_reps_min,
+          target_reps_max: ex.target_reps_max,
+          target_weight_lbs: ex.target_weight_lbs,
           sets: ex.sets.map((s, i) => ({
             set_number: i + 1,
             reps: s.reps,
@@ -618,11 +639,11 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
     paddingHorizontal: spacing.sm,
   },
-  setColSet: { flex: 0.9, fontSize: 12, color: colors.textTertiary, fontWeight: "bold", textAlign: "center" },
-  setColPrevious: { flex: 1.7, fontSize: 12, color: colors.textTertiary, fontWeight: "bold", textAlign: "center" },
-  setColLbs: { flex: 1.4, fontSize: 12, color: colors.textTertiary, fontWeight: "bold", textAlign: "center" },
-  setColReps: { flex: 1.4, fontSize: 12, color: colors.textTertiary, fontWeight: "bold", textAlign: "center" },
-  setColCheck: { flex: 0.9, fontSize: 12, color: colors.textTertiary, fontWeight: "bold", textAlign: "center" },
+  setColSet: { flex: 0.9, fontSize: 11, color: colors.textTertiary, fontWeight: "bold", textAlign: "center" },
+  setColPrevious: { flex: 1.7, fontSize: 11, color: colors.textTertiary, fontWeight: "bold", textAlign: "center" },
+  setColLbs: { flex: 1.4, fontSize: 11, color: colors.textTertiary, fontWeight: "bold", textAlign: "center" },
+  setColReps: { flex: 1.4, fontSize: 11, color: colors.textTertiary, fontWeight: "bold", textAlign: "center" },
+  setColCheck: { flex: 0.9, fontSize: 11, color: colors.textTertiary, fontWeight: "bold", textAlign: "center" },
   
   setRow: {
     flexDirection: "row",
@@ -647,24 +668,26 @@ const styles = StyleSheet.create({
   setIndexWarmup: {
     color: colors.warning || colors.primary,
   },
-  previousSetText: {
+  targetHintContainer: {
     flex: 1.7,
+    alignItems: "center",
+    justifyContent: "center",
+    marginHorizontal: spacing.xs,
+  },
+  targetHintText: {
     textAlign: "center",
     fontSize: 12,
     color: colors.textSecondary,
-    marginHorizontal: spacing.xs,
   },
   inputBox: {
     flex: 1.4,
-    backgroundColor: colors.background,
+    backgroundColor: "#1a1a1a",
     marginHorizontal: spacing.xs,
-    borderRadius: 6,
-    paddingVertical: 6,
+    borderRadius: 8,
+    paddingVertical: 10,
     textAlign: "center",
     fontSize: 16,
-    color: colors.text,
-    borderWidth: 1,
-    borderColor: colors.border,
+    color: "#fff",
   },
   inputBoxCompleted: {
     backgroundColor: "transparent",

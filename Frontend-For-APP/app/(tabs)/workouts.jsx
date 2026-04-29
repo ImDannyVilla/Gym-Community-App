@@ -4,7 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, layout, spacing } from "../../lib/theme";
-import { getMyRoutines, startWorkout, getWorkoutStreak, deleteWorkoutLog } from "../../lib/workoutApi";
+import { getMyRoutines, startWorkout, getWorkoutStreak, deleteWorkoutLog, getRoutine, addExerciseToLog } from "../../lib/workoutApi";
 import { getMyProfile } from "../../lib/socialApi";
 import { useWorkoutStore } from "../../stores/workoutStore";
 
@@ -66,7 +66,45 @@ export default function WorkoutsScreen() {
 
   const startNewWorkout = async (name, routineId, errorMessage) => {
     try {
+      // 1. Create a new workout log
       const log = await startWorkout(name, routineId, false);
+      const logId = log.id;
+
+      // 2. If it's a routine, fetch exercises and add them with EMPTY sets
+      if (routineId) {
+        try {
+          const routine = await getRoutine(routineId);
+          if (routine && routine.exercises) {
+            for (const ex of routine.exercises) {
+              // Create sets array with placeholder values (0 as requested)
+              const sets = Array.from({ length: ex.target_sets || 1 }, (_, index) => ({
+                set_number: index + 1,
+                reps: 0,
+                weight_lbs: 0.0,
+                completed: false,
+              }));
+
+              await addExerciseToLog(logId, {
+                exercise_id: ex.exercise_id,
+                name: ex.name,
+                category: ex.category,
+                target: ex.target,
+                equipment: ex.equipment,
+                gif_url: ex.gif_url,
+                order: ex.order,
+                target_sets: ex.target_sets,
+                target_reps_min: ex.target_reps_min,
+                target_reps_max: ex.target_reps_max,
+                target_weight_lbs: ex.target_weight_lbs,
+                sets: sets,
+              });
+            }
+          }
+        } catch (routineError) {
+          console.error("Failed to add routine exercises:", routineError.message);
+        }
+      }
+
       setWorkoutActive(log);
       router.push("/activeWorkout");
     } catch (e) {
