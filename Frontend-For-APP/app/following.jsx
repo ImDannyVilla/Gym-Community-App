@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator, Image } from "react-native";
+import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator, Image, TextInput } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing, layout } from "../lib/theme";
@@ -12,6 +12,7 @@ export default function Following() {
     const [following, setFollowing] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [searchQuery, setSearchQuery] = useState("");
 
     useEffect(() => {
         const fetchFollowing = async () => {
@@ -52,6 +53,14 @@ export default function Following() {
         </Pressable>
     );
 
+    const filteredFollowing = following.filter(f => {
+        const query = searchQuery.toLowerCase();
+        return (
+            (f.user_name || "").toLowerCase().includes(query) ||
+            (f.full_name || "").toLowerCase().includes(query)
+        );
+    });
+
     if (isLoading) {
         return (
             <View style={styles.container}>
@@ -77,8 +86,25 @@ export default function Following() {
     return (
         <View style={styles.container}>
             <Header title="Following" rightComponent={backButton} />
+            <View style={styles.searchContainer}>
+                <Ionicons name="search-outline" size={18} color={colors.textSecondary} style={styles.searchIcon} />
+                <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search following..."
+                    placeholderTextColor={colors.textSecondary}
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                />
+                {searchQuery.length > 0 && (
+                    <Pressable onPress={() => setSearchQuery("")}>
+                        <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
+                    </Pressable>
+                )}
+            </View>
             <FlatList
-                data={following}
+                data={filteredFollowing}
                 keyExtractor={(item) => item.id.toString()}
                 contentContainerStyle={styles.listContent}
                 ListEmptyComponent={
@@ -122,6 +148,24 @@ const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
     centered: { flex: 1, justifyContent: "center", alignItems: "center", padding: spacing.lg },
     backButton: { padding: 4 },
+    searchContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: colors.surface,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: colors.border,
+        paddingHorizontal: spacing.md,
+        marginHorizontal: layout.screenPadding,
+        marginVertical: spacing.sm,
+        height: 44,
+    },
+    searchIcon: { marginRight: spacing.sm },
+    searchInput: {
+        flex: 1,
+        fontSize: 14,
+        color: colors.text,
+    },
     listContent: {
         paddingHorizontal: layout.screenPadding,
         paddingVertical: spacing.md,

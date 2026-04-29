@@ -241,53 +241,55 @@ const loadProfileData = async () => {
     };
 
     const profileHeader = () => {
-        return (
-            <View style={{width: "100%", alignItems: "center"}}>
-                <View style={styles.photoContainer}>
-                    <Image
-                        source={{ uri: avatarUrl || "https://via.placeholder.com/400" }}
-                        style={styles.profilePhoto}
-                        resizeMode="cover"
-                    />
-
-                    <Pressable style={styles.editProfilePhoto} onPress={changeProfilePhoto}>
-                        <Text style={styles.plusIcon}>+</Text>
-                    </Pressable>
-                </View>
-
-                <Text style={styles.name}>{name}</Text>
-                <Text style={styles.userName}>@{username}</Text>
-
-                <View style={styles.followRow}>
-                    <Pressable 
-                        style={styles.followStat}
-                        onPress={() => router.push({ pathname: "/followers", params: { userId } })}
-                    >
-                        <Text style={styles.followNumber}>{followersCount}</Text>
-                        <Text style={styles.followLabel}>Followers</Text>
-                    </Pressable>
-                    <Pressable 
-                        style={styles.followStat}
-                        onPress={() => router.push({ pathname: "/following", params: { userId } })}
-                    >
-                        <Text style={styles.followNumber}>{followingCount}</Text>
-                        <Text style={styles.followLabel}>Following</Text>
-                        </Pressable>
-                </View>
-
-                <View style={styles.editProfile}>
-                    <Pressable style={styles.editButton} onPress={() => {router.push({ pathname: "../edit/editProfile", params: {name, username, about, gymLevel, weight}})}}>
-                        <Text style={styles.edit}>Edit Profile</Text>
-                    </Pressable>
-                </View>
-
-                <View style={styles.aboutContainer}>
-                    <Text style={styles.aboutHeader}>About</Text>
-                    <Text style={styles.about}>{about}</Text>
-                </View>
+    return (
+        <View style={{width: "100%", alignItems: "center"}}>
+            <View style={styles.photoContainer}>
+                <Image
+                    source={{ uri: avatarUrl || "https://via.placeholder.com/400" }}
+                    style={styles.profilePhoto}
+                    resizeMode="cover"
+                />
+                <Pressable style={styles.editProfilePhoto} onPress={changeProfilePhoto}>
+                    <Text style={styles.plusIcon}>+</Text>
+                </Pressable>
             </View>
-        );
-    };
+
+            <Text style={styles.name}>{name}</Text>
+            <Text style={styles.userName}>@{username}</Text>
+
+            <View style={styles.editProfile}>
+                <Pressable style={styles.editButton} onPress={() => {router.push({ pathname: "../edit/editProfile", params: {name, username, about, gymLevel, weight}})}}>
+                    <Text style={styles.edit}>Edit Profile</Text>
+                </Pressable>
+                <Pressable style={styles.searchButton} onPress={() => router.push("/user-search")}>
+                    <Ionicons name="search-outline" size={20} color={colors.text} />
+                </Pressable>
+            </View>
+
+            <View style={styles.followRow}>
+                <Pressable 
+                    style={styles.followStat}
+                    onPress={() => router.push({ pathname: "/followers", params: { userId } })}
+                >
+                    <Text style={styles.followNumber}>{followersCount}</Text>
+                    <Text style={styles.followLabel}>Followers</Text>
+                </Pressable>
+                <Pressable 
+                    style={styles.followStat}
+                    onPress={() => router.push({ pathname: "/following", params: { userId } })}
+                >
+                    <Text style={styles.followNumber}>{followingCount}</Text>
+                    <Text style={styles.followLabel}>Following</Text>
+                </Pressable>
+            </View>
+
+            <View style={styles.aboutContainer}>
+                <Text style={styles.aboutHeader}>About</Text>
+                <Text style={styles.about}>{about}</Text>
+            </View>
+        </View>
+    );
+};
 
     const completedWorkouts = workoutLogs;
     const totalDuration = completedWorkouts.reduce((total, log) => total + (log.duration || 0), 0);
@@ -777,24 +779,6 @@ const styles = StyleSheet.create({
         color: colors.textSecondary,
         marginTop: 2,
     },
-    followRow: {
-        flexDirection: "row",
-        gap: 24,
-        justifyContent: "center",
-        paddingVertical: 12,
-    },
-    followStat: {
-        alignItems: "center",
-    },
-    followNumber: {
-        fontSize: 18,
-        fontWeight: "bold",
-        color: colors.text,
-    },
-    followLabel: {
-        fontSize: 12,
-        color: colors.textSecondary,
-    },
     badge: {
         borderRadius: 20,
         paddingHorizontal: 8,
@@ -856,5 +840,16 @@ const styles = StyleSheet.create({
     followLabel: {
     fontSize: 12,
     color: colors.textSecondary,
+    },
+    searchButton: {
+    backgroundColor: colors.surface,
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginLeft: 8,
     },
 });
