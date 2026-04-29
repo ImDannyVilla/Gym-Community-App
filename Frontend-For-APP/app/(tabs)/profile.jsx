@@ -112,10 +112,13 @@ export default function Profile() {
     const [avatarUrl, setAvatarUrl] = useState("");
 
     const [workoutLogs, setWorkoutLogs] = useState([]);
-
     const [prData, setPrData] = useState({ "bench press": 0, "squat": 0, "deadlift": 0 });
 
     const [isLoading, setIsLoading] = useState(true);
+
+    const [userId, setUserId] = useState(null);
+    const [followersCount, setFollowersCount] = useState(0);
+    const [followingCount, setFollowingCount] = useState(0);
 
     useEffect(() => {
         if(params.name) {
@@ -145,6 +148,9 @@ const loadProfileData = async () => {
                 setGymLevel(data.profile.gym_level || "");
                 setWeight(data.profile.weight?.toString() || "");
                 setAvatarUrl(data.profile.avatar_url || "");
+                setFollowersCount(data.profile.followers_count || 0);
+                setFollowingCount(data.profile.following_count || 0);
+                setUserId(data.id);
             }
 
             const logsData = await getWorkoutLogs();
@@ -251,6 +257,23 @@ const loadProfileData = async () => {
 
                 <Text style={styles.name}>{name}</Text>
                 <Text style={styles.userName}>@{username}</Text>
+
+                <View style={styles.followRow}>
+                    <Pressable 
+                        style={styles.followStat}
+                        onPress={() => router.push({ pathname: "/followers", params: { userId } })}
+                    >
+                        <Text style={styles.followNumber}>{followersCount}</Text>
+                        <Text style={styles.followLabel}>Followers</Text>
+                    </Pressable>
+                    <Pressable 
+                        style={styles.followStat}
+                        onPress={() => router.push({ pathname: "/following", params: { userId } })}
+                    >
+                        <Text style={styles.followNumber}>{followingCount}</Text>
+                        <Text style={styles.followLabel}>Following</Text>
+                        </Pressable>
+                </View>
 
                 <View style={styles.editProfile}>
                     <Pressable style={styles.editButton} onPress={() => {router.push({ pathname: "../edit/editProfile", params: {name, username, about, gymLevel, weight}})}}>
@@ -814,5 +837,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     color: colors.primary,  
+    },
+    followRow: {
+    flexDirection: "row",
+    gap: 32,
+    justifyContent: "center",
+    paddingVertical: 10,
+    marginBottom: 8,
+    },
+    followStat: {
+    alignItems: "center",
+    },
+    followNumber: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: colors.text,
+    },
+    followLabel: {
+    fontSize: 12,
+    color: colors.textSecondary,
     },
 });

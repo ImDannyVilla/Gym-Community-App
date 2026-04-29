@@ -3,11 +3,15 @@ from typing import List, Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
+from sqlalchemy import select, and_
 
 from app.dependencies import get_current_user, AsyncSessionDep, CurrentUser
 from app.models.user import User, UserProfile
 from app.schemas.user import UserResponse, UserwithProfile, ProfileUpdate, ProfileResponse, PasswordUpdate, EmailUpdate
 from app.core.supabase_client import get_auth_client, supabase_admin
+
+from app.models.user import User, UserProfile
+from app.models.user import User, UserProfile, Follow
 router = APIRouter(prefix="/users", tags=["Users"])
 
 #(.get, .put, .post, .delete)
@@ -89,10 +93,33 @@ async def search_users(
     )
     return result.scalars().all()
 
+#@router.get("/{username}", response_model=UserwithProfile)
+#async def get_user_by_username(
+        #username: str,
+        #db: AsyncSessionDep
+#):
+   # """Get any user's profile by username"""
+    #result = await db.execute(
+    #    select(User)
+    #    .join(UserProfile, UserProfile.user_id == User.id)
+    #    .options(selectinload(User.profile))
+    #    .where(UserProfile.user_name == username)
+    #)
+    #user = result.scalars().first()
+
+    #if not user:
+    #    raise HTTPException(
+    #        status_code=status.HTTP_404_NOT_FOUND,
+    #        detail="User not found"
+    #    )
+
+    #return user
+
 @router.get("/{username}", response_model=UserwithProfile)
 async def get_user_by_username(
         username: str,
-        db: AsyncSessionDep
+        db: AsyncSessionDep,
+        current_user: CurrentUser
 ):
     """Get any user's profile by username"""
     result = await db.execute(
@@ -109,8 +136,22 @@ async def get_user_by_username(
             detail="User not found"
         )
 
-    return user
+    # Check if current user is following this user
+    follow_result = await db.execute(
+        select(Follow).where(
+            and_(
+                Follow.follower_id == current_user.id,
+                Follow.following_id == user.id
+            )
+        )
+    )
+    is_following = follow_result.scalars().first() is not None
 
+    # Manually set is_following on the profile
+    if user.profile:
+        user.profile.is_following = is_following
+
+    return user
 
 @router.put("/me/password")
 async def update_password(

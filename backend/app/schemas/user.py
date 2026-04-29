@@ -101,6 +101,7 @@ class ProfileResponse(BaseModel):
     day_streak: int = 0
     followers_count: int = 0
     following_count: int = 0
+    is_following: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
