@@ -241,7 +241,7 @@ const loadProfileData = async (hasCache = false) => {
             const data = await getMyProfile();
             if (data.profile) {
                 setUsername(data.profile.user_name || "Username");
-                setName(data.profile.full_name || "Name");
+                setName(data.profile.full_name || "");
                 setAbout(data.profile.bio || "This is a little about me.");
                 setGymLevel(data.profile.gym_level || "");
                 setWeight(data.profile.weight?.toString() || "");
@@ -275,7 +275,7 @@ const loadProfileData = async (hasCache = false) => {
             const hasCache = !!cachedProfile;
             if (hasCache) {
                 setUsername(cachedProfile.user_name || "Username");
-                setName(cachedProfile.full_name || "Name");
+                setName(cachedProfile.full_name || "");
                 setAbout(cachedProfile.bio || "This is a little about me.");
                 setGymLevel(cachedProfile.gym_level || "");
                 setWeight(cachedProfile.weight?.toString() || "");
@@ -354,7 +354,7 @@ const loadProfileData = async (hasCache = false) => {
                     </Pressable>
                 </View>
 
-                <Text style={styles.name}>{name}</Text>
+                {name ? <Text style={styles.name}>{name}</Text> : null}
                 <Text style={styles.userName}>@{username}</Text>
 
                 <View style={styles.editProfile}>
