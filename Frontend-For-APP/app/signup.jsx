@@ -37,8 +37,12 @@ const getPasswordStrength = (password) => {
 };
 
 const validateName = (name) => {
-  if (!name.trim()) return "Name is required";
-  if (name.trim().length < 2) return "Name must be at least 2 characters";
+  const trimmed = name.trim();
+  if (!trimmed) return "Name is required";
+  if (trimmed.length < 2) return "Name must be at least 2 characters";
+  if (trimmed.length > 50) return "Name must be 50 characters or less";
+  if (/[0-9]/.test(trimmed)) return "Name cannot contain numbers";
+  if (!/^[a-zA-Z\s'\-]+$/.test(trimmed)) return "Name can only contain letters, spaces, hyphens, and apostrophes";
   return "";
 };
 
@@ -168,6 +172,7 @@ export default function SignUp() {
                 returnKeyType="next"
                 onSubmitEditing={() => emailRef.current?.focus()}
                 blurOnSubmit={false}
+                maxLength={50}
                 textContentType="name"
                 autoComplete="name"
               />
