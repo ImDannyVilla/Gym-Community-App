@@ -42,7 +42,6 @@ export default function CreateRoutineScreen() {
       const routine = await getRoutine(routineId);
       setName(routine.name);
       setDescription(routine.description || '');
-      setIsPublic(routine.is_public);
       
       // Convert routine exercises to the format expected by the store
       const formattedExercises = routine.exercises.map(ex => ({
