@@ -492,16 +492,23 @@ export default function ActiveWorkout() {
           data={exercises}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <ExerciseCard 
-              ex={item} 
+            <ExerciseCard
+              ex={item}
               exerciseHistory={exerciseHistoryById[item.exercise_id]}
-              handleUpdateSet={handleUpdateSet} 
-              handleToggleComplete={handleToggleComplete} 
-              handleAddSet={handleAddSet} 
+              handleUpdateSet={handleUpdateSet}
+              handleToggleComplete={handleToggleComplete}
+              handleAddSet={handleAddSet}
               handleSetOptions={handleSetOptions}
               handleOpenExerciseDetails={handleOpenExerciseDetails}
             />
           )}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyIcon}>🏋️</Text>
+              <Text style={styles.emptyTitle}>No exercises yet</Text>
+              <Text style={styles.emptySubtitle}>Tap "Add Exercise" to get started</Text>
+            </View>
+          }
           ListFooterComponent={
             <View style={styles.footerControls}>
               {showRestTimer && (
@@ -739,6 +746,26 @@ const styles = StyleSheet.create({
     color: colors.textTertiary,
     fontSize: 14,
     fontWeight: "bold",
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 80,
+  },
+  emptyIcon: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    color: '#666',
+    fontSize: 14,
   },
   footerControls: {
     gap: spacing.md,
