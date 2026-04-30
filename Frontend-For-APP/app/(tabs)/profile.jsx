@@ -207,6 +207,12 @@ export default function Profile() {
 
     const needsProfileRefresh = useWorkoutStore(state => state.needsProfileRefresh);
     const clearProfileRefresh = useWorkoutStore(state => state.clearProfileRefresh);
+    const cachedProfile = useWorkoutStore(state => state.cachedProfile);
+    const cachedWorkoutLogs = useWorkoutStore(state => state.cachedWorkoutLogs);
+    const cachedDayStreak = useWorkoutStore(state => state.cachedDayStreak);
+    const setCachedProfile = useWorkoutStore(state => state.setCachedProfile);
+    const setCachedWorkoutLogs = useWorkoutStore(state => state.setCachedWorkoutLogs);
+    const setCachedDayStreak = useWorkoutStore(state => state.setCachedDayStreak);
 
     useEffect(() => {
         if(params.name) {
@@ -226,9 +232,9 @@ export default function Profile() {
         router.replace("/");
     };
 
-const loadProfileData = async () => {
+const loadProfileData = async (hasCache = false) => {
+        if (!hasCache) setIsLoading(true);
         try {
-            setIsLoading(true);
             const token = await getToken();
             if (!token) return;
 
@@ -240,6 +246,7 @@ const loadProfileData = async () => {
                 setGymLevel(data.profile.gym_level || "");
                 setWeight(data.profile.weight?.toString() || "");
                 setAvatarUrl(data.profile.avatar_url || "");
+                setCachedProfile(data.profile);
             }
 
             const [logsData, streakData] = await Promise.all([
@@ -250,7 +257,11 @@ const loadProfileData = async () => {
                 .filter(log => log.completed_at)
                 .sort((a, b) => new Date(b.completed_at) - new Date(a.completed_at));
             setWorkoutLogs(completedLogs);
-            if (streakData) setDayStreak(streakData.day_streak ?? 0);
+            setCachedWorkoutLogs(completedLogs);
+            if (streakData) {
+                setDayStreak(streakData.day_streak ?? 0);
+                setCachedDayStreak(streakData.day_streak ?? 0);
+            }
             clearProfileRefresh();
         } catch (error) {
             console.log("Failed to load profile data (Network error)", error);
@@ -261,9 +272,18 @@ const loadProfileData = async () => {
 
     useFocusEffect(
         useCallback(() => {
-            if (workoutLogs.length === 0 || needsProfileRefresh) {
-                loadProfileData();
+            const hasCache = !!cachedProfile;
+            if (hasCache) {
+                setUsername(cachedProfile.user_name || "Username");
+                setName(cachedProfile.full_name || "Name");
+                setAbout(cachedProfile.bio || "This is a little about me.");
+                setGymLevel(cachedProfile.gym_level || "");
+                setWeight(cachedProfile.weight?.toString() || "");
+                setAvatarUrl(cachedProfile.avatar_url || "");
             }
+            if (cachedWorkoutLogs.length > 0) setWorkoutLogs(cachedWorkoutLogs);
+            if (cachedDayStreak) setDayStreak(cachedDayStreak);
+            loadProfileData(hasCache);
         }, [needsProfileRefresh])
     );
 
@@ -400,7 +420,7 @@ const loadProfileData = async () => {
         };
     }), [completedWorkouts, last14Days]);
 
-    if (isLoading) {
+    if (isLoading && !cachedProfile) {
         return (
             <SafeAreaView style={[styles.scrollWindow, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]} edges={['top']}>
                 <ActivityIndicator size="large" color={colors.primary} />
