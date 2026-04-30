@@ -12,6 +12,8 @@ from app.schemas.user import (
     PasswordReset,
     PasswordResetRequest,
     ResetConfirmation,
+    RefreshRequest,
+    RefreshResponse,
     UserwithProfile
 )
 from app.dependencies import AsyncSessionDep, CurrentUser
@@ -98,6 +100,7 @@ async def login(db: AsyncSessionDep, credentials: OAuth2PasswordRequestForm = De
         # Since username is now required at registration, users are always onboarded
         return Token(
             access_token=auth_response.session.access_token,
+            refresh_token=auth_response.session.refresh_token,
             token_type="bearer",
             is_onboarded=True
         )
@@ -176,6 +179,23 @@ async def update_password(
         raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/refresh", response_model=RefreshResponse)
+async def refresh_token(data: RefreshRequest):
+    try:
+        auth_client = get_auth_client()
+        result = auth_client.auth.refresh_session(data.refresh_token)
+        if not result.session:
+            raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+        return RefreshResponse(
+            access_token=result.session.access_token,
+            refresh_token=result.session.refresh_token,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=401, detail="Token refresh failed")
+
 
 @router.post("/resend-confirmation")
 async def resend_confirmation(data: ResetConfirmation):

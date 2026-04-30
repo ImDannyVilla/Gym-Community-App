@@ -14,7 +14,7 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { typography, colors, layout, spacing, iconSizes } from "../lib/theme";
 import { loginUser } from "../lib/authApi";
-import { saveToken } from "../lib/tokenStorage";
+import { saveToken, saveRefreshToken } from "../lib/tokenStorage";
 import ScreenContainer from "./_components/ScreenContainer";
 
 const APP_ICON_SIZE = 120;
@@ -64,6 +64,7 @@ export default function LoginScreen() {
 
       if (data.access_token) {
         await saveToken(data.access_token);
+        if (data.refresh_token) await saveRefreshToken(data.refresh_token);
         router.replace("/workouts");
       } else {
         setServerError("No access token received. Please try again.");

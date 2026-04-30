@@ -119,6 +119,7 @@ class Token(BaseModel):
     React Native stores this token and uses it for future requests.
     """
     access_token: str
+    refresh_token: str
     token_type: str
     is_onboarded: bool
 
@@ -154,6 +155,14 @@ class EmailUpdate(BaseModel):
 
 class ResetConfirmation(BaseModel):
     email: EmailStr
+
+class RefreshRequest(BaseModel):
+    refresh_token: str
+
+class RefreshResponse(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
 
 class FollowResponse(BaseModel):
     """Response when following/unfollowing a user"""

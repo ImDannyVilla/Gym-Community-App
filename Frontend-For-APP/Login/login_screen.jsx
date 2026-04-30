@@ -12,7 +12,7 @@ import {
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { loginUser } from "../lib/authApi";
-import { saveToken } from "../lib/tokenStorage";
+import { saveToken, saveRefreshToken } from "../lib/tokenStorage";
 
 const validateEmail = (email) => {
   if (!email.trim()) return "Email is required";
@@ -52,6 +52,7 @@ const LoginScreen = () => {
 
       if (data.access_token) {
         await saveToken(data.access_token);
+        if (data.refresh_token) await saveRefreshToken(data.refresh_token);
         router.replace("/workouts");
       } else {
         Alert.alert("Login failed", "No access token received.");
