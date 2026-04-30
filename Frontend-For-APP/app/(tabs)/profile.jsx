@@ -1,6 +1,7 @@
-import {useState, useEffect, useCallback} from "react";
-import {useRouter, useLocalSearchParams, useFocusEffect} from "expo-router";
+import {useState, useEffect, useCallback, useMemo} from "react";
+import {useRouter, useLocalSearchParams, useFocusEffect, useWindowDimensions} from "expo-router";
 import {View, Text, Image, Pressable, StyleSheet, Alert, Platform, ActivityIndicator, ScrollView, FlatList} from "react-native";
+import Svg, { Path, Line as SvgLine, Text as SvgText } from 'react-native-svg';
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import * as NavigationBar from "expo-navigation-bar";
@@ -96,9 +97,60 @@ function WorkoutsTab({ workoutLogs, isLoading }) {
     );
 }
 
+const GRAPH_ACCENT = '#DC2626';
+const G_H = 100;
+const G_PAD = { t: 6, b: 26, l: 4, r: 4 };
+
+function ProgressGraph({ data, label, graphWidth }) {
+  const pW = graphWidth - G_PAD.l - G_PAD.r;
+  const pH = G_H - G_PAD.t - G_PAD.b;
+  const n = data.length;
+  const maxVal = Math.max(...data.map(d => d.value), 1);
+  const xPos = (i) => G_PAD.l + (n > 1 ? (i / (n - 1)) * pW : pW / 2);
+  const yPos = (v) => G_PAD.t + pH * (1 - v / maxVal);
+  const pathD = data.map((d, i) => `${i === 0 ? 'M' : 'L'}${xPos(i).toFixed(1)},${yPos(d.value).toFixed(1)}`).join(' ');
+
+  return (
+    <View style={graphStyles.card}>
+      <Text style={graphStyles.label}>{label}</Text>
+      <Svg width={graphWidth} height={G_H}>
+        <SvgLine x1={G_PAD.l} y1={G_PAD.t + pH} x2={G_PAD.l + pW} y2={G_PAD.t + pH} stroke="#333" strokeWidth={1} />
+        <Path d={pathD} stroke={GRAPH_ACCENT} strokeWidth={2} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        {data.map((d, i) => {
+          if (i % 4 !== 0 && i !== n - 1) return null;
+          return (
+            <SvgText key={i} x={xPos(i)} y={G_H - 4} fontSize={8} fill="#888" textAnchor="middle">{d.label}</SvgText>
+          );
+        })}
+      </Svg>
+    </View>
+  );
+}
+
+const graphStyles = StyleSheet.create({
+  card: {
+    width: '100%',
+    marginBottom: 12,
+    backgroundColor: colors.surface,
+    borderRadius: layout.borderRadius,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 12,
+    paddingBottom: 6,
+  },
+  label: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+    marginBottom: 6,
+  },
+});
+
 export default function Profile() {
-    // Create router for navigation to editProfile
     const router = useRouter();
+    const { width: screenWidth } = useWindowDimensions();
 
     const params = useLocalSearchParams();
 
@@ -265,12 +317,38 @@ const loadProfileData = async () => {
 
     const completedWorkouts = workoutLogs;
     const totalDuration = completedWorkouts.reduce((total, log) => total + (log.duration || 0), 0);
-    const totalSets = completedWorkouts.reduce((total, log) => (
-        total + (log.exercises || []).reduce((exerciseTotal, exercise) => (
-            exerciseTotal + (exercise.sets || []).filter(set => set.completed).length
-        ), 0)
-    ), 0);
     const lastCompletedWorkout = [...completedWorkouts].sort((a, b) => new Date(b.completed_at) - new Date(a.completed_at))[0];
+
+    const last14Days = useMemo(() => {
+        const days = [];
+        for (let i = 13; i >= 0; i--) {
+            const d = new Date();
+            d.setHours(0, 0, 0, 0);
+            d.setDate(d.getDate() - i);
+            days.push(d);
+        }
+        return days;
+    }, []);
+
+    const volumeData = useMemo(() => last14Days.map(day => {
+        const ds = day.toISOString().slice(0, 10);
+        const vol = completedWorkouts
+            .filter(log => log.completed_at && new Date(log.completed_at).toISOString().slice(0, 10) === ds)
+            .reduce((t, log) => t + (log.exercises || []).reduce((et, ex) =>
+                et + (ex.sets || []).filter(s => s.completed).reduce((st, s) =>
+                    st + (s.weight_lbs || 0) * (s.reps || 0), 0), 0), 0);
+        return { value: Math.round(vol), label: day.toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 1) };
+    }), [completedWorkouts, last14Days]);
+
+    const repsData = useMemo(() => last14Days.map(day => {
+        const ds = day.toISOString().slice(0, 10);
+        const reps = completedWorkouts
+            .filter(log => log.completed_at && new Date(log.completed_at).toISOString().slice(0, 10) === ds)
+            .reduce((t, log) => t + (log.exercises || []).reduce((et, ex) =>
+                et + (ex.sets || []).filter(s => s.completed).reduce((st, s) =>
+                    st + (s.reps || 0), 0), 0), 0);
+        return { value: reps, label: day.toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 1) };
+    }), [completedWorkouts, last14Days]);
 
     if (isLoading) {
         return (
@@ -285,30 +363,26 @@ const loadProfileData = async () => {
             <ScrollView style={styles.scrollView} contentContainerStyle={styles.profileContent} showsVerticalScrollIndicator={false}>
                 {profileHeader()}
 
-                <View style={styles.dashboardCard}>
+                <View style={styles.progressSection}>
                     <Text style={styles.sectionTitle}>My Progress</Text>
-                    <View style={styles.dashboardGrid}>
-                        <View style={styles.dashboardStat}>
-                            <Text style={styles.dashboardValue}>{completedWorkouts.length}</Text>
-                            <Text style={styles.dashboardLabel}>Completed</Text>
+
+                    <View style={styles.summaryRow}>
+                        <View style={styles.summaryItem}>
+                            <Text style={styles.summaryValue}>{completedWorkouts.length}</Text>
+                            <Text style={styles.summaryLabel}>Workouts</Text>
                         </View>
-                        <View style={styles.dashboardStat}>
-                            <Text style={styles.dashboardValue}>{workoutLogs.length}</Text>
-                            <Text style={styles.dashboardLabel}>Logged</Text>
+                        <View style={styles.summaryDivider} />
+                        <View style={styles.summaryItem}>
+                            <Text style={styles.summaryValue}>{dayStreak}</Text>
+                            <Text style={styles.summaryLabel}>Day Streak</Text>
                         </View>
-                        <View style={styles.dashboardStat}>
-                            <Text style={styles.dashboardValue}>{totalSets}</Text>
-                            <Text style={styles.dashboardLabel}>Sets</Text>
-                        </View>
-                        <View style={styles.dashboardStat}>
-                            <Text style={styles.dashboardValue}>{Math.floor(totalDuration / 60)}</Text>
-                            <Text style={styles.dashboardLabel}>Minutes</Text>
-                        </View>
-                        <View style={[styles.dashboardStat, { flexBasis: "100%" }]}>
-                            <Text style={styles.dashboardValue}>{dayStreak}</Text>
-                            <Text style={styles.dashboardLabel}>Day Streak</Text>
+                        <View style={styles.summaryDivider} />
+                        <View style={styles.summaryItem}>
+                            <Text style={styles.summaryValue}>{Math.floor(totalDuration / 60)}</Text>
+                            <Text style={styles.summaryLabel}>Minutes</Text>
                         </View>
                     </View>
+
                     <View style={styles.lastWorkoutCard}>
                         <Ionicons name="calendar-outline" size={18} color={colors.primary} />
                         <View style={styles.lastWorkoutTextWrap}>
@@ -316,6 +390,23 @@ const loadProfileData = async () => {
                             <Text style={styles.lastWorkoutText}>{formatLastWorkout(lastCompletedWorkout)}</Text>
                         </View>
                     </View>
+
+                    {isLoading ? (
+                        <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 20 }} />
+                    ) : (
+                        <>
+                            <ProgressGraph
+                                data={volumeData}
+                                label="Volume (lbs)"
+                                graphWidth={screenWidth * 0.9 - 24}
+                            />
+                            <ProgressGraph
+                                data={repsData}
+                                label="Total Reps"
+                                graphWidth={screenWidth * 0.9 - 24}
+                            />
+                        </>
+                    )}
                 </View>
 
                 <View style={styles.historySection}>
@@ -470,14 +561,42 @@ const styles = StyleSheet.create({
         color: colors.textSecondary,
     },
 
-    dashboardCard: {
+    progressSection: {
         width: "90%",
+        marginBottom: spacing.lg,
+    },
+
+    summaryRow: {
+        flexDirection: "row",
         backgroundColor: colors.surface,
         borderRadius: layout.borderRadius,
-        padding: spacing.md,
-        marginBottom: spacing.lg,
         borderWidth: 1,
         borderColor: colors.border,
+        paddingVertical: spacing.md,
+        marginBottom: spacing.sm,
+        alignItems: "center",
+    },
+    summaryItem: {
+        flex: 1,
+        alignItems: "center",
+    },
+    summaryDivider: {
+        width: 1,
+        height: 32,
+        backgroundColor: colors.border,
+    },
+    summaryValue: {
+        fontSize: 24,
+        fontWeight: "900",
+        color: colors.primary,
+        lineHeight: 26,
+    },
+    summaryLabel: {
+        fontSize: 10,
+        color: colors.textSecondary,
+        textTransform: "uppercase",
+        letterSpacing: 0.5,
+        marginTop: 2,
     },
 
     sectionTitle: {
