@@ -36,16 +36,6 @@ const getPasswordStrength = (password) => {
   return { level: "Strong", color: colors.success, width: "100%" };
 };
 
-const validateName = (name) => {
-  const trimmed = name.trim();
-  if (!trimmed) return "Name is required";
-  if (trimmed.length < 2) return "Name must be at least 2 characters";
-  if (trimmed.length > 50) return "Name must be 50 characters or less";
-  if (/[0-9]/.test(trimmed)) return "Name cannot contain numbers";
-  if (!/^[a-zA-Z\s'\-]+$/.test(trimmed)) return "Name can only contain letters, spaces, hyphens, and apostrophes";
-  return "";
-};
-
 const validateEmail = (email) => {
   if (!email.trim()) return "Email is required";
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return "Invalid email format";
@@ -74,22 +64,29 @@ const validatePassword = (password) => {
   return "";
 };
 
+const validateConfirmPassword = (password, confirmPassword) => {
+  if (!confirmPassword) return "Please confirm your password";
+  if (password !== confirmPassword) return "Passwords do not match";
+  return "";
+};
+
 export default function SignUp() {
-  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [nameError, setNameError] = useState("");
   const [emailError, setEmailError] = useState("");
   const [usernameError, setUsernameError] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [confirmPasswordError, setConfirmPasswordError] = useState("");
   const [serverError, setServerError] = useState("");
 
-  const emailRef = useRef(null);
   const usernameRef = useRef(null);
   const passwordRef = useRef(null);
+  const confirmPasswordRef = useRef(null);
 
   const passwordStrength = getPasswordStrength(password);
 
@@ -97,22 +94,21 @@ export default function SignUp() {
     Keyboard.dismiss();
     setServerError("");
 
-    const nameErr = validateName(name);
     const emailErr = validateEmail(email);
     const usernameErr = validateUsername(username);
     const passwordErr = validatePassword(password);
+    const confirmPasswordErr = validateConfirmPassword(password, confirmPassword);
 
-    setNameError(nameErr);
     setEmailError(emailErr);
     setUsernameError(usernameErr);
     setPasswordError(passwordErr);
+    setConfirmPasswordError(confirmPasswordErr);
 
-    if (nameErr || emailErr || usernameErr || passwordErr) return;
+    if (emailErr || usernameErr || passwordErr || confirmPasswordErr) return;
 
     try {
       setLoading(true);
       await registerUser({
-        full_name: name.trim(),
         email: email.trim(),
         username: username.trim(),
         password: password,
@@ -156,33 +152,8 @@ export default function SignUp() {
             )}
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Name</Text>
-              <TextInput
-                style={[styles.input, nameError ? styles.inputError : null]}
-                placeholder="Enter your full name"
-                placeholderTextColor={colors.textTertiary}
-                value={name}
-                onChangeText={(text) => {
-                  setName(text);
-                  if (nameError) setNameError("");
-                  if (serverError) setServerError("");
-                }}
-                autoCapitalize="words"
-                autoCorrect={false}
-                returnKeyType="next"
-                onSubmitEditing={() => emailRef.current?.focus()}
-                blurOnSubmit={false}
-                maxLength={50}
-                textContentType="name"
-                autoComplete="name"
-              />
-              {nameError ? <Text style={styles.errorText}>{nameError}</Text> : null}
-            </View>
-
-            <View style={styles.inputContainer}>
               <Text style={styles.label}>Email</Text>
               <TextInput
-                ref={emailRef}
                 style={[styles.input, emailError ? styles.inputError : null]}
                 placeholder="Enter your email"
                 placeholderTextColor={colors.textTertiary}
@@ -246,8 +217,9 @@ export default function SignUp() {
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
                   autoCorrect={false}
-                  returnKeyType="go"
-                  onSubmitEditing={handleCreateAccount}
+                  returnKeyType="next"
+                  onSubmitEditing={() => confirmPasswordRef.current?.focus()}
+                  blurOnSubmit={false}
                   maxLength={20}
                   textContentType="newPassword"
                   autoComplete="password-new"
@@ -306,6 +278,43 @@ export default function SignUp() {
                   </View>
                 </View>
               )}
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Confirm Password</Text>
+              <View style={[styles.passwordContainer, confirmPasswordError ? styles.inputError : null]}>
+                <TextInput
+                  ref={confirmPasswordRef}
+                  style={styles.passwordInput}
+                  placeholder="Re-enter your password"
+                  placeholderTextColor={colors.textTertiary}
+                  value={confirmPassword}
+                  onChangeText={(text) => {
+                    setConfirmPassword(text);
+                    if (confirmPasswordError) setConfirmPasswordError("");
+                    if (serverError) setServerError("");
+                  }}
+                  secureTextEntry={!showConfirmPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  returnKeyType="go"
+                  onSubmitEditing={handleCreateAccount}
+                  maxLength={20}
+                  textContentType="newPassword"
+                  autoComplete="password-new"
+                />
+                <Pressable
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Ionicons
+                    name={showConfirmPassword ? "eye-off" : "eye"}
+                    size={iconSizes.navIcon}
+                    color={colors.textTertiary}
+                  />
+                </Pressable>
+              </View>
+              {confirmPasswordError ? <Text style={styles.errorText}>{confirmPasswordError}</Text> : null}
             </View>
 
             <Pressable
