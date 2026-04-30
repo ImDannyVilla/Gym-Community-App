@@ -491,6 +491,9 @@ export default function ActiveWorkout() {
           contentContainerStyle={styles.exercisesContent}
           data={exercises}
           keyExtractor={(item) => item.id}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
+          windowSize={5}
           renderItem={({ item }) => (
             <ExerciseCard
               ex={item}
