@@ -69,6 +69,7 @@ export default function Layout() {
           <Stack.Screen name="activeWorkout" />
           <Stack.Screen name="create-routine" />
           <Stack.Screen name="exercise-search" />
+          <Stack.Screen name="exercise-history" />
         </Stack>
         {isWorkoutActive && isAuthenticated && !isActiveWorkoutScreen && <ActiveWorkoutMiniWidget />}
         {isAuthenticated && !isActiveWorkoutScreen && <BottomNav />}

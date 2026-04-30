@@ -97,7 +97,7 @@ const SetRow = memo(({ set, setIndex, exerciseId, exercise, previousSet, handleU
 
 // Memoized Exercise Card
 const ExerciseCard = memo(({ ex, exerciseHistory, handleUpdateSet, handleToggleComplete, handleAddSet, handleSetOptions, handleOpenExerciseDetails }) => {
-  const previousSets = exerciseHistory?.sets || [];
+  const previousSets = exerciseHistory?.[0]?.sets || [];
 
   return (
     <View style={styles.exerciseCard}>

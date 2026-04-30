@@ -60,9 +60,11 @@ export default function ExerciseDetailScreen() {
     }
   };
 
+  const latestSession = history?.[0] ?? null;
+
   const bestSet = useMemo(() => {
-    if (!history?.sets?.length) return null;
-    return history.sets.reduce((best, set) => {
+    if (!latestSession?.sets?.length) return null;
+    return latestSession.sets.reduce((best, set) => {
       const bestWeight = Number(best.weight_lbs || best.weight || 0);
       const setWeight = Number(set.weight_lbs || set.weight || 0);
       const bestReps = Number(best.reps || 0);
@@ -70,8 +72,8 @@ export default function ExerciseDetailScreen() {
       if (setWeight > bestWeight) return set;
       if (setWeight === bestWeight && setReps > bestReps) return set;
       return best;
-    }, history.sets[0]);
-  }, [history]);
+    }, latestSession.sets[0]);
+  }, [latestSession]);
 
   const currentExercise = exercise || fallbackExercise;
   const instructionLines = currentExercise.instructions
@@ -126,12 +128,19 @@ export default function ExerciseDetailScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Exercise History</Text>
-          {history ? (
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Exercise History</Text>
+            {history?.length > 0 && (
+              <Pressable onPress={() => router.push({ pathname: "/exercise-history", params: { exerciseId: params.exerciseId, exerciseName: currentExercise.name } })}>
+                <Text style={styles.viewAllLink}>View All →</Text>
+              </Pressable>
+            )}
+          </View>
+          {latestSession ? (
             <View style={styles.historyCard}>
               <Text style={styles.historyTitle}>Last performed</Text>
-              <Text style={styles.historyDate}>{new Date(history.last_performed).toLocaleDateString()}</Text>
-              {history.sets?.map((set, index) => (
+              <Text style={styles.historyDate}>{new Date(latestSession.last_performed).toLocaleDateString()}</Text>
+              {latestSession.sets?.map((set, index) => (
                 <Text key={set.id || index} style={styles.setText}>
                   Set {index + 1}: {set.reps || 0} reps · {set.weight_lbs || set.weight || 0} lb
                 </Text>
@@ -175,7 +184,9 @@ const styles = StyleSheet.create({
   tagsContainer: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   tag: { backgroundColor: `${colors.primary}18`, borderWidth: 1, borderColor: `${colors.primary}40`, borderRadius: 8, paddingVertical: 5, paddingHorizontal: 10 },
   tagText: { color: colors.primary, fontSize: 11, fontWeight: "800", textTransform: "capitalize" },
-  sectionTitle: { fontSize: 11, fontWeight: "800", color: colors.textSecondary, textTransform: "uppercase", letterSpacing: 1.4, marginBottom: 12 },
+  sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
+  sectionTitle: { fontSize: 11, fontWeight: "800", color: colors.textSecondary, textTransform: "uppercase", letterSpacing: 1.4 },
+  viewAllLink: { fontSize: 13, fontWeight: "700", color: colors.primary },
   recordCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 14 },
   recordValue: { fontSize: 22, fontWeight: "900", color: colors.primary, marginBottom: 4 },
   recordLabel: { fontSize: 12, color: colors.textSecondary },

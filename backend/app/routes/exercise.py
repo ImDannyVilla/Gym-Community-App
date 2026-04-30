@@ -77,36 +77,38 @@ async def get_equipment_types(db: AsyncSessionDep):
     )
     return [row for row in result.scalars().all()]
 
-@router.get("/{exercise_id}/history", response_model=ExerciseHistoryResponse)
+@router.get("/{exercise_id}/history", response_model=List[ExerciseHistoryResponse])
 async def get_exercise_history(
     exercise_id: str,
     db: AsyncSessionDep,
     current_user: CurrentUser
 ):
     """
-    Get the last performance for a specific exercise.
-    Returns sets/reps/weight from the most recent session.
+    Get all logged sessions for a specific exercise, newest first.
+    Each entry has the date performed and the sets/reps/weight logged.
     """
     result = await db.execute(
         select(WorkoutLogExercise)
         .join(WorkoutLog, WorkoutLog.id == WorkoutLogExercise.workout_log_id)
         .options(
             selectinload(WorkoutLogExercise.sets),
-            selectinload(WorkoutLogExercise.workout_logs)  # load parent log
+            selectinload(WorkoutLogExercise.workout_logs)
         )
         .where(WorkoutLog.user_id == current_user.id)
         .where(WorkoutLogExercise.exercise_id == exercise_id)
         .order_by(WorkoutLog.started_at.desc())
-        .limit(1)
     )
-    last = result.scalars().first()
+    entries = result.scalars().all()
 
-    if not last:
+    if not entries:
         raise HTTPException(status_code=404, detail="No previous performance found for this exercise")
 
-    return ExerciseHistoryResponse(
-        exercise_id=last.exercise_id,
-        name=last.name,
-        last_performed=last.workout_logs.started_at,
-        sets=last.sets
-    )
+    return [
+        ExerciseHistoryResponse(
+            exercise_id=entry.exercise_id,
+            name=entry.name,
+            last_performed=entry.workout_logs.started_at,
+            sets=entry.sets,
+        )
+        for entry in entries
+    ]
