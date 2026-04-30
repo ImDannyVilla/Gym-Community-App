@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, ConfigDict, field_validator
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Literal
 
 
 def validate_password(v: str) -> str:
@@ -68,7 +68,7 @@ class UserLogin(BaseModel):
 class ProfileUpdate(BaseModel):
     full_name: Optional[str] = None
     user_name: Optional[str] = None
-    gym_level: Optional[str] = None
+    gym_level: Optional[Literal['Beginner', 'Intermediate', 'Advanced']] = None
     bio: Optional[str] = None
     avatar_url: Optional[str] = None
     weight: Optional[int] = None
