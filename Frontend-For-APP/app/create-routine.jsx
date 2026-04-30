@@ -221,7 +221,7 @@ export default function CreateRoutineScreen() {
 
       {/* Routine Name */}
       <TextInput
-        style={styles.input}
+        style={[styles.input, { marginTop: 16 }]}
         placeholder="Routine Name (e.g. Push Day)"
         placeholderTextColor="#666"
         value={name}

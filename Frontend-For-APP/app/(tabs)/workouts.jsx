@@ -4,7 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, layout, spacing } from "../../lib/theme";
-import { getMyRoutines, startWorkout, getWorkoutStreak, deleteWorkoutLog, getRoutine, addExerciseToLog } from "../../lib/workoutApi";
+import { getMyRoutines, startWorkout, getWorkoutStreak, deleteWorkoutLog, getRoutine, addExerciseToLog, deleteRoutine } from "../../lib/workoutApi";
 import { loadFromCache, saveToCache, CACHE_KEYS } from "../../lib/localCache";
 import { getMyProfile } from "../../lib/socialApi";
 import { useWorkoutStore } from "../../stores/workoutStore";
@@ -186,6 +186,31 @@ export default function WorkoutsScreen() {
     confirmStartWorkout(routineName, routineId, "Failed to start routine");
   };
 
+  const handleDeleteRoutine = (routineId) => {
+    Alert.alert(
+      'Delete Routine',
+      'Are you sure you want to delete this routine? This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteRoutine(routineId);
+              const updated = routines.filter(r => r.id !== routineId);
+              setCachedRoutines(updated);
+              await saveToCache(CACHE_KEYS.ROUTINES, updated);
+            } catch (e) {
+              console.error('Failed to delete routine:', e.message);
+              Alert.alert('Error', 'Failed to delete routine. Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -257,18 +282,27 @@ export default function WorkoutsScreen() {
             <View key={routine.id} style={styles.routineCard}>
               <View style={styles.routineInfo}>
                 <Text style={styles.routineName}>{routine.name}</Text>
+                {!!routine.description && (
+                  <Text style={styles.routineDescription} numberOfLines={2}>{routine.description}</Text>
+                )}
                 <Text style={styles.routineExercises}>
                   {routine.exercises?.length || 0} exercises
                 </Text>
               </View>
               <View style={styles.routineActions}>
-                <Pressable 
-                  style={styles.editButton}
+                <Pressable
+                  style={styles.iconButton}
+                  onPress={() => handleDeleteRoutine(routine.id)}
+                >
+                  <Ionicons name="trash-outline" size={16} color="#DC2626" />
+                </Pressable>
+                <Pressable
+                  style={styles.iconButton}
                   onPress={() => router.push({ pathname: "/create-routine", params: { routineId: routine.id } })}
                 >
                   <Ionicons name="pencil" size={16} color={colors.textSecondary} />
                 </Pressable>
-                <Pressable 
+                <Pressable
                   style={styles.startButton}
                   onPress={() => handleStartRoutine(routine.id, routine.name)}
                 >
@@ -438,9 +472,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.text,
   },
-  routineExercises: {
+  routineDescription: {
     fontSize: 11,
     color: colors.textSecondary,
+    marginTop: 2,
+  },
+  routineExercises: {
+    fontSize: 11,
+    color: colors.textTertiary,
     marginTop: 2,
   },
   routineActions: {
@@ -448,7 +487,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
-  editButton: {
+  iconButton: {
     padding: 8,
     borderRadius: 8,
     backgroundColor: colors.surface,
