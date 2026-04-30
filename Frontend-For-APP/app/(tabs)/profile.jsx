@@ -11,7 +11,7 @@ import { getToken, clearAllTokens } from "../../lib/tokenStorage";
 import { getMyProfile, updateMyProfile } from "../../lib/socialApi";
 import { uploadAvatar } from "../../lib/supabaseStorage";
 import { logoutUser } from "../../lib/authApi";
-import { getWorkoutLogs } from "../../lib/workoutApi";
+import { getWorkoutLogs, getWorkoutStreak } from "../../lib/workoutApi";
 import { useWorkoutStore } from "../../stores/workoutStore";
 
 const formatDate = (isoString) => {
@@ -110,6 +110,7 @@ export default function Profile() {
     const [avatarUrl, setAvatarUrl] = useState("");
 
     const [workoutLogs, setWorkoutLogs] = useState([]);
+    const [dayStreak, setDayStreak] = useState(0);
 
     const [isLoading, setIsLoading] = useState(true);
 
@@ -150,11 +151,15 @@ const loadProfileData = async () => {
                 setAvatarUrl(data.profile.avatar_url || "");
             }
 
-            const logsData = await getWorkoutLogs();
+            const [logsData, streakData] = await Promise.all([
+                getWorkoutLogs(),
+                getWorkoutStreak().catch(() => null),
+            ]);
             const completedLogs = (logsData || [])
                 .filter(log => log.completed_at)
                 .sort((a, b) => new Date(b.completed_at) - new Date(a.completed_at));
             setWorkoutLogs(completedLogs);
+            if (streakData) setDayStreak(streakData.day_streak ?? 0);
             clearProfileRefresh();
         } catch (error) {
             console.log("Failed to load profile data (Network error)", error);
@@ -298,6 +303,10 @@ const loadProfileData = async () => {
                         <View style={styles.dashboardStat}>
                             <Text style={styles.dashboardValue}>{Math.floor(totalDuration / 60)}</Text>
                             <Text style={styles.dashboardLabel}>Minutes</Text>
+                        </View>
+                        <View style={[styles.dashboardStat, { flexBasis: "100%" }]}>
+                            <Text style={styles.dashboardValue}>{dayStreak}</Text>
+                            <Text style={styles.dashboardLabel}>Day Streak</Text>
                         </View>
                     </View>
                     <View style={styles.lastWorkoutCard}>
