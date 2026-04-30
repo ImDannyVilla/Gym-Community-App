@@ -1,7 +1,7 @@
 import {useState, useEffect, useCallback, useMemo} from "react";
 import {useRouter, useLocalSearchParams, useFocusEffect} from "expo-router";
 import {View, Text, Image, Pressable, StyleSheet, Alert, Platform, ActivityIndicator, ScrollView, FlatList, useWindowDimensions} from "react-native";
-import Svg, { Path, Line as SvgLine, Text as SvgText } from 'react-native-svg';
+import Svg, { Line as SvgLine, Text as SvgText, Rect, G } from 'react-native-svg';
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import * as NavigationBar from "expo-navigation-bar";
@@ -98,30 +98,62 @@ function WorkoutsTab({ workoutLogs, isLoading }) {
 }
 
 const GRAPH_ACCENT = '#DC2626';
-const G_H = 100;
-const G_PAD = { t: 6, b: 26, l: 4, r: 4 };
+const GRAPH_ACCENT_SEL = '#FF4444';
+const G_H = 110;
+const G_PAD = { t: 8, b: 28, l: 4, r: 4 };
 
 function ProgressGraph({ data, label, graphWidth }) {
+  const [selectedIndex, setSelectedIndex] = useState(null);
+
   const pW = graphWidth - G_PAD.l - G_PAD.r;
   const pH = G_H - G_PAD.t - G_PAD.b;
   const n = data.length;
   const maxVal = Math.max(...data.map(d => d.value), 1);
-  const xPos = (i) => G_PAD.l + (n > 1 ? (i / (n - 1)) * pW : pW / 2);
-  const yPos = (v) => G_PAD.t + pH * (1 - v / maxVal);
-  const pathD = data.map((d, i) => `${i === 0 ? 'M' : 'L'}${xPos(i).toFixed(1)},${yPos(d.value).toFixed(1)}`).join(' ');
+
+  const barSlot = pW / n;
+  const barW = barSlot * 0.6;
+  const xCenter = (i) => G_PAD.l + i * barSlot + barSlot / 2;
+  const bH = (v) => v === 0 ? 3 : Math.max(4, (v / maxVal) * pH);
+  const bY = (v) => G_PAD.t + pH - bH(v);
+
+  const sel = selectedIndex !== null ? data[selectedIndex] : null;
 
   return (
     <View style={graphStyles.card}>
       <Text style={graphStyles.label}>{label}</Text>
+      <Text style={graphStyles.tooltip} numberOfLines={1}>
+        {sel ? `${sel.fullDate} — ${sel.tooltipText}` : ' '}
+      </Text>
       <Svg width={graphWidth} height={G_H}>
-        <SvgLine x1={G_PAD.l} y1={G_PAD.t + pH} x2={G_PAD.l + pW} y2={G_PAD.t + pH} stroke="#333" strokeWidth={1} />
-        <Path d={pathD} stroke={GRAPH_ACCENT} strokeWidth={2} fill="none" strokeLinecap="round" strokeLinejoin="round" />
-        {data.map((d, i) => {
-          if (i % 4 !== 0 && i !== n - 1) return null;
-          return (
-            <SvgText key={i} x={xPos(i)} y={G_H - 4} fontSize={8} fill="#888" textAnchor="middle">{d.label}</SvgText>
-          );
-        })}
+        <SvgLine
+          x1={G_PAD.l} y1={G_PAD.t + pH}
+          x2={G_PAD.l + pW} y2={G_PAD.t + pH}
+          stroke="#333" strokeWidth={1}
+        />
+        {data.map((d, i) => (
+          <G key={i} onPress={() => setSelectedIndex(i === selectedIndex ? null : i)}>
+            <Rect
+              x={xCenter(i) - barSlot / 2}
+              y={G_PAD.t}
+              width={barSlot}
+              height={pH}
+              fill="rgba(0,0,0,0.01)"
+            />
+            <Rect
+              x={xCenter(i) - barW / 2}
+              y={bY(d.value)}
+              width={barW}
+              height={bH(d.value)}
+              rx={2}
+              fill={i === selectedIndex ? GRAPH_ACCENT_SEL : GRAPH_ACCENT}
+            />
+            {i % 2 === 0 && (
+              <SvgText x={xCenter(i)} y={G_H - 4} fontSize={7} fill="#888" textAnchor="middle">
+                {d.label}
+              </SvgText>
+            )}
+          </G>
+        ))}
       </Svg>
     </View>
   );
@@ -144,7 +176,14 @@ const graphStyles = StyleSheet.create({
     color: colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 1.2,
+    marginBottom: 2,
+  },
+  tooltip: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.text,
     marginBottom: 6,
+    minHeight: 16,
   },
 });
 
@@ -337,7 +376,13 @@ const loadProfileData = async () => {
             .reduce((t, log) => t + (log.exercises || []).reduce((et, ex) =>
                 et + (ex.sets || []).filter(s => s.completed).reduce((st, s) =>
                     st + (s.weight_lbs || 0) * (s.reps || 0), 0), 0), 0);
-        return { value: Math.round(vol), label: day.toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 1) };
+        const rounded = Math.round(vol);
+        return {
+            value: rounded,
+            label: day.toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 1),
+            fullDate: day.toLocaleDateString('en-US', { month: 'long', day: 'numeric' }),
+            tooltipText: `${rounded.toLocaleString()} lbs total volume`,
+        };
     }), [completedWorkouts, last14Days]);
 
     const repsData = useMemo(() => last14Days.map(day => {
@@ -347,7 +392,12 @@ const loadProfileData = async () => {
             .reduce((t, log) => t + (log.exercises || []).reduce((et, ex) =>
                 et + (ex.sets || []).filter(s => s.completed).reduce((st, s) =>
                     st + (s.reps || 0), 0), 0), 0);
-        return { value: reps, label: day.toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 1) };
+        return {
+            value: reps,
+            label: day.toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 1),
+            fullDate: day.toLocaleDateString('en-US', { month: 'long', day: 'numeric' }),
+            tooltipText: `${reps.toLocaleString()} total reps`,
+        };
     }), [completedWorkouts, last14Days]);
 
     if (isLoading) {
