@@ -9,53 +9,50 @@ import { getMyProfile } from "../../lib/socialApi";
 import { useWorkoutStore } from "../../stores/workoutStore";
 
 export default function WorkoutsScreen() {
-  const [routines, setRoutines] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [stats, setStats] = useState({
-    totalWorkouts: 0,
-    setsDone: 0,
-    dayStreak: 0,
-  });
+  const [isLoading, setIsLoading] = useState(false);
   const {
     isActive: hasActiveWorkout,
     activeLogId,
     startWorkout: setWorkoutActive,
     endWorkout,
     hasWorkoutActivity,
+    needsProfileRefresh,
+    clearProfileRefresh,
+    cachedRoutines: routines,
+    cachedStats: stats,
+    setCachedRoutines,
+    setCachedStats,
   } = useWorkoutStore();
 
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      // Fetch routines
-      const routinesData = await getMyRoutines();
-      setRoutines(routinesData || []);
-
-      // Fetch stats (gracefully handle if endpoint not deployed yet)
-      try {
-        const streakData = await getWorkoutStreak();
-        if (streakData) {
-          setStats({
-            totalWorkouts: streakData.workouts_this_week || 0,
-            setsDone: streakData.total_sets || 0,
-            dayStreak: streakData.day_streak || 0,
-          });
-        }
-      } catch (streakError) {
-        console.log("Streak endpoint not available yet:", streakError.message);
-        // Keep default stats (0 values) if endpoint not deployed
+      const [routinesData, streakData] = await Promise.all([
+        getMyRoutines(),
+        getWorkoutStreak().catch(() => null),
+      ]);
+      setCachedRoutines(routinesData || []);
+      if (streakData) {
+        setCachedStats({
+          totalWorkouts: streakData.workouts_this_week || 0,
+          setsDone: streakData.total_sets || 0,
+          dayStreak: streakData.day_streak || 0,
+        });
       }
     } catch (e) {
       console.error("Failed to load data:", e.message);
     } finally {
       setIsLoading(false);
+      clearProfileRefresh();
     }
   };
 
   useFocusEffect(
     useCallback(() => {
-      fetchData();
-    }, [])
+      if (routines.length === 0 || needsProfileRefresh) {
+        fetchData();
+      }
+    }, [needsProfileRefresh])
   );
 
   const getCurrentDate = () => {

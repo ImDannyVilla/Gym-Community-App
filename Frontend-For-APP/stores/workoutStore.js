@@ -15,8 +15,14 @@ export const useWorkoutStore = create(persist((set, get) => ({
   exercises: [],
   needsProfileRefresh: false,
 
+  // Non-persisted UI cache — avoids refetch on every tab switch
+  cachedRoutines: [],
+  cachedStats: { totalWorkouts: 0, setsDone: 0, dayStreak: 0 },
+
   setHasHydrated: (hasHydrated) => set({ hasHydrated }),
   clearProfileRefresh: () => set({ needsProfileRefresh: false }),
+  setCachedRoutines: (routines) => set({ cachedRoutines: routines }),
+  setCachedStats: (stats) => set({ cachedStats: stats }),
   
   startWorkout: (log, startTime = null) => set({
     isActive: true,
