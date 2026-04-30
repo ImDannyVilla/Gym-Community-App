@@ -165,6 +165,9 @@ export default function ActiveWorkout() {
   const [restDuration, setRestDuration] = useState(90);
   const [restRemaining, setRestRemaining] = useState(0);
   const [showRestTimer, setShowRestTimer] = useState(false);
+  const [showFinishSheet, setShowFinishSheet] = useState(false);
+  const [finishTitle, setFinishTitle] = useState('');
+  const [pendingExercises, setPendingExercises] = useState([]);
   
   const { 
     activeLogId,
@@ -366,7 +369,7 @@ export default function ActiveWorkout() {
     const s = (seconds % 60).toString().padStart(2, "0");
     return `${m}:${s}`;
   };
-  const handleFinish = async () => {
+  const handleFinish = () => {
     const completedExercises = exercises.map(ex => ({
       ...ex,
       sets: ex.sets.map(normalizeCompletedSet).filter(Boolean)
@@ -377,18 +380,26 @@ export default function ActiveWorkout() {
       return;
     }
 
+    setFinishTitle('');
+    setPendingExercises(completedExercises);
+    setShowFinishSheet(true);
+  };
+
+  const doSaveWorkout = async (title) => {
+    setShowFinishSheet(false);
     setIsLoading(true);
+    const logId = currentLogId;
     try {
       const completedAt = new Date().toISOString();
 
-      for (const ex of completedExercises) {
+      for (const ex of pendingExercises) {
         const exerciseLibraryId = getExerciseLibraryId(ex);
 
         if (!exerciseLibraryId) {
           throw new Error(`Missing exercise library id for ${ex.name || "exercise"}`);
         }
 
-        await addExerciseToLog(currentLogId, {
+        await addExerciseToLog(logId, {
           exercise_id: exerciseLibraryId,
           name: ex.name,
           category: ex.category,
@@ -408,21 +419,20 @@ export default function ActiveWorkout() {
         });
       }
 
-      await updateWorkoutLog(currentLogId, {
-        name: workoutName,
+      await updateWorkoutLog(logId, {
+        name: title,
         completed_at: completedAt,
         duration: timer,
         is_public: false,
       });
 
-      // Invalidate profile caches so next visit fetches fresh logs + streak
       await Promise.all([
         saveToCache(CACHE_KEYS.WORKOUT_LOGS, null),
         saveToCache(CACHE_KEYS.STREAK, null),
       ]).catch(() => {});
 
       endWorkout();
-      router.back();
+      router.replace(`/workout-summary?logId=${logId}`);
     } catch (e) {
       console.error("Failed to save workout:", e.message);
       Alert.alert("Error", "Failed to save workout.");
@@ -553,6 +563,42 @@ export default function ActiveWorkout() {
           }
         />
       </KeyboardAvoidingView>
+
+      {/* Finish Workout Sheet */}
+      <Modal
+        isVisible={showFinishSheet}
+        onBackdropPress={() => setShowFinishSheet(false)}
+        style={styles.bottomModal}
+        backdropOpacity={0.6}
+        animationIn="slideInUp"
+        animationOut="slideOutDown"
+        useNativeDriver={true}
+        avoidKeyboard={true}
+      >
+        <View style={styles.finishSheet}>
+          <View style={styles.finishSheetHandle} />
+          <Text style={styles.finishSheetTitle}>Name Your Workout</Text>
+          <TextInput
+            style={styles.finishTitleInput}
+            placeholder={`Workout — ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+            placeholderTextColor="#666"
+            value={finishTitle}
+            onChangeText={setFinishTitle}
+            autoFocus
+            maxLength={50}
+          />
+          <Pressable
+            style={[styles.saveBtnStyle, isLoading && { opacity: 0.6 }]}
+            onPress={() => doSaveWorkout(finishTitle || `Workout — ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`)}
+            disabled={isLoading}
+          >
+            <Text style={styles.saveBtnTextStyle}>Save Workout</Text>
+          </Pressable>
+          <Pressable style={styles.cancelBtnStyle} onPress={() => setShowFinishSheet(false)}>
+            <Text style={styles.cancelBtnTextStyle}>Cancel</Text>
+          </Pressable>
+        </View>
+      </Modal>
 
       {/* Empty Workout Alert Modal */}
       <Modal
@@ -910,6 +956,59 @@ const styles = StyleSheet.create({
   modalExerciseCategory: {
     fontSize: 12,
     color: colors.textSecondary,
+  },
+  finishSheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    paddingBottom: 36,
+  },
+  finishSheetHandle: {
+    width: 40,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: colors.border,
+    alignSelf: 'center',
+    marginBottom: 20,
+  },
+  finishSheetTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: colors.text,
+    marginBottom: 16,
+  },
+  finishTitleInput: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: '#fff',
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  saveBtnStyle: {
+    backgroundColor: colors.primary,
+    borderRadius: 10,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  saveBtnTextStyle: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  cancelBtnStyle: {
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  cancelBtnTextStyle: {
+    color: colors.textSecondary,
+    fontSize: 15,
   },
   alertBox: {
     backgroundColor: colors.surface,
