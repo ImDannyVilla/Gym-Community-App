@@ -23,7 +23,6 @@ export default function CreateRoutineScreen() {
   
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [isPublic, setIsPublic] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingRoutine, setIsLoadingRoutine] = useState(false);
   const [editingExercise, setEditingExercise] = useState(null);
@@ -93,7 +92,7 @@ export default function CreateRoutineScreen() {
         await updateRoutine(routineId, {
           name: name.trim(),
           description: description.trim() || null,
-          is_public: isPublic,
+          is_public: false,
         });
 
         // Refresh + persist routines cache
@@ -121,7 +120,7 @@ export default function CreateRoutineScreen() {
           notes: ex.notes || null,
         }));
 
-        await createRoutine(name.trim(), description.trim() || null, isPublic, exercisesData);
+        await createRoutine(name.trim(), description.trim() || null, false, exercisesData);
 
         // Refresh + persist routines cache so workouts screen loads instantly
         const freshRoutines = await getMyRoutines().catch(() => null);
@@ -219,17 +218,6 @@ export default function CreateRoutineScreen() {
         multiline
         maxLength={200}
       />
-
-      {/* Public Toggle */}
-      <TouchableOpacity
-        style={styles.toggle}
-        onPress={() => setIsPublic(!isPublic)}
-      >
-        <Text style={styles.toggleLabel}>Make Public</Text>
-        <View style={[styles.toggleSwitch, isPublic && styles.toggleActive]}>
-          <Text style={{ color: '#fff', fontSize: 12 }}>{isPublic ? 'ON' : 'OFF'}</Text>
-        </View>
-      </TouchableOpacity>
 
       {/* Exercise List */}
       <FlatList
@@ -344,31 +332,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     borderWidth: 1,
     borderColor: colors.border,
-  },
-  toggle: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    marginHorizontal: 16, 
-    marginBottom: 16, 
-    backgroundColor: '#1a1a1a', 
-    padding: 14, 
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  toggleLabel: { 
-    color: '#fff', 
-    fontSize: 15 
-  },
-  toggleSwitch: { 
-    backgroundColor: '#444', 
-    borderRadius: 6, 
-    paddingHorizontal: 10, 
-    paddingVertical: 4 
-  },
-  toggleActive: { 
-    backgroundColor: '#DC2626' 
   },
   exerciseRow: { 
     flexDirection: 'row', 
