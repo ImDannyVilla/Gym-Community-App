@@ -276,7 +276,10 @@ export default function ActiveWorkout() {
           const history = await getExerciseHistory(exerciseId);
           return [exerciseId, history];
         } catch (error) {
-          console.error("Failed to load exercise history:", error);
+          // 404 = no history yet — expected for new exercises, not an error
+          if (error.status !== 404) {
+            console.warn("Failed to load exercise history:", error.message);
+          }
           return [exerciseId, null];
         }
       }));
