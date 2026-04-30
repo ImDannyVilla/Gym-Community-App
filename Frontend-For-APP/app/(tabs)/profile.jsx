@@ -9,6 +9,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing, layout } from "../../lib/theme";
 import { getToken } from "../../lib/tokenStorage";
 import { getMyProfile, updateMyProfile } from "../../lib/socialApi";
+import { uploadAvatar } from "../../lib/supabaseStorage";
 import { getWorkoutLogs } from "../../lib/workoutApi";
 import { useWorkoutStore } from "../../stores/workoutStore";
 
@@ -201,12 +202,12 @@ const loadProfileData = async () => {
         });
 
         if (!result.canceled && result.assets?.length) {
-            const newUri = result.assets[0].uri;
-            
+            const localUri = result.assets[0].uri;
+
             try {
-                // Update avatar_url in backend
-                await updateMyProfile({ avatar_url: newUri });
-                setAvatarUrl(newUri);
+                const publicUrl = await uploadAvatar(localUri);
+                await updateMyProfile({ avatar_url: publicUrl });
+                setAvatarUrl(publicUrl);
                 Alert.alert("Success", "Profile photo updated!");
             } catch (error) {
                 console.error("Failed to update profile photo:", error);
