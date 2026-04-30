@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, memo, useMemo } from "react";
+import React, { useState, useEffect, useCallback, memo, useMemo, useRef } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet, FlatList, SafeAreaView, KeyboardAvoidingView, Platform, Alert } from "react-native";
 import { Image } from "expo-image";
 import { router } from "expo-router";
@@ -8,15 +8,7 @@ import { colors, layout, typography, spacing } from "../lib/theme";
 import { startWorkout, updateWorkoutLog, addExerciseToLog, deleteWorkoutLog, getExerciseHistory } from "../lib/workoutApi";
 import { saveToCache, CACHE_KEYS } from "../lib/localCache";
 import { useWorkoutStore } from "../stores/workoutStore";
-
-const REST_TIMER_OPTIONS = [
-  { label: "Off", value: 0 },
-  { label: "30s", value: 30 },
-  { label: "60s", value: 60 },
-  { label: "90s", value: 90 },
-  { label: "2 min", value: 120 },
-  { label: "3 min", value: 180 },
-];
+import RestTimer from "./_components/RestTimer";
 
 const formatPreviousSet = (set) => {
   if (!set) return "—";
@@ -100,6 +92,7 @@ const SetRow = memo(({ set, setIndex, exerciseId, exercise, previousSet, handleU
 // Memoized Exercise Card
 const ExerciseCard = memo(({ ex, exerciseHistory, handleUpdateSet, handleToggleComplete, handleAddSet, handleSetOptions, handleOpenExerciseDetails }) => {
   const previousSets = exerciseHistory?.[0]?.sets || [];
+  const restTimerTriggerRef = useRef(null);
 
   const lastSessionLabel = useMemo(() => {
     if (!previousSets.length) return null;
@@ -109,20 +102,30 @@ const ExerciseCard = memo(({ ex, exerciseHistory, handleUpdateSet, handleToggleC
     return `Last time: ${previousSets.length}×${reps} @ ${weight} lb`;
   }, [previousSets]);
 
+  const handleToggleCompleteWithTimer = useCallback((exerciseId, setId) => {
+    const targetSet = ex.sets?.find(s => s.id === setId);
+    const willComplete = targetSet && !targetSet.completed;
+    handleToggleComplete(exerciseId, setId);
+    if (willComplete) restTimerTriggerRef.current?.();
+  }, [ex.sets, handleToggleComplete]);
+
   return (
     <View style={styles.exerciseCard}>
-    <Pressable style={styles.exerciseTitleRow} onPress={() => handleOpenExerciseDetails(ex)}>
-      <Image
-        source={{ uri: ex.gif_url }}
-        style={styles.exerciseThumb}
-        contentFit="cover"
-      />
-      <View style={styles.exerciseTitleTextWrap}>
-        <Text style={styles.exerciseTitle}>{ex.name}</Text>
-        <Text style={styles.exerciseMeta}>Tap for summary, records, and history</Text>
-      </View>
-      <Ionicons name="information-circle-outline" size={20} color={colors.textSecondary} />
-    </Pressable>
+    <View style={styles.exerciseTitleRow}>
+      <Pressable style={styles.exerciseTitlePressable} onPress={() => handleOpenExerciseDetails(ex)}>
+        <Image
+          source={{ uri: ex.gif_url }}
+          style={styles.exerciseThumb}
+          contentFit="cover"
+        />
+        <View style={styles.exerciseTitleTextWrap}>
+          <Text style={styles.exerciseTitle}>{ex.name}</Text>
+          <Text style={styles.exerciseMeta}>Tap for summary, records, and history</Text>
+        </View>
+        <Ionicons name="information-circle-outline" size={20} color={colors.textSecondary} />
+      </Pressable>
+      <RestTimer onSetComplete={restTimerTriggerRef} />
+    </View>
 
     {lastSessionLabel && (
       <Text style={styles.lastSessionLabel}>{lastSessionLabel}</Text>
@@ -139,15 +142,15 @@ const ExerciseCard = memo(({ ex, exerciseHistory, handleUpdateSet, handleToggleC
 
     {/* Sets Rows */}
     {ex.sets.map((set, setIndex) => (
-      <SetRow 
-        key={set.id} 
-        set={set} 
-        setIndex={setIndex} 
-        exerciseId={ex.id} 
+      <SetRow
+        key={set.id}
+        set={set}
+        setIndex={setIndex}
+        exerciseId={ex.id}
         exercise={ex}
         previousSet={previousSets[setIndex]}
-        handleUpdateSet={handleUpdateSet} 
-        handleToggleComplete={handleToggleComplete} 
+        handleUpdateSet={handleUpdateSet}
+        handleToggleComplete={handleToggleCompleteWithTimer}
         handleSetOptions={handleSetOptions}
       />
     ))}
@@ -168,9 +171,6 @@ export default function ActiveWorkout() {
   const [isLoading, setIsLoading] = useState(false);
   const [showEmptyAlert, setShowEmptyAlert] = useState(false);
   const [exerciseHistoryById, setExerciseHistoryById] = useState({});
-  const [restDuration, setRestDuration] = useState(90);
-  const [restRemaining, setRestRemaining] = useState(0);
-  const [showRestTimer, setShowRestTimer] = useState(false);
   const [showFinishSheet, setShowFinishSheet] = useState(false);
   const [finishTitle, setFinishTitle] = useState('');
   const [pendingExercises, setPendingExercises] = useState([]);
@@ -208,17 +208,8 @@ export default function ActiveWorkout() {
   }, [updateSet]);
 
   const handleToggleComplete = useCallback((exerciseId, setId) => {
-    const exercise = exercises.find(ex => ex.id === exerciseId);
-    const targetSet = exercise?.sets?.find(set => set.id === setId);
-    const shouldStartRest = targetSet && !targetSet.completed && restDuration > 0;
-
     toggleSetComplete(exerciseId, setId);
-
-    if (shouldStartRest) {
-      setRestRemaining(restDuration);
-      setShowRestTimer(true);
-    }
-  }, [exercises, restDuration, toggleSetComplete]);
+  }, [toggleSetComplete]);
 
   const handleSetOptions = useCallback((exerciseId, setId, set) => {
     Alert.alert("Set Options", "Choose an action for this set.", [
@@ -252,11 +243,6 @@ export default function ActiveWorkout() {
         secondaryMuscles: exercise.secondary_muscles || "",
       },
     });
-  }, []);
-
-  const handleSkipRestTimer = useCallback(() => {
-    setShowRestTimer(false);
-    setRestRemaining(0);
   }, []);
 
   const handleAddSet = useCallback((exerciseId) => {
@@ -351,27 +337,6 @@ export default function ActiveWorkout() {
     }, 1000);
     return () => clearInterval(interval);
   }, [startTime]);
-
-  useEffect(() => {
-    if (!showRestTimer) return undefined;
-
-    if (restRemaining <= 0) {
-      setShowRestTimer(false);
-      return undefined;
-    }
-
-    const interval = setInterval(() => {
-      setRestRemaining(prev => {
-        if (prev <= 1) {
-          setShowRestTimer(false);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [showRestTimer, restRemaining]);
 
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60).toString().padStart(2, "0");
@@ -533,35 +498,8 @@ export default function ActiveWorkout() {
           }
           ListFooterComponent={
             <View style={styles.footerControls}>
-              {showRestTimer && (
-                <View style={styles.restTimerCard}>
-                  <View>
-                    <Text style={styles.restTimerLabel}>Rest Timer</Text>
-                    <Text style={styles.restTimerValue}>{formatTime(restRemaining)}</Text>
-                  </View>
-                  <Pressable style={styles.skipRestButton} onPress={handleSkipRestTimer}>
-                    <Text style={styles.skipRestButtonText}>Skip</Text>
-                  </Pressable>
-                </View>
-              )}
-
-              <View style={styles.restSettingsCard}>
-                <Text style={styles.restSettingsTitle}>Rest Timer</Text>
-                <View style={styles.restOptionsRow}>
-                  {REST_TIMER_OPTIONS.map(option => (
-                    <Pressable
-                      key={option.value}
-                      style={[styles.restOption, restDuration === option.value && styles.restOptionActive]}
-                      onPress={() => setRestDuration(option.value)}
-                    >
-                      <Text style={[styles.restOptionText, restDuration === option.value && styles.restOptionTextActive]}>{option.label}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-
-              <Pressable 
-                style={[styles.addExerciseButton, !currentLogId && styles.addExerciseButtonDisabled]} 
+              <Pressable
+                style={[styles.addExerciseButton, !currentLogId && styles.addExerciseButtonDisabled]}
                 onPress={handleOpenModal}
                 disabled={!currentLogId}
               >
@@ -701,8 +639,13 @@ const styles = StyleSheet.create({
   exerciseTitleRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     marginBottom: spacing.sm,
+    gap: 8,
+  },
+  exerciseTitlePressable: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
   },
   exerciseTitleTextWrap: {
     flex: 1,
@@ -831,77 +774,6 @@ const styles = StyleSheet.create({
   },
   footerControls: {
     gap: spacing.md,
-  },
-  restTimerCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: `${colors.primary}18`,
-    borderWidth: 1,
-    borderColor: `${colors.primary}40`,
-    borderRadius: 12,
-    padding: spacing.md,
-  },
-  restTimerLabel: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    fontWeight: "bold",
-    textTransform: "uppercase",
-  },
-  restTimerValue: {
-    fontSize: 24,
-    color: colors.primary,
-    fontWeight: "900",
-    marginTop: 2,
-  },
-  skipRestButton: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: 8,
-    backgroundColor: colors.primary,
-  },
-  skipRestButtonText: {
-    color: "white",
-    fontSize: 14,
-    fontWeight: "bold",
-  },
-  restSettingsCard: {
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  restSettingsTitle: {
-    fontSize: 14,
-    color: colors.text,
-    fontWeight: "bold",
-    marginBottom: spacing.sm,
-  },
-  restOptionsRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.xs,
-  },
-  restOption: {
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.background,
-  },
-  restOptionActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  restOptionText: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    fontWeight: "bold",
-  },
-  restOptionTextActive: {
-    color: "white",
   },
   addExerciseButton: {
     flexDirection: "row",
