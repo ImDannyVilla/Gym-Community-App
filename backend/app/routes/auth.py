@@ -44,9 +44,6 @@ async def register(
         auth_response = auth_client.auth.sign_up({
             "email": user_data.email,
             "password": user_data.password,
-            "options": {
-                "email_confirm": True
-            }
         })
 
         if not auth_response.user:
@@ -218,7 +215,7 @@ async def resend_confirmation(data: ResetConfirmation):
             "type": "signup",
             "email": data.email,
             "options": {
-                "email_redirect_to": "gym_app://resend-confirmation"
+                "email_redirect_to": "anglesapp://auth/callback"
             }
         })
         return {"message": "Confirmation email sent successfully"}
