@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Animated, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,8 +20,6 @@ export default function ActiveWorkoutMiniWidget() {
   const insets = useSafeAreaInsets();
   const pulseValue = useRef(new Animated.Value(1)).current;
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [isDiscarding, setIsDiscarding] = useState(false);
-
   const {
     activeLogId,
     activeWorkoutName,
@@ -76,27 +74,13 @@ export default function ActiveWorkoutMiniWidget() {
     router.push('/activeWorkout');
   };
 
-  const discardWorkout = async () => {
-    if (isDiscarding) return;
-
-    setIsDiscarding(true);
-    try {
-      if (activeLogId) {
-        await deleteWorkoutLog(activeLogId);
-      }
-      endWorkout();
-      router.replace('/(tabs)/workouts');
-    } catch (error) {
-      if (error.status === 404) {
-        endWorkout();
-        router.replace('/(tabs)/workouts');
-        return;
-      }
-
-      console.error('Failed to discard workout:', error.message);
-      Alert.alert('Error', 'Failed to discard workout. Please try again.');
-    } finally {
-      setIsDiscarding(false);
+  const discardWorkout = () => {
+    endWorkout();
+    router.replace('/(tabs)/workouts');
+    if (activeLogId) {
+      deleteWorkoutLog(activeLogId).catch(e => {
+        if (e.status !== 404) console.warn('Failed to delete workout log:', e.message);
+      });
     }
   };
 
@@ -130,13 +114,14 @@ export default function ActiveWorkoutMiniWidget() {
         <Text style={styles.exerciseName} numberOfLines={1}>{currentExerciseName}</Text>
       </Pressable>
 
-      <Pressable
-        style={[styles.discardButton, isDiscarding && styles.discardButtonDisabled]}
+      <TouchableOpacity
+        style={styles.discardButton}
         onPress={handleDiscard}
-        disabled={isDiscarding}
+        activeOpacity={0.7}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
         <Ionicons name="trash" size={20} color={colors.white} />
-      </Pressable>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -204,8 +189,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.error,
-  },
-  discardButtonDisabled: {
-    opacity: 0.6,
   },
 });
