@@ -12,8 +12,9 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import Modal from "react-native-modal";
 import { typography, colors, layout, spacing, iconSizes } from "../lib/theme";
-import { loginWithEmailOrUsername } from "../lib/authApi";
+import { loginWithEmailOrUsername, forgotPasswordEmail } from "../lib/authApi";
 import { saveToken, saveRefreshToken } from "../lib/tokenStorage";
 import ScreenContainer from "./_components/ScreenContainer";
 
@@ -41,6 +42,33 @@ export default function LoginScreen() {
   const [serverError, setServerError] = useState("");
 
   const passwordRef = useRef(null);
+
+  const [forgotModalVisible, setForgotModalVisible] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotEmailError, setForgotEmailError] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotSuccess, setForgotSuccess] = useState("");
+
+  const closeForgotModal = () => {
+    setForgotModalVisible(false);
+    setForgotEmail("");
+    setForgotEmailError("");
+    setForgotSuccess("");
+  };
+
+  const handleSendResetLink = async () => {
+    if (!forgotEmail.trim()) { setForgotEmailError("Email is required"); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(forgotEmail.trim())) { setForgotEmailError("Invalid email format"); return; }
+    try {
+      setForgotLoading(true);
+      await forgotPasswordEmail({ email: forgotEmail.trim() });
+      setForgotSuccess("Check your email for a reset link");
+    } catch (error) {
+      setForgotEmailError(error.message || "Something went wrong");
+    } finally {
+      setForgotLoading(false);
+    }
+  };
 
   const handleLogin = async () => {
     Keyboard.dismiss();
@@ -193,7 +221,7 @@ export default function LoginScreen() {
 
             <View style={styles.forgotRow}>
               <Pressable
-                onPress={() => router.push("/forgot-password")}
+                onPress={() => setForgotModalVisible(true)}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 <Text style={styles.forgotText}>Forgot Password?</Text>
@@ -202,6 +230,58 @@ export default function LoginScreen() {
           </View>
         </View>
       </TouchableWithoutFeedback>
+
+      <Modal
+        isVisible={forgotModalVisible}
+        backdropOpacity={0.6}
+        animationIn="slideInUp"
+        animationOut="slideOutDown"
+        useNativeDriver={true}
+        onBackdropPress={closeForgotModal}
+        style={styles.forgotModalOuter}
+      >
+        <View style={styles.forgotModalInner}>
+          <View style={styles.forgotModalHandle} />
+          <Text style={styles.forgotModalTitle}>Reset Password</Text>
+          <Text style={styles.forgotModalSubtitle}>Enter your email to receive a reset link</Text>
+
+          {forgotSuccess ? (
+            <View style={styles.forgotSuccessBox}>
+              <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+              <Text style={styles.forgotSuccessText}>{forgotSuccess}</Text>
+            </View>
+          ) : (
+            <>
+              <TextInput
+                style={[styles.input, forgotEmailError ? styles.inputError : null]}
+                placeholder="Enter your email"
+                placeholderTextColor={colors.textTertiary}
+                value={forgotEmail}
+                onChangeText={(text) => { setForgotEmail(text); if (forgotEmailError) setForgotEmailError(""); }}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                autoCorrect={false}
+              />
+              {forgotEmailError ? <Text style={styles.errorText}>{forgotEmailError}</Text> : null}
+              <Pressable
+                style={[styles.button, forgotLoading && styles.buttonDisabled, { marginTop: spacing.md }]}
+                onPress={handleSendResetLink}
+                disabled={forgotLoading}
+              >
+                {forgotLoading ? (
+                  <ActivityIndicator color={colors.text} />
+                ) : (
+                  <Text style={styles.buttonText}>Send Reset Link</Text>
+                )}
+              </Pressable>
+            </>
+          )}
+
+          <Pressable style={styles.linkButton} onPress={closeForgotModal}>
+            <Text style={styles.linkText}>{forgotSuccess ? "Close" : "Cancel"}</Text>
+          </Pressable>
+        </View>
+      </Modal>
     </ScreenContainer>
   );
 }
@@ -351,5 +431,54 @@ const styles = StyleSheet.create({
     color: colors.error,
     fontSize: typography.caption.fontSize,
     marginTop: spacing.xs,
+    width: "100%",
+  },
+  forgotModalOuter: {
+    justifyContent: "flex-end",
+    margin: 0,
+  },
+  forgotModalInner: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 40,
+  },
+  forgotModalHandle: {
+    width: 40,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: colors.border,
+    alignSelf: "center",
+    marginBottom: 20,
+  },
+  forgotModalTitle: {
+    fontSize: 22,
+    fontWeight: "bold",
+    color: colors.text,
+    marginBottom: spacing.xs,
+  },
+  forgotModalSubtitle: {
+    fontSize: typography.body.fontSize,
+    color: colors.textSecondary,
+    marginBottom: spacing.lg,
+  },
+  forgotSuccessBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    backgroundColor: "rgba(220, 38, 38, 0.1)",
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: 10,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    marginBottom: spacing.md,
+  },
+  forgotSuccessText: {
+    color: colors.text,
+    fontSize: typography.bodySmall.fontSize,
+    flex: 1,
   },
 });
