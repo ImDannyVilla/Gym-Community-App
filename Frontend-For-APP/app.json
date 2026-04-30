@@ -30,7 +30,14 @@
     "plugins": [
       "expo-router",
       "expo-font",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Angles to access your photos to update your profile picture.",
+          "cameraPermission": "Allow Angles to use your camera to take a profile photo."
+        }
+      ]
     ]
   }
 }

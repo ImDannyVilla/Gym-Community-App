@@ -1,6 +1,7 @@
 import {useState, useEffect, useCallback, useMemo} from "react";
 import {useRouter, useLocalSearchParams, useFocusEffect, router} from "expo-router";
-import {View, Text, Image, Pressable, StyleSheet, Alert, Platform, ActivityIndicator, ScrollView, FlatList, useWindowDimensions} from "react-native";
+import {View, Text, Pressable, StyleSheet, Alert, Platform, ActionSheetIOS, ActivityIndicator, ScrollView, FlatList, useWindowDimensions} from "react-native";
+import { Image } from "expo-image";
 import Svg, { Line as SvgLine, Text as SvgText, Rect, G } from 'react-native-svg';
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
@@ -206,6 +207,8 @@ export default function Profile() {
     const [gymLevel, setGymLevel] = useState("");
     const [weight, setWeight] = useState("");
     const [avatarUrl, setAvatarUrl] = useState("");
+    const [userId, setUserId] = useState(null);
+    const [isUploading, setIsUploading] = useState(false);
 
     const [workoutLogs, setWorkoutLogs] = useState([]);
     const [dayStreak, setDayStreak] = useState(0);
@@ -247,6 +250,7 @@ const loadProfileData = async (hasCache = false) => {
             if (!token) return;
 
             const data = await getMyProfile();
+            if (data.id) setUserId(String(data.id));
             if (data.profile) {
                 setUsername(data.profile.user_name || "Username");
                 setName(data.profile.full_name || "");
@@ -338,64 +342,103 @@ const loadProfileData = async (hasCache = false) => {
         }
     }, []);
 
-    // Request photo permissions on mount if not granted
-    useEffect(() => {
-        (async () => {
-            const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
-            if (status !== "granted") {
-                await ImagePicker.requestMediaLibraryPermissionsAsync();
-            }
-        })();
-    }, []);
-
-    const changeProfilePhoto = async () => {
-        // Ask permission
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== "granted") {
-            Alert.alert(
-                "Permission needed",
-                "Please allow photo library access to upload a profile picture."
+    const handleAvatarPress = () => {
+        if (Platform.OS === 'ios') {
+            ActionSheetIOS.showActionSheetWithOptions(
+                {
+                    options: ['Cancel', 'Take Photo', 'Choose from Library'],
+                    cancelButtonIndex: 0,
+                },
+                (buttonIndex) => {
+                    if (buttonIndex === 1) takePhoto();
+                    if (buttonIndex === 2) pickFromLibrary();
+                }
             );
+        } else {
+            Alert.alert('Profile Photo', 'Choose an option', [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Take Photo', onPress: takePhoto },
+                { text: 'Choose from Library', onPress: pickFromLibrary },
+            ]);
+        }
+    };
+
+    const takePhoto = async () => {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== 'granted') {
+            Alert.alert('Permission needed', 'Please allow camera access to take a profile photo.');
             return;
         }
-
-        // Open gallery
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ['images'], // Only allows images for upload
-            allowsEditing: true, // lets them crop
-            aspect: [1, 1], // square crop
-            quality: 1,
+        const result = await ImagePicker.launchCameraAsync({
+            mediaTypes: ['images'],
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.7,
         });
-
         if (!result.canceled && result.assets?.length) {
-            const localUri = result.assets[0].uri;
+            await uploadAvatarPhoto(result.assets[0].uri);
+        }
+    };
 
-            try {
-                const publicUrl = await uploadAvatar(localUri);
-                await updateMyProfile({ avatar_url: publicUrl });
-                setAvatarUrl(publicUrl);
-                Alert.alert("Success", "Profile photo updated!");
-            } catch (error) {
-                console.error("Failed to update profile photo:", error);
-                Alert.alert("Error", "Failed to update profile photo. Please try again.");
-            }
+    const pickFromLibrary = async () => {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+            Alert.alert('Permission needed', 'Please allow photo library access to upload a profile picture.');
+            return;
+        }
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images'],
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.7,
+        });
+        if (!result.canceled && result.assets?.length) {
+            await uploadAvatarPhoto(result.assets[0].uri);
+        }
+    };
+
+    const uploadAvatarPhoto = async (localUri) => {
+        setIsUploading(true);
+        try {
+            const publicUrl = await uploadAvatar(localUri, userId);
+            await updateMyProfile({ avatar_url: publicUrl });
+            setAvatarUrl(publicUrl);
+            const updatedProfile = { ...cachedProfile, avatar_url: publicUrl };
+            setCachedProfile(updatedProfile);
+            await saveToCache(CACHE_KEYS.PROFILE, updatedProfile).catch(() => {});
+        } catch (error) {
+            console.error('Avatar upload error:', error);
+            Alert.alert('Upload Failed', 'Could not upload photo. Please try again.');
+        } finally {
+            setIsUploading(false);
         }
     };
 
     const profileHeader = () => {
         return (
             <View style={{width: "100%", alignItems: "center"}}>
-                <View style={styles.photoContainer}>
-                    <Image
-                        source={{ uri: avatarUrl || "https://via.placeholder.com/400" }}
-                        style={styles.profilePhoto}
-                        resizeMode="cover"
-                    />
-
-                    <Pressable style={styles.editProfilePhoto} onPress={changeProfilePhoto}>
-                        <Text style={styles.plusIcon}>+</Text>
-                    </Pressable>
-                </View>
+                <Pressable onPress={handleAvatarPress} style={styles.avatarContainer}>
+                    {avatarUrl ? (
+                        <Image
+                            source={{ uri: avatarUrl }}
+                            style={styles.avatar}
+                            contentFit="cover"
+                        />
+                    ) : (
+                        <View style={[styles.avatar, styles.avatarPlaceholder]}>
+                            <Ionicons name="person-outline" size={40} color="#555" />
+                        </View>
+                    )}
+                    {isUploading ? (
+                        <View style={styles.avatarOverlay}>
+                            <ActivityIndicator color="#fff" />
+                        </View>
+                    ) : (
+                        <View style={styles.cameraIconOverlay}>
+                            <Ionicons name="camera" size={14} color="#fff" />
+                        </View>
+                    )}
+                </Pressable>
 
                 {name ? <Text style={styles.name}>{name}</Text> : null}
                 <Text style={styles.userName}>@{username}</Text>
@@ -551,34 +594,46 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
 
-    photoContainer: {
-        marginBottom: 8
+    avatarContainer: {
+        position: 'relative',
+        alignSelf: 'center',
+        marginBottom: 8,
     },
 
-    profilePhoto: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: "#ccc",
+    avatar: {
+        width: 90,
+        height: 90,
+        borderRadius: 45,
+        backgroundColor: '#2a2a2a',
     },
 
-    editProfilePhoto: {
-        position: "absolute",
+    avatarPlaceholder: {
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+
+    avatarOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        borderRadius: 45,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+
+    cameraIconOverlay: {
+        position: 'absolute',
         bottom: 0,
         right: 0,
+        backgroundColor: colors.primary,
         borderRadius: 12,
         width: 24,
         height: 24,
-        backgroundColor: colors.primary,
-        alignItems: "center",
-        justifyContent: "center",
-    },
-
-    plusIcon: {
-        fontSize: 20,
-        fontWeight: "bold",
-        color: colors.text,
-        lineHeight: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
 
     name: {
