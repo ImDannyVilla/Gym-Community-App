@@ -175,14 +175,15 @@ export default function ActiveWorkout() {
   const [finishTitle, setFinishTitle] = useState('');
   const [pendingExercises, setPendingExercises] = useState([]);
   
-  const { 
+  const {
     activeLogId,
     activeWorkoutName,
     activeWorkoutStartTime,
-    exercises, 
-    updateSet, 
-    toggleSetComplete, 
-    addSet, 
+    activeRoutineId,
+    exercises,
+    updateSet,
+    toggleSetComplete,
+    addSet,
     removeSet,
     toggleWarmupSet,
     endWorkout,
@@ -354,19 +355,24 @@ export default function ActiveWorkout() {
       return;
     }
 
-    setFinishTitle('');
-    setPendingExercises(completedExercises);
-    setShowFinishSheet(true);
+    if (activeRoutineId) {
+      // Routine workout — name is already set, skip the naming sheet
+      doSaveWorkout(workoutName, completedExercises);
+    } else {
+      setFinishTitle('');
+      setPendingExercises(completedExercises);
+      setShowFinishSheet(true);
+    }
   };
 
-  const doSaveWorkout = async (title) => {
+  const doSaveWorkout = async (title, completedExercises) => {
     setShowFinishSheet(false);
     setIsLoading(true);
     const logId = currentLogId;
     try {
       const completedAt = new Date().toISOString();
 
-      for (const ex of pendingExercises) {
+      for (const ex of completedExercises) {
         const exerciseLibraryId = getExerciseLibraryId(ex);
 
         if (!exerciseLibraryId) {
@@ -536,7 +542,7 @@ export default function ActiveWorkout() {
           />
           <Pressable
             style={[styles.saveBtnStyle, isLoading && { opacity: 0.6 }]}
-            onPress={() => doSaveWorkout(finishTitle || `Workout — ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`)}
+            onPress={() => doSaveWorkout(finishTitle || `Workout — ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`, pendingExercises)}
             disabled={isLoading}
           >
             <Text style={styles.saveBtnTextStyle}>Save Workout</Text>

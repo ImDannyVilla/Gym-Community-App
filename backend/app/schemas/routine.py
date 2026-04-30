@@ -52,6 +52,7 @@ class RoutineUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     is_public: Optional[bool] = None
+    exercises: Optional[List[RoutineExerciseCreate]] = None
 
 
 class RoutineSummary(BaseModel):

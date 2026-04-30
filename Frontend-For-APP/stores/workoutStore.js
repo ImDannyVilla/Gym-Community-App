@@ -12,6 +12,7 @@ export const useWorkoutStore = create(persist((set, get) => ({
   activeLogId: null,
   activeWorkoutName: null,
   activeWorkoutStartTime: null,
+  activeRoutineId: null,
   exercises: [],
   needsProfileRefresh: false,
 
@@ -35,6 +36,7 @@ export const useWorkoutStore = create(persist((set, get) => ({
     activeLogId: log.id,
     activeWorkoutName: log.name,
     activeWorkoutStartTime: startTime || log.started_at || Date.now(),
+    activeRoutineId: log.routine_id || null,
     exercises: log.exercises || []
   }),
 
@@ -47,6 +49,7 @@ export const useWorkoutStore = create(persist((set, get) => ({
     activeLogId: null,
     activeWorkoutName: null,
     activeWorkoutStartTime: null,
+    activeRoutineId: null,
     exercises: [],
     needsProfileRefresh: true,
   }),
@@ -170,6 +173,7 @@ export const useWorkoutStore = create(persist((set, get) => ({
     activeLogId: state.activeLogId,
     activeWorkoutName: state.activeWorkoutName,
     activeWorkoutStartTime: state.activeWorkoutStartTime,
+    activeRoutineId: state.activeRoutineId,
     exercises: state.exercises,
   }),
   onRehydrateStorage: () => (state) => {

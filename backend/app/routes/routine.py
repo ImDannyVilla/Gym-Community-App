@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.orm import selectinload
 from typing import List
 from uuid import UUID, uuid4
@@ -123,9 +123,36 @@ async def update_routine(
     if data.is_public is not None:
         routine.is_public = data.is_public
 
+    if data.exercises is not None:
+        await db.execute(
+            delete(RoutineExercise).where(RoutineExercise.routine_id == routine_id)
+        )
+        for ex_data in data.exercises:
+            db.add(RoutineExercise(
+                id=uuid4(),
+                routine_id=routine.id,
+                exercise_id=ex_data.exercise_id,
+                name=ex_data.name,
+                gif_url=ex_data.gif_url,
+                category=ex_data.category,
+                target=ex_data.target,
+                equipment=ex_data.equipment,
+                order=ex_data.order,
+                target_sets=ex_data.target_sets,
+                target_reps_min=ex_data.target_reps_min,
+                target_reps_max=ex_data.target_reps_max,
+                target_weight_lbs=ex_data.target_weight_lbs,
+                notes=ex_data.notes,
+            ))
+
     await db.commit()
-    await db.refresh(routine)
-    return routine
+
+    result = await db.execute(
+        select(Routine)
+        .options(selectinload(Routine.exercises))
+        .where(Routine.id == routine_id)
+    )
+    return result.scalars().first()
 
 
 @router.delete("/{routine_id}", status_code=status.HTTP_204_NO_CONTENT)

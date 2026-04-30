@@ -92,6 +92,20 @@ export default function CreateRoutineScreen() {
           name: name.trim(),
           description: description.trim() || null,
           is_public: false,
+          exercises: exercises.map((ex, index) => ({
+            exercise_id: ex.exercise_id,
+            name: ex.name,
+            gif_url: ex.gif_url,
+            category: ex.category,
+            target: ex.target,
+            equipment: ex.equipment,
+            order: index + 1,
+            target_sets: ex.target_sets || 3,
+            target_reps_min: ex.target_reps_min || 8,
+            target_reps_max: ex.target_reps_max || 12,
+            target_weight_lbs: ex.target_weight_lbs || null,
+            notes: ex.notes || null,
+          })),
         });
 
         // Refresh + persist routines cache
