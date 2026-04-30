@@ -36,7 +36,7 @@ export default function WorkoutsScreen() {
         const streakData = await getWorkoutStreak();
         if (streakData) {
           setStats({
-            totalWorkouts: streakData.total_workouts || 0,
+            totalWorkouts: streakData.workouts_this_week || 0,
             setsDone: streakData.total_sets || 0,
             dayStreak: streakData.day_streak || 0,
           });
@@ -174,10 +174,11 @@ export default function WorkoutsScreen() {
         {/* Header */}
         <View style={styles.header}>
         <Text style={styles.dateText}>{getCurrentDate()}</Text>
-        <Text style={styles.titleText}>MY WORKOUTS</Text>
+        <Text style={styles.titleText}>WORKOUT</Text>
       </View>
 
       {/* Stats Bubble */}
+      <Text style={styles.thisWeekLabel}>THIS WEEK</Text>
       <View style={styles.statsContainer}>
         <View style={styles.statBubble}>
           <Text style={styles.statValue}>{stats.totalWorkouts}</Text>
@@ -185,11 +186,11 @@ export default function WorkoutsScreen() {
         </View>
         <View style={styles.statBubble}>
           <Text style={styles.statValue}>{stats.setsDone}</Text>
-          <Text style={styles.statLabel}>Sets Done</Text>
+          <Text style={styles.statLabel}>Sets</Text>
         </View>
         <View style={styles.statBubble}>
           <Text style={styles.statValue}>{stats.dayStreak}</Text>
-          <Text style={styles.statLabel}>Day Streak</Text>
+          <Text style={styles.statLabel}>Streak</Text>
         </View>
       </View>
 
@@ -293,9 +294,19 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     lineHeight: 32,
   },
+  thisWeekLabel: {
+    marginHorizontal: 16,
+    marginTop: 4,
+    marginBottom: 4,
+    fontSize: 10,
+    fontWeight: "800",
+    color: colors.textSecondary,
+    letterSpacing: 1.5,
+    textTransform: "uppercase",
+  },
   statsContainer: {
     marginHorizontal: 16,
-    marginVertical: 12,
+    marginBottom: 12,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
