@@ -5,13 +5,16 @@ import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "../../lib/theme";
 import { API_BASE_URL } from "../../lib/api";
-import { saveSeededWorkoutAsRoutine } from "../../lib/workoutApi";
+import { saveSeededWorkoutAsRoutine, getMyRoutines } from "../../lib/workoutApi";
+import { saveToCache, CACHE_KEYS } from "../../lib/localCache";
+import { useWorkoutStore } from "../../stores/workoutStore";
 
 export default function WorkoutDetailScreen() {
   const { id } = useLocalSearchParams();
   const [workout, setWorkout] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const setCachedRoutines = useWorkoutStore(state => state.setCachedRoutines);
 
   useEffect(() => {
     if (id) {
@@ -83,6 +86,11 @@ export default function WorkoutDetailScreen() {
   const handleSaveRoutine = async () => {
     try {
       await saveSeededWorkoutAsRoutine(id);
+      const freshRoutines = await getMyRoutines().catch(() => null);
+      if (freshRoutines) {
+        setCachedRoutines(freshRoutines);
+        await saveToCache(CACHE_KEYS.ROUTINES, freshRoutines);
+      }
       Alert.alert(
         "Success",
         `"${workout.name}" has been saved to your routines!`,

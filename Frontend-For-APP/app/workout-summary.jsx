@@ -7,7 +7,9 @@ import { Image } from 'expo-image';
 import { useLocalSearchParams, router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { getWorkoutLog, saveLogAsRoutine } from '../lib/workoutApi';
+import { getWorkoutLog, saveLogAsRoutine, getMyRoutines } from '../lib/workoutApi';
+import { saveToCache, CACHE_KEYS } from '../lib/localCache';
+import { useWorkoutStore } from '../stores/workoutStore';
 
 const formatDuration = (seconds) => {
   if (!seconds) return '—';
@@ -29,6 +31,7 @@ export default function WorkoutSummary() {
   const [log, setLog] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSavingRoutine, setIsSavingRoutine] = useState(false);
+  const setCachedRoutines = useWorkoutStore(state => state.setCachedRoutines);
 
   const fetchLog = useCallback(async () => {
     try {
@@ -50,6 +53,12 @@ export default function WorkoutSummary() {
     setIsSavingRoutine(true);
     try {
       await saveLogAsRoutine(logId);
+      const freshRoutines = await getMyRoutines().catch(() => null);
+      if (freshRoutines) {
+        setCachedRoutines(freshRoutines);
+        await saveToCache(CACHE_KEYS.ROUTINES, freshRoutines);
+      }
+      setLog(prev => ({ ...prev, routine_id: 'saved' }));
       Alert.alert('Saved!', 'Workout saved as a routine.');
     } catch (e) {
       console.error('Failed to save as routine:', e.message);

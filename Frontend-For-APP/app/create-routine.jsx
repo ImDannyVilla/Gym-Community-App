@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { colors } from '../lib/theme';
 import { useRoutineStore } from '../stores/routineStore';
+import { useWorkoutStore } from '../stores/workoutStore';
 import { createRoutine, getRoutine, updateRoutine, getMyRoutines } from '../lib/workoutApi';
 import { saveToCache, CACHE_KEYS } from '../lib/localCache';
 import ExerciseConfigSheet from './_components/ExerciseConfigSheet';
@@ -20,6 +21,7 @@ export default function CreateRoutineScreen() {
   const removeExercise = useRoutineStore(state => state.removeExercise);
   const updateExercise = useRoutineStore(state => state.updateExercise);
   const setExercises = useRoutineStore(state => state.setExercises);
+  const setCachedRoutines = useWorkoutStore(state => state.setCachedRoutines);
   
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -108,9 +110,12 @@ export default function CreateRoutineScreen() {
           })),
         });
 
-        // Refresh + persist routines cache
+        // Refresh + persist routines cache and update Zustand store immediately
         const freshRoutines = await getMyRoutines().catch(() => null);
-        if (freshRoutines) await saveToCache(CACHE_KEYS.ROUTINES, freshRoutines);
+        if (freshRoutines) {
+          setCachedRoutines(freshRoutines);
+          await saveToCache(CACHE_KEYS.ROUTINES, freshRoutines);
+        }
 
         clearExercises();
         Alert.alert('Success', 'Routine updated successfully', [
@@ -135,9 +140,12 @@ export default function CreateRoutineScreen() {
 
         await createRoutine(name.trim(), description.trim() || null, false, exercisesData);
 
-        // Refresh + persist routines cache so workouts screen loads instantly
+        // Refresh + persist routines cache and update Zustand store immediately
         const freshRoutines = await getMyRoutines().catch(() => null);
-        if (freshRoutines) await saveToCache(CACHE_KEYS.ROUTINES, freshRoutines);
+        if (freshRoutines) {
+          setCachedRoutines(freshRoutines);
+          await saveToCache(CACHE_KEYS.ROUTINES, freshRoutines);
+        }
 
         clearExercises();
         Alert.alert('Success', 'Routine created successfully', [
