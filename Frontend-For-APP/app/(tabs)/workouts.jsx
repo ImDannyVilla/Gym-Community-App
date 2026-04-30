@@ -5,6 +5,7 @@ import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, layout, spacing } from "../../lib/theme";
 import { getMyRoutines, startWorkout, getWorkoutStreak, deleteWorkoutLog, getRoutine, addExerciseToLog } from "../../lib/workoutApi";
+import { loadFromCache, saveToCache, CACHE_KEYS } from "../../lib/localCache";
 import { getMyProfile } from "../../lib/socialApi";
 import { useWorkoutStore } from "../../stores/workoutStore";
 
@@ -25,22 +26,42 @@ export default function WorkoutsScreen() {
   } = useWorkoutStore();
 
   const fetchData = async () => {
-    setIsLoading(true);
+    // 1. Load from AsyncStorage immediately — no spinner if cache exists
+    const [cachedRoutinesData, cachedStreakData] = await Promise.all([
+      loadFromCache(CACHE_KEYS.ROUTINES),
+      loadFromCache(CACHE_KEYS.STREAK),
+    ]);
+    if (cachedRoutinesData?.length > 0) {
+      setCachedRoutines(cachedRoutinesData);
+    } else {
+      setIsLoading(true);
+    }
+    if (cachedStreakData) {
+      setCachedStats({
+        totalWorkouts: cachedStreakData.workouts_this_week || 0,
+        setsDone: cachedStreakData.total_sets || 0,
+        dayStreak: cachedStreakData.day_streak || 0,
+      });
+    }
+
+    // 2. Fetch fresh in background — update UI and cache silently
     try {
       const [routinesData, streakData] = await Promise.all([
         getMyRoutines(),
         getWorkoutStreak().catch(() => null),
       ]);
       setCachedRoutines(routinesData || []);
+      await saveToCache(CACHE_KEYS.ROUTINES, routinesData || []);
       if (streakData) {
         setCachedStats({
           totalWorkouts: streakData.workouts_this_week || 0,
           setsDone: streakData.total_sets || 0,
           dayStreak: streakData.day_streak || 0,
         });
+        await saveToCache(CACHE_KEYS.STREAK, streakData);
       }
     } catch (e) {
-      console.error("Failed to load data:", e.message);
+      console.warn("Background refresh failed:", e.message);
     } finally {
       setIsLoading(false);
       clearProfileRefresh();

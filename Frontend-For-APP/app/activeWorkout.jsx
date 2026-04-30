@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import Modal from "react-native-modal";
 import { colors, layout, typography, spacing } from "../lib/theme";
 import { startWorkout, updateWorkoutLog, addExerciseToLog, deleteWorkoutLog, getExerciseHistory } from "../lib/workoutApi";
+import { saveToCache, CACHE_KEYS } from "../lib/localCache";
 import { useWorkoutStore } from "../stores/workoutStore";
 
 const REST_TIMER_OPTIONS = [
@@ -413,6 +414,12 @@ export default function ActiveWorkout() {
         duration: timer,
         is_public: false,
       });
+
+      // Invalidate profile caches so next visit fetches fresh logs + streak
+      await Promise.all([
+        saveToCache(CACHE_KEYS.WORKOUT_LOGS, null),
+        saveToCache(CACHE_KEYS.STREAK, null),
+      ]).catch(() => {});
 
       endWorkout();
       router.back();

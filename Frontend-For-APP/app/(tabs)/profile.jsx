@@ -9,6 +9,7 @@ import Modal from "react-native-modal";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing, layout } from "../../lib/theme";
 import { getToken, clearAllTokens } from "../../lib/tokenStorage";
+import { loadFromCache, saveToCache, clearCache, CACHE_KEYS } from "../../lib/localCache";
 import { getMyProfile, updateMyProfile } from "../../lib/socialApi";
 import { uploadAvatar } from "../../lib/supabaseStorage";
 import { logoutUser } from "../../lib/authApi";
@@ -227,6 +228,7 @@ export default function Profile() {
     }, [params.name, params.username, params.about]);
 
     const handleLogout = async () => {
+        await clearCache();
         await clearAllTokens();
         logoutUser(); // fire-and-forget server-side invalidation
         router.replace("/");
@@ -263,6 +265,13 @@ const loadProfileData = async (hasCache = false) => {
                 setCachedDayStreak(streakData.day_streak ?? 0);
             }
             clearProfileRefresh();
+
+            // Persist fresh data to AsyncStorage for cross-session cache
+            await Promise.all([
+                data.profile ? saveToCache(CACHE_KEYS.PROFILE, data.profile) : Promise.resolve(),
+                saveToCache(CACHE_KEYS.WORKOUT_LOGS, completedLogs),
+                streakData ? saveToCache(CACHE_KEYS.STREAK, streakData) : Promise.resolve(),
+            ]).catch(() => {});
         } catch (error) {
             console.log("Failed to load profile data (Network error)", error);
         } finally {
@@ -272,18 +281,46 @@ const loadProfileData = async (hasCache = false) => {
 
     useFocusEffect(
         useCallback(() => {
-            const hasCache = !!cachedProfile;
-            if (hasCache) {
-                setUsername(cachedProfile.user_name || "Username");
-                setName(cachedProfile.full_name || "");
-                setAbout(cachedProfile.bio || "This is a little about me.");
-                setGymLevel(cachedProfile.gym_level || "");
-                setWeight(cachedProfile.weight?.toString() || "");
-                setAvatarUrl(cachedProfile.avatar_url || "");
-            }
-            if (cachedWorkoutLogs.length > 0) setWorkoutLogs(cachedWorkoutLogs);
-            if (cachedDayStreak) setDayStreak(cachedDayStreak);
-            loadProfileData(hasCache);
+            const initAndLoad = async () => {
+                // 1. Populate from Zustand immediately (same-session, zero latency)
+                const hasZustandCache = !!cachedProfile;
+                if (hasZustandCache) {
+                    setUsername(cachedProfile.user_name || "Username");
+                    setName(cachedProfile.full_name || "");
+                    setAbout(cachedProfile.bio || "This is a little about me.");
+                    setGymLevel(cachedProfile.gym_level || "");
+                    setWeight(cachedProfile.weight?.toString() || "");
+                    setAvatarUrl(cachedProfile.avatar_url || "");
+                }
+                if (cachedWorkoutLogs.length > 0) setWorkoutLogs(cachedWorkoutLogs);
+                if (cachedDayStreak) setDayStreak(cachedDayStreak);
+
+                // 2. If Zustand is empty (app restart), hydrate from AsyncStorage
+                let hasCache = hasZustandCache;
+                if (!hasZustandCache) {
+                    const [asyncProfile, asyncLogs, asyncStreak] = await Promise.all([
+                        loadFromCache(CACHE_KEYS.PROFILE),
+                        loadFromCache(CACHE_KEYS.WORKOUT_LOGS),
+                        loadFromCache(CACHE_KEYS.STREAK),
+                    ]);
+                    if (asyncProfile) {
+                        hasCache = true;
+                        setUsername(asyncProfile.user_name || "Username");
+                        setName(asyncProfile.full_name || "");
+                        setAbout(asyncProfile.bio || "This is a little about me.");
+                        setGymLevel(asyncProfile.gym_level || "");
+                        setWeight(asyncProfile.weight?.toString() || "");
+                        setAvatarUrl(asyncProfile.avatar_url || "");
+                        setCachedProfile(asyncProfile);
+                    }
+                    if (asyncLogs) { setWorkoutLogs(asyncLogs); setCachedWorkoutLogs(asyncLogs); }
+                    if (asyncStreak) { setDayStreak(asyncStreak.day_streak ?? 0); setCachedDayStreak(asyncStreak.day_streak ?? 0); }
+                }
+
+                // 3. Background fetch (no spinner if any cache exists)
+                loadProfileData(hasCache);
+            };
+            initAndLoad();
         }, [needsProfileRefresh])
     );
 

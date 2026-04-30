@@ -4,7 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { colors } from '../lib/theme';
 import { useRoutineStore } from '../stores/routineStore';
-import { createRoutine, getRoutine, updateRoutine } from '../lib/workoutApi';
+import { createRoutine, getRoutine, updateRoutine, getMyRoutines } from '../lib/workoutApi';
+import { saveToCache, CACHE_KEYS } from '../lib/localCache';
 import ExerciseConfigSheet from './_components/ExerciseConfigSheet';
 
 export default function CreateRoutineScreen() {
@@ -93,7 +94,11 @@ export default function CreateRoutineScreen() {
           description: description.trim() || null,
           is_public: isPublic,
         });
-        
+
+        // Refresh + persist routines cache
+        const freshRoutines = await getMyRoutines().catch(() => null);
+        if (freshRoutines) await saveToCache(CACHE_KEYS.ROUTINES, freshRoutines);
+
         clearExercises();
         Alert.alert('Success', 'Routine updated successfully', [
           { text: 'OK', onPress: () => router.replace('/(tabs)/workouts') }
@@ -116,7 +121,11 @@ export default function CreateRoutineScreen() {
         }));
 
         await createRoutine(name.trim(), description.trim() || null, isPublic, exercisesData);
-        
+
+        // Refresh + persist routines cache so workouts screen loads instantly
+        const freshRoutines = await getMyRoutines().catch(() => null);
+        if (freshRoutines) await saveToCache(CACHE_KEYS.ROUTINES, freshRoutines);
+
         clearExercises();
         Alert.alert('Success', 'Routine created successfully', [
           { text: 'OK', onPress: () => router.replace('/(tabs)/workouts') }
