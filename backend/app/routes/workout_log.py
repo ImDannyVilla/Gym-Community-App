@@ -327,10 +327,6 @@ async def add_exercise_to_log(
     """Add an exercise with sets to a workout log."""
     result = await db.execute(
         select(WorkoutLog)
-        .options(
-            selectinload(WorkoutLog.exercises)
-            .selectinload(WorkoutLogExercise.sets)
-        )
         .where(WorkoutLog.id == log_id)
         .where(WorkoutLog.user_id == current_user.id)
     )
@@ -338,63 +334,46 @@ async def add_exercise_to_log(
     if not log:
         raise HTTPException(status_code=404, detail="Workout log not found")
 
-    # Find the exercise in the already loaded exercises
-    exercise = None
-    for ex in log.exercises:
-        if ex.order == data.order:
-            if data.exercise_id and ex.exercise_id == data.exercise_id:
-                exercise = ex
-                break
-            elif not data.exercise_id and ex.name == data.name:
-                exercise = ex
-                break
-
-    if exercise:
-        exercise.exercise_id = data.exercise_id
-        exercise.name = data.name
-        exercise.category = data.category
-        exercise.target = data.target
-        exercise.equipment = data.equipment
-        exercise.gif_url = data.gif_url
-        exercise.order = data.order
-        existing_sets = {workout_set.set_number: workout_set for workout_set in exercise.sets}
-    else:
-        exercise = WorkoutLogExercise(
-            id=uuid4(),
-            workout_log_id=log_id,
-            exercise_id=data.exercise_id,
-            name=data.name,
-            category=data.category,
-            target=data.target,
-            equipment=data.equipment,
-            gif_url=data.gif_url,
-            order=data.order,
-        )
-        db.add(exercise)
-        await db.flush()
-        existing_sets = {}
+    exercise = WorkoutLogExercise(
+        id=uuid4(),
+        workout_log_id=log_id,
+        exercise_id=data.exercise_id,
+        name=data.name,
+        category=data.category,
+        target=data.target,
+        equipment=data.equipment,
+        gif_url=data.gif_url,
+        order=data.order,
+        target_sets=data.target_sets,
+        target_reps_min=data.target_reps_min,
+        target_reps_max=data.target_reps_max,
+        target_weight_lbs=data.target_weight_lbs,
+    )
+    db.add(exercise)
+    await db.flush()
 
     for set_data in data.sets:
-        workout_set = existing_sets.get(set_data.set_number)
-        if workout_set:
-            workout_set.reps = set_data.reps
-            workout_set.weight_lbs = set_data.weight_lbs
-            workout_set.completed = set_data.completed
-        else:
-            workout_set = WorkoutLogSet(
-                id=uuid4(),
-                workout_log_exercise_id=getattr(exercise, "id"),
-                set_number=set_data.set_number,
-                reps=set_data.reps,
-                weight_lbs=set_data.weight_lbs,
-                completed=set_data.completed,
-            )
-            db.add(workout_set)
+        workout_set = WorkoutLogSet(
+            id=uuid4(),
+            workout_log_exercise_id=exercise.id,
+            set_number=set_data.set_number,
+            reps=set_data.reps,
+            weight_lbs=set_data.weight_lbs,
+            completed=set_data.completed,
+        )
+        db.add(workout_set)
 
     await db.commit()
 
-    # return full log with exercises
-    return await load_workout_log_response(db, log_id, current_user.id)
+    result = await db.execute(
+        select(WorkoutLog)
+        .options(
+            selectinload(WorkoutLog.exercises)
+            .selectinload(WorkoutLogExercise.sets)
+        )
+        .where(WorkoutLog.id == log_id)
+    )
+    return result.scalars().first()
 
 @router.post("/{log_id}/save-as-routine", response_model=RoutineResponse, status_code=status.HTTP_201_CREATED)
 async def save_log_as_routine(

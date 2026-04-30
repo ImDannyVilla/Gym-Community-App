@@ -33,6 +33,10 @@ class WorkoutLogExerciseCreate(BaseModel):
     equipment: Optional[str] = Field(None, max_length=50)
     gif_url: Optional[str] = None
     order: int = Field(ge=0)
+    target_sets: Optional[int] = None
+    target_reps_min: Optional[int] = None
+    target_reps_max: Optional[int] = None
+    target_weight_lbs: Optional[float] = None
     sets: List[WorkoutLogSetCreate] = []
 
 
@@ -45,6 +49,10 @@ class WorkoutLogExerciseResponse(BaseModel):
     equipment: Optional[str] = None
     gif_url: Optional[str] = None
     order: int
+    target_sets: Optional[int] = None
+    target_reps_min: Optional[int] = None
+    target_reps_max: Optional[int] = None
+    target_weight_lbs: Optional[float] = None
     sets: List[WorkoutLogSetResponse] = []
 
     model_config = ConfigDict(from_attributes=True)
