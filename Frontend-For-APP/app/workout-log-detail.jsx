@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, Pressable,
-  ActivityIndicator, Alert, Image,
+  ActivityIndicator, Alert,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useLocalSearchParams, router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -179,7 +180,7 @@ export default function WorkoutLogDetail() {
                   <Image
                     source={{ uri: ex.gif_url }}
                     style={styles.exerciseGif}
-                    resizeMode="cover"
+                    contentFit="cover"
                   />
                 ) : (
                   <View style={styles.exerciseGifPlaceholder}>

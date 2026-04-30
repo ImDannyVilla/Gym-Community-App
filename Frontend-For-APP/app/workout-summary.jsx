@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, Pressable,
-  ActivityIndicator, Alert, Image,
+  ActivityIndicator, Alert,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useLocalSearchParams, router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -119,7 +120,7 @@ export default function WorkoutSummary() {
           <View key={ex.id} style={styles.exerciseCard}>
             <View style={styles.exerciseHeader}>
               {ex.gif_url ? (
-                <Image source={{ uri: ex.gif_url }} style={styles.exerciseGif} resizeMode="cover" />
+                <Image source={{ uri: ex.gif_url }} style={styles.exerciseGif} contentFit="cover" />
               ) : (
                 <View style={styles.exerciseGifPlaceholder}>
                   <Ionicons name="barbell-outline" size={24} color="#444" />

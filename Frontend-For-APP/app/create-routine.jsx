@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Alert, Image, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { colors } from '../lib/theme';
@@ -248,7 +249,7 @@ export default function CreateRoutineScreen() {
               <Image
                 source={{ uri: item.gif_url }}
                 style={styles.exerciseGif}
-                resizeMode="cover"
+                contentFit="cover"
               />
               <View style={{ flex: 1 }}>
                 <Text style={styles.exerciseName}>{item.name}</Text>

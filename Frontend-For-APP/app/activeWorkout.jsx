@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, memo, useMemo } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet, FlatList, SafeAreaView, KeyboardAvoidingView, Platform, Alert } from "react-native";
+import { Image } from "expo-image";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Modal from "react-native-modal";
@@ -111,6 +112,11 @@ const ExerciseCard = memo(({ ex, exerciseHistory, handleUpdateSet, handleToggleC
   return (
     <View style={styles.exerciseCard}>
     <Pressable style={styles.exerciseTitleRow} onPress={() => handleOpenExerciseDetails(ex)}>
+      <Image
+        source={{ uri: ex.gif_url }}
+        style={styles.exerciseThumb}
+        contentFit="cover"
+      />
       <View style={styles.exerciseTitleTextWrap}>
         <Text style={styles.exerciseTitle}>{ex.name}</Text>
         <Text style={styles.exerciseMeta}>Tap for summary, records, and history</Text>
@@ -795,6 +801,13 @@ const styles = StyleSheet.create({
     color: colors.textTertiary,
     fontSize: 14,
     fontWeight: "bold",
+  },
+  exerciseThumb: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    backgroundColor: '#1a1a1a',
+    marginRight: 10,
   },
   emptyState: {
     flex: 1,

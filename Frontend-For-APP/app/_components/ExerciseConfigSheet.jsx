@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import {
-  View, Text, Image, TouchableOpacity, StyleSheet,
+  View, Text, TouchableOpacity, StyleSheet,
   Modal, ScrollView, TextInput, Dimensions
 } from 'react-native';
+import { Image } from 'expo-image';
 import { colors } from '../../lib/theme';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -95,7 +96,7 @@ export default function ExerciseConfigSheet({ exercise, visible, onClose, onAdd,
           <Image
             source={{ uri: exercise.gif_url }}
             style={styles.exerciseGif}
-            resizeMode="cover"
+            contentFit="cover"
           />
           <View style={{ flex: 1 }}>
             <Text style={styles.exerciseName} numberOfLines={2}>
