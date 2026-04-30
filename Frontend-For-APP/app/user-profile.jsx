@@ -107,15 +107,21 @@ export default function UserProfile() {
       {profile?.bio ? <Text style={styles.bio}>{profile.bio}</Text> : null}
 
       <View style={styles.followStats}>
-        <View style={styles.followStat}>
+        <Pressable
+          style={styles.followStat}
+          onPress={() => profile?.id && router.push(`/followers-list?userId=${profile.id}&type=followers`)}
+        >
           <Text style={styles.followNumber}>{followersCount}</Text>
           <Text style={styles.followLabel}>Followers</Text>
-        </View>
+        </Pressable>
         <View style={styles.followDivider} />
-        <View style={styles.followStat}>
+        <Pressable
+          style={styles.followStat}
+          onPress={() => profile?.id && router.push(`/followers-list?userId=${profile.id}&type=following`)}
+        >
           <Text style={styles.followNumber}>{profile?.following_count ?? 0}</Text>
           <Text style={styles.followLabel}>Following</Text>
-        </View>
+        </Pressable>
       </View>
 
       {!isOwnProfile && (

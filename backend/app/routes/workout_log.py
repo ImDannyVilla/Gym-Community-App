@@ -14,6 +14,7 @@ from app.schemas.workout_log import (
     WorkoutLogResponse,
     WorkoutLogExerciseCreate,
     PublicFeedPost,
+    PublicWorkoutLogResponse,
 )
 from app.dependencies import AsyncSessionDep, CurrentUser
 
@@ -289,6 +290,46 @@ async def get_public_feed(
         )
         for row in rows
     ]
+
+
+@router.get("/public/{log_id}", response_model=PublicWorkoutLogResponse)
+async def get_public_workout_log(
+    log_id: UUID,
+    db: AsyncSessionDep,
+):
+    """Get a public workout log with full exercises and sets. No auth required. Returns 404 if private."""
+    result = await db.execute(
+        select(WorkoutLog)
+        .options(
+            selectinload(WorkoutLog.exercises)
+            .selectinload(WorkoutLogExercise.sets)
+        )
+        .where(WorkoutLog.id == log_id)
+        .where(WorkoutLog.is_public == True)
+    )
+    log = result.scalars().first()
+    if not log:
+        raise HTTPException(status_code=404, detail="Workout log not found")
+
+    profile_result = await db.execute(
+        select(UserProfile).where(UserProfile.user_id == log.user_id)
+    )
+    profile = profile_result.scalars().first()
+
+    return PublicWorkoutLogResponse(
+        id=log.id,
+        name=log.name,
+        completed_at=log.completed_at,
+        duration=log.duration,
+        media_url=log.media_url,
+        media_type=log.media_type,
+        caption=log.caption,
+        user_id=log.user_id,
+        user_name=profile.user_name if profile else None,
+        full_name=profile.full_name if profile else None,
+        avatar_url=profile.avatar_url if profile else None,
+        exercises=log.exercises,
+    )
 
 
 @router.get("/{log_id}", response_model=WorkoutLogResponse)

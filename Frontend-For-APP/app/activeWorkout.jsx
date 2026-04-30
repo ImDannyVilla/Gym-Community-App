@@ -45,19 +45,15 @@ const getExerciseLibraryId = (exercise) => exercise.exercise_id || exercise.libr
 
 // Memoized Set Row to prevent re-renders when other inputs change
 const SetRow = memo(({ set, setIndex, exerciseId, exercise, previousSet, handleUpdateSet, handleToggleComplete, handleSetOptions }) => {
-  const targetReps = exercise.target_reps_min === exercise.target_reps_max
-    ? `${exercise.target_reps_min}`
-    : `${exercise.target_reps_min}-${exercise.target_reps_max}`;
-
   return (
     <View style={[styles.setRow, set.completed && styles.setRowCompleted]}>
       <Pressable style={styles.setIndexButton} onPress={() => handleSetOptions(exerciseId, set.id, set)}>
         <Text style={[styles.setIndex, set.warmup && styles.setIndexWarmup]}>{set.warmup ? "W" : setIndex + 1}</Text>
       </Pressable>
-      
+
       <View style={styles.targetHintContainer}>
         <Text style={styles.targetHintText}>
-          {exercise.target_reps_min ? `${targetReps}` : formatPreviousSet(previousSet)}
+          {formatPreviousSet(previousSet)}
         </Text>
       </View>
 
@@ -134,7 +130,7 @@ const ExerciseCard = memo(({ ex, exerciseHistory, handleUpdateSet, handleToggleC
     {/* Sets Header */}
     <View style={styles.setRowHeader}>
       <Text style={styles.setColSet}>SET</Text>
-      <Text style={styles.setColPrevious}>TARGET</Text>
+      <Text style={styles.setColPrevious}>PREVIOUS</Text>
       <Text style={styles.setColLbs}>LBS</Text>
       <Text style={styles.setColReps}>REPS</Text>
       <Text style={styles.setColCheck}>✓</Text>

@@ -182,3 +182,55 @@ async def test_public_feed_pagination(client):
 
     response2 = await client.get("/workout-logs/public?skip=2&limit=2")
     assert response2.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_get_public_workout_log_detail(client):
+    """Public log returns 200 with exercises and sets."""
+    log_r = await client.post("/workout-logs/", json={"name": "Public Detail", "is_public": False})
+    log_id = log_r.json()["id"]
+
+    await client.post(f"/workout-logs/{log_id}/exercises", json={
+        "exercise_id": "Barbell_Bench_Press_-_Medium_Grip",
+        "name": "Barbell Bench Press - Medium Grip",
+        "category": "strength",
+        "target": "chest",
+        "equipment": "barbell",
+        "order": 1,
+        "sets": [
+            {"set_number": 1, "reps": 10, "weight_lbs": 100.0, "completed": True},
+            {"set_number": 2, "reps": 8, "weight_lbs": 110.0, "completed": True},
+        ],
+    })
+
+    await client.put(f"/workout-logs/{log_id}", json={
+        "completed_at": "2026-04-20T10:00:00Z",
+        "is_public": True,
+    })
+
+    response = await client.get(f"/workout-logs/public/{log_id}")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["id"] == log_id
+    assert data["name"] == "Public Detail"
+    assert len(data["exercises"]) == 1
+    assert len(data["exercises"][0]["sets"]) == 2
+    assert "user_id" in data
+
+
+@pytest.mark.asyncio
+async def test_get_public_workout_log_private_returns_404(client):
+    """Private log returns 404 on the public endpoint."""
+    log_r = await client.post("/workout-logs/", json={"name": "Private Only", "is_public": False})
+    log_id = log_r.json()["id"]
+
+    response = await client.get(f"/workout-logs/public/{log_id}")
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_get_public_workout_log_nonexistent_returns_404(client):
+    """Non-existent log ID returns 404."""
+    fake_id = "00000000-0000-0000-0000-000000000000"
+    response = await client.get(f"/workout-logs/public/{fake_id}")
+    assert response.status_code == 404

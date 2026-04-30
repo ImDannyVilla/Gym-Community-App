@@ -95,3 +95,8 @@ export async function getUserPublicLogs(userId, skip = 0, limit = 20) {
   const params = new URLSearchParams({ user_id: userId, skip, limit });
   return fetchWithAuth(`/workout-logs/public?${params.toString()}`);
 }
+
+// Full detail for a single public workout log (no auth required)
+export async function getPublicWorkoutLog(logId) {
+  return fetchWithAuth(`/workout-logs/public/${logId}`);
+}

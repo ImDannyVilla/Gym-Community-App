@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView, Alert } from "react-native";
+import { View, Text, StyleSheet, Pressable, ScrollView, Alert, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -11,6 +11,7 @@ import { useWorkoutStore } from "../../stores/workoutStore";
 
 export default function WorkoutsScreen() {
   const [isLoading, setIsLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const {
     isActive: hasActiveWorkout,
     activeLogId,
@@ -213,7 +214,17 @@ export default function WorkoutsScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.container}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={async () => { setRefreshing(true); await fetchData(); setRefreshing(false); }}
+            tintColor="#DC2626"
+          />
+        }
+      >
         {/* Header */}
         <View style={styles.header}>
         <Text style={styles.dateText}>{getCurrentDate()}</Text>

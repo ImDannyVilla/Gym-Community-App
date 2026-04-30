@@ -208,6 +208,8 @@ export default function Profile() {
     const [weight, setWeight] = useState("");
     const [avatarUrl, setAvatarUrl] = useState("");
     const [userId, setUserId] = useState(null);
+    const [followersCount, setFollowersCount] = useState(0);
+    const [followingCount, setFollowingCount] = useState(0);
     const [isUploading, setIsUploading] = useState(false);
 
     const [workoutLogs, setWorkoutLogs] = useState([]);
@@ -258,6 +260,8 @@ const loadProfileData = async (hasCache = false) => {
                 setGymLevel(data.profile.gym_level || "");
                 setWeight(data.profile.weight?.toString() || "");
                 setAvatarUrl(data.profile.avatar_url || "");
+                setFollowersCount(data.profile.followers_count ?? 0);
+                setFollowingCount(data.profile.following_count ?? 0);
                 setCachedProfile(data.profile);
             }
 
@@ -301,6 +305,8 @@ const loadProfileData = async (hasCache = false) => {
                     setGymLevel(cachedProfile.gym_level || "");
                     setWeight(cachedProfile.weight?.toString() || "");
                     setAvatarUrl(cachedProfile.avatar_url || "");
+                    setFollowersCount(cachedProfile.followers_count ?? 0);
+                    setFollowingCount(cachedProfile.following_count ?? 0);
                 }
                 if (cachedWorkoutLogs.length > 0) setWorkoutLogs(cachedWorkoutLogs);
                 if (cachedDayStreak) setDayStreak(cachedDayStreak);
@@ -321,6 +327,8 @@ const loadProfileData = async (hasCache = false) => {
                         setGymLevel(asyncProfile.gym_level || "");
                         setWeight(asyncProfile.weight?.toString() || "");
                         setAvatarUrl(asyncProfile.avatar_url || "");
+                        setFollowersCount(asyncProfile.followers_count ?? 0);
+                        setFollowingCount(asyncProfile.following_count ?? 0);
                         setCachedProfile(asyncProfile);
                     }
                     if (asyncLogs) { setWorkoutLogs(asyncLogs); setCachedWorkoutLogs(asyncLogs); }
@@ -442,6 +450,24 @@ const loadProfileData = async (hasCache = false) => {
 
                 {name ? <Text style={styles.name}>{name}</Text> : null}
                 <Text style={styles.userName}>@{username}</Text>
+
+                <View style={styles.followRow}>
+                    <Pressable
+                        style={styles.followStat}
+                        onPress={() => userId && router.push(`/followers-list?userId=${userId}&type=followers`)}
+                    >
+                        <Text style={styles.followNumber}>{followersCount}</Text>
+                        <Text style={styles.followLabel}>Followers</Text>
+                    </Pressable>
+                    <View style={{ width: 1, height: 28, backgroundColor: colors.border }} />
+                    <Pressable
+                        style={styles.followStat}
+                        onPress={() => userId && router.push(`/followers-list?userId=${userId}&type=following`)}
+                    >
+                        <Text style={styles.followNumber}>{followingCount}</Text>
+                        <Text style={styles.followLabel}>Following</Text>
+                    </Pressable>
+                </View>
 
                 <View style={styles.editProfile}>
                     <Pressable style={styles.editButton} onPress={() => {router.push({ pathname: "../edit/editProfile", params: {name, username, about, gymLevel, weight}})}}>

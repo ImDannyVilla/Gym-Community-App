@@ -122,3 +122,21 @@ class PublicFeedPost(BaseModel):
     full_name: Optional[str] = None
     avatar_url: Optional[str] = None
     exercise_count: int = 0
+
+
+class PublicWorkoutLogResponse(BaseModel):
+    """Full public workout log detail with poster info and all exercises/sets"""
+    id: UUID
+    name: str
+    completed_at: Optional[datetime] = None
+    duration: Optional[int] = None
+    media_url: Optional[str] = None
+    media_type: Optional[str] = None
+    caption: Optional[str] = None
+    user_id: UUID
+    user_name: Optional[str] = None
+    full_name: Optional[str] = None
+    avatar_url: Optional[str] = None
+    exercises: List[WorkoutLogExerciseResponse] = []
+
+    model_config = ConfigDict(from_attributes=True)

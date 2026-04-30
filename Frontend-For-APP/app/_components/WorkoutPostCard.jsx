@@ -28,7 +28,7 @@ const formatTimeAgo = (isoString) => {
   return new Date(isoString).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 };
 
-export default function WorkoutPostCard({ post, currentUserId, isFollowing: initialIsFollowing, onFollowChange }) {
+export default function WorkoutPostCard({ post, currentUserId, isFollowing: initialIsFollowing, onFollowChange, onPress }) {
   const [isFollowing, setIsFollowing] = useState(initialIsFollowing);
   const [followLoading, setFollowLoading] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
@@ -110,31 +110,31 @@ export default function WorkoutPostCard({ post, currentUserId, isFollowing: init
         )}
       </View>
 
-      {/* Media */}
-      {post.media_url && (
-        <Image source={{ uri: post.media_url }} style={styles.media} contentFit="cover" />
-      )}
-
-      {/* Workout info */}
-      <View style={styles.cardBody}>
-        <Text style={styles.workoutName}>{post.name}</Text>
-        <View style={styles.statsRow}>
-          {post.exercise_count > 0 && (
-            <View style={styles.chip}>
-              <Ionicons name="barbell-outline" size={12} color={colors.textSecondary} />
-              <Text style={styles.chipText}>{post.exercise_count} exercises</Text>
-            </View>
-          )}
-          {post.duration ? (
-            <View style={styles.chip}>
-              <Ionicons name="time-outline" size={12} color={colors.textSecondary} />
-              <Text style={styles.chipText}>{formatDuration(post.duration)}</Text>
-            </View>
-          ) : null}
-          <Text style={styles.timestamp}>{formatTimeAgo(post.completed_at)}</Text>
+      {/* Tappable card body: media + workout info */}
+      <Pressable onPress={() => onPress ? onPress() : router.push(`/post-detail?logId=${post.id}`)}>
+        {post.media_url && (
+          <Image source={{ uri: post.media_url }} style={styles.media} contentFit="cover" />
+        )}
+        <View style={styles.cardBody}>
+          <Text style={styles.workoutName}>{post.name}</Text>
+          <View style={styles.statsRow}>
+            {post.exercise_count > 0 && (
+              <View style={styles.chip}>
+                <Ionicons name="barbell-outline" size={12} color={colors.textSecondary} />
+                <Text style={styles.chipText}>{post.exercise_count} exercises</Text>
+              </View>
+            )}
+            {post.duration ? (
+              <View style={styles.chip}>
+                <Ionicons name="time-outline" size={12} color={colors.textSecondary} />
+                <Text style={styles.chipText}>{formatDuration(post.duration)}</Text>
+              </View>
+            ) : null}
+            <Text style={styles.timestamp}>{formatTimeAgo(post.completed_at)}</Text>
+          </View>
+          {post.caption ? <Text style={styles.caption}>{post.caption}</Text> : null}
         </View>
-        {post.caption ? <Text style={styles.caption}>{post.caption}</Text> : null}
-      </View>
+      </Pressable>
 
       {/* Save to Library */}
       {!isOwnPost && (
