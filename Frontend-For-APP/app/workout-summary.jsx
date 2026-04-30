@@ -81,7 +81,7 @@ export default function WorkoutSummary() {
       <SafeAreaView style={styles.container}>
         <View style={styles.errorState}>
           <Text style={styles.errorText}>Unable to load workout summary.</Text>
-          <Pressable style={styles.doneBtn} onPress={() => router.replace('/(tabs)')}>
+          <Pressable style={styles.doneBtn} onPress={() => router.replace('/(tabs)/workouts')}>
             <Text style={styles.doneBtnText}>Go Home</Text>
           </Pressable>
         </View>
@@ -168,7 +168,7 @@ export default function WorkoutSummary() {
             </Pressable>
           )}
 
-          <Pressable style={styles.doneBtn} onPress={() => router.replace('/(tabs)')}>
+          <Pressable style={styles.doneBtn} onPress={() => router.push(`/post-workout-share?logId=${log.id}`)}>
             <Text style={styles.doneBtnText}>Done</Text>
           </Pressable>
         </View>

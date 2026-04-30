@@ -15,6 +15,7 @@ export default function TabLayout() {
         }}
     >
       <SwipeableTabs.Screen name="workouts" />
+      <SwipeableTabs.Screen name="community" />
       <SwipeableTabs.Screen name="profile" />
     </SwipeableTabs>
   );

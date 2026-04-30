@@ -13,6 +13,7 @@ export default function BottomNav({ state, descriptors, navigation }) {
   // Define tab routes
   const tabs = [
     { name: 'workouts', label: 'My Workouts', route: '/(tabs)/workouts', icon: 'barbell' },
+    { name: 'community', label: 'Community', route: '/(tabs)/community', icon: 'people' },
     { name: 'profile', label: 'Profile', route: '/(tabs)/profile', icon: 'person' },
   ];
 
@@ -45,10 +46,12 @@ export default function BottomNav({ state, descriptors, navigation }) {
 
           let iconName = "home";
           if (route.name === "workouts") iconName = "barbell";
+          if (route.name === "community") iconName = "people";
           if (route.name === "profile") iconName = "person";
 
-          const mappedLabel = 
-            route.name === "workouts" ? "My Workouts" : 
+          const mappedLabel =
+            route.name === "workouts" ? "My Workouts" :
+            route.name === "community" ? "Community" :
             route.name === "profile" ? "Profile" : label;
 
           return (

@@ -12,7 +12,8 @@ from app.schemas.routine import RoutineResponse
 from app.schemas.workout_log import (
     WorkoutLogCreate, WorkoutLogUpdate,
     WorkoutLogResponse,
-    WorkoutLogExerciseCreate
+    WorkoutLogExerciseCreate,
+    PublicFeedPost,
 )
 from app.dependencies import AsyncSessionDep, CurrentUser
 
@@ -232,6 +233,62 @@ async def get_my_workout_streak(
         "total_workouts": total_workouts,
         "total_sets": total_sets
     }
+
+
+@router.get("/public", response_model=List[PublicFeedPost])
+async def get_public_feed(
+    db: AsyncSessionDep,
+    skip: int = 0,
+    limit: int = 20,
+    user_id: Optional[UUID] = None,
+):
+    """Get public workout posts ordered by most recent. No auth required."""
+    exercise_count_sq = (
+        select(func.count(WorkoutLogExercise.id))
+        .where(WorkoutLogExercise.workout_log_id == WorkoutLog.id)
+        .correlate(WorkoutLog)
+        .scalar_subquery()
+    )
+
+    query = (
+        select(
+            WorkoutLog,
+            UserProfile.user_name,
+            UserProfile.full_name,
+            UserProfile.avatar_url,
+            exercise_count_sq.label("exercise_count"),
+        )
+        .join(UserProfile, UserProfile.user_id == WorkoutLog.user_id, isouter=True)
+        .where(WorkoutLog.is_public == True)
+        .where(WorkoutLog.completed_at.isnot(None))
+        .order_by(WorkoutLog.completed_at.desc())
+        .offset(skip)
+        .limit(min(limit, 50))
+    )
+
+    if user_id is not None:
+        query = query.where(WorkoutLog.user_id == user_id)
+
+    result = await db.execute(query)
+    rows = result.all()
+
+    return [
+        PublicFeedPost(
+            id=row.WorkoutLog.id,
+            name=row.WorkoutLog.name,
+            completed_at=row.WorkoutLog.completed_at,
+            duration=row.WorkoutLog.duration,
+            media_url=row.WorkoutLog.media_url,
+            media_type=row.WorkoutLog.media_type,
+            caption=row.WorkoutLog.caption,
+            user_id=row.WorkoutLog.user_id,
+            user_name=row.user_name,
+            full_name=row.full_name,
+            avatar_url=row.avatar_url,
+            exercise_count=row.exercise_count or 0,
+        )
+        for row in rows
+    ]
 
 
 @router.get("/{log_id}", response_model=WorkoutLogResponse)

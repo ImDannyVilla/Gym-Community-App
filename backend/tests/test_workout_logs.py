@@ -128,3 +128,57 @@ async def test_delete_workout_log(client):
 
     response = await client.delete(f"/workout-logs/{log_id}")
     assert response.status_code == 204
+
+
+@pytest.mark.asyncio
+async def test_public_feed(client):
+    # Create a completed public log
+    log_response = await client.post("/workout-logs/", json={"name": "Public Workout", "is_public": False})
+    log_id = log_response.json()["id"]
+    await client.put(f"/workout-logs/{log_id}", json={
+        "completed_at": "2026-04-20T10:00:00Z",
+        "duration": 1800,
+        "is_public": True,
+        "caption": "Great session",
+    })
+
+    # Create a completed private log
+    priv_response = await client.post("/workout-logs/", json={"name": "Private Workout", "is_public": False})
+    priv_id = priv_response.json()["id"]
+    await client.put(f"/workout-logs/{priv_id}", json={
+        "completed_at": "2026-04-20T11:00:00Z",
+        "is_public": False,
+    })
+
+    # Public endpoint — no auth needed, but the test client has auth headers anyway
+    response = await client.get("/workout-logs/public")
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+
+    ids = [item["id"] for item in data]
+    assert log_id in ids, "Public log should appear in feed"
+    assert priv_id not in ids, "Private log must not appear in feed"
+
+    # Every item includes required fields
+    for item in data:
+        assert "user_id" in item
+        assert "exercise_count" in item
+
+
+@pytest.mark.asyncio
+async def test_public_feed_pagination(client):
+    for i in range(3):
+        log_response = await client.post("/workout-logs/", json={"name": f"Paginate {i}", "is_public": False})
+        log_id = log_response.json()["id"]
+        await client.put(f"/workout-logs/{log_id}", json={
+            "completed_at": f"2026-04-2{i}T10:00:00Z",
+            "is_public": True,
+        })
+
+    response = await client.get("/workout-logs/public?skip=0&limit=2")
+    assert response.status_code == 200
+    assert len(response.json()) <= 2
+
+    response2 = await client.get("/workout-logs/public?skip=2&limit=2")
+    assert response2.status_code == 200

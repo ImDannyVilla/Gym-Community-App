@@ -83,3 +83,15 @@ export async function changeEmail(newEmail) {
     }),
   });
 }
+
+// Public feed (no auth required but passing auth header is harmless)
+export async function getPublicFeed(skip = 0, limit = 20) {
+  const params = new URLSearchParams({ skip, limit });
+  return fetchWithAuth(`/workout-logs/public?${params.toString()}`);
+}
+
+// Public posts for a specific user
+export async function getUserPublicLogs(userId, skip = 0, limit = 20) {
+  const params = new URLSearchParams({ user_id: userId, skip, limit });
+  return fetchWithAuth(`/workout-logs/public?${params.toString()}`);
+}

@@ -36,3 +36,36 @@ export async function uploadAvatar(localUri, userId) {
 
   return `${SUPABASE_URL}/storage/v1/object/public/avatars/${fileName}`;
 }
+
+export async function uploadWorkoutMedia(localUri, userId, logId) {
+  const token = await getToken();
+  const ext = localUri.split('.').pop()?.split('?')[0]?.toLowerCase() || 'jpg';
+  const fileName = `${userId}/${logId}.${ext}`;
+
+  const formData = new FormData();
+  formData.append("file", {
+    uri: localUri,
+    name: `workout.${ext}`,
+    type: `image/${ext}`,
+  });
+
+  const response = await fetch(
+    `${SUPABASE_URL}/storage/v1/object/workout-media/${fileName}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        apikey: SUPABASE_ANON_KEY,
+        "x-upsert": "true",
+      },
+      body: formData,
+    }
+  );
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.message || "Media upload failed");
+  }
+
+  return `${SUPABASE_URL}/storage/v1/object/public/workout-media/${fileName}`;
+}

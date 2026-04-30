@@ -106,3 +106,19 @@ class WorkoutLogResponse(BaseModel):
     caption: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class PublicFeedPost(BaseModel):
+    """Public feed item — log with poster profile fields"""
+    id: UUID
+    name: str
+    completed_at: Optional[datetime] = None
+    duration: Optional[int] = None
+    media_url: Optional[str] = None
+    media_type: Optional[str] = None
+    caption: Optional[str] = None
+    user_id: UUID
+    user_name: Optional[str] = None
+    full_name: Optional[str] = None
+    avatar_url: Optional[str] = None
+    exercise_count: int = 0
