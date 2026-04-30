@@ -202,13 +202,6 @@ export default function LoginScreen() {
               >
                 <Text style={styles.forgotText}>Forgot Password?</Text>
               </Pressable>
-              <Text style={styles.forgotSeparator}>|</Text>
-              <Pressable
-                onPress={() => router.push("/forgot-email")}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Text style={styles.forgotText}>Forgot Email?</Text>
-              </Pressable>
             </View>
           </View>
         </View>
@@ -354,10 +347,6 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: typography.bodySmall.fontSize,
     fontWeight: "600",
-  },
-  forgotSeparator: {
-    color: colors.textTertiary,
-    fontSize: typography.bodySmall.fontSize,
   },
   inputError: {
     borderColor: colors.error,
