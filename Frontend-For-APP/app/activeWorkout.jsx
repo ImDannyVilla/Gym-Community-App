@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, memo } from "react";
+import React, { useState, useEffect, useCallback, memo, useMemo } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet, FlatList, SafeAreaView, KeyboardAvoidingView, Platform, Alert } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -99,6 +99,14 @@ const SetRow = memo(({ set, setIndex, exerciseId, exercise, previousSet, handleU
 const ExerciseCard = memo(({ ex, exerciseHistory, handleUpdateSet, handleToggleComplete, handleAddSet, handleSetOptions, handleOpenExerciseDetails }) => {
   const previousSets = exerciseHistory?.[0]?.sets || [];
 
+  const lastSessionLabel = useMemo(() => {
+    if (!previousSets.length) return null;
+    const first = previousSets[0];
+    const weight = first.weight_lbs ?? 0;
+    const reps = first.reps ?? 0;
+    return `Last time: ${previousSets.length}×${reps} @ ${weight} lb`;
+  }, [previousSets]);
+
   return (
     <View style={styles.exerciseCard}>
     <Pressable style={styles.exerciseTitleRow} onPress={() => handleOpenExerciseDetails(ex)}>
@@ -108,6 +116,10 @@ const ExerciseCard = memo(({ ex, exerciseHistory, handleUpdateSet, handleToggleC
       </View>
       <Ionicons name="information-circle-outline" size={20} color={colors.textSecondary} />
     </Pressable>
+
+    {lastSessionLabel && (
+      <Text style={styles.lastSessionLabel}>{lastSessionLabel}</Text>
+    )}
 
     {/* Sets Header */}
     <View style={styles.setRowHeader}>
@@ -633,6 +645,12 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.textTertiary,
     marginTop: 2,
+  },
+  lastSessionLabel: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    paddingHorizontal: 12,
+    paddingBottom: 6,
   },
   setRowHeader: {
     flexDirection: "row",
