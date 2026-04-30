@@ -6,7 +6,7 @@ import { StatusBar } from "expo-status-bar";
 import ActiveWorkoutMiniWidget from "./_components/ActiveWorkoutMiniWidget";
 import BottomNav from "./_components/BottomNav";
 import { useWorkoutStore } from "../stores/workoutStore";
-import { getToken, removeToken } from "../lib/tokenStorage";
+import { getToken } from "../lib/tokenStorage";
 import { useEffect, useState, useCallback } from "react";
 
 export default function Layout() {
@@ -16,16 +16,6 @@ export default function Layout() {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(null);
   const isActiveWorkoutScreen = pathname === '/activeWorkout';
-
-  // TEMPORARY: Clear token on app startup to force login screen to show
-  // Remove this useEffect once you've verified the login screen works
-  useEffect(() => {
-    const clearToken = async () => {
-      await removeToken();
-      console.log("Token cleared - you should now see the login screen");
-    };
-    clearToken();
-  }, []);
 
   // Re-check auth token whenever the route changes (covers post-login/register navigation)
   const checkAuth = useCallback(async () => {
