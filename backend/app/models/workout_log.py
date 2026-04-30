@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, Boolean
+from sqlalchemy import Column, Integer, Float, String, ForeignKey, DateTime, Text, Boolean
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy.sql import func
 from ..db import Base
@@ -57,6 +57,10 @@ class WorkoutLogExercise(Base):
     gif_url: Mapped[Optional[str]] = mapped_column(String)
 
     order: Mapped[int] = mapped_column(Integer)
+    target_sets: Mapped[Optional[int]] = mapped_column(Integer)
+    target_reps_min: Mapped[Optional[int]] = mapped_column(Integer)
+    target_reps_max: Mapped[Optional[int]] = mapped_column(Integer)
+    target_weight_lbs: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
 
     workout_logs: Mapped["WorkoutLog"] = relationship(
         "WorkoutLog", back_populates="exercises"
