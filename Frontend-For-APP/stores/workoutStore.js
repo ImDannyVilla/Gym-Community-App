@@ -13,8 +13,10 @@ export const useWorkoutStore = create(persist((set, get) => ({
   activeWorkoutName: null,
   activeWorkoutStartTime: null,
   exercises: [],
+  needsProfileRefresh: false,
 
   setHasHydrated: (hasHydrated) => set({ hasHydrated }),
+  clearProfileRefresh: () => set({ needsProfileRefresh: false }),
   
   startWorkout: (log, startTime = null) => set({
     isActive: true,
@@ -33,7 +35,8 @@ export const useWorkoutStore = create(persist((set, get) => ({
     activeLogId: null,
     activeWorkoutName: null,
     activeWorkoutStartTime: null,
-    exercises: []
+    exercises: [],
+    needsProfileRefresh: true,
   }),
   
   addExercise: (exerciseWithConfig) => {

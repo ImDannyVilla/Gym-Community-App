@@ -10,6 +10,7 @@ import { colors, spacing, layout } from "../../lib/theme";
 import { getToken } from "../../lib/tokenStorage";
 import { getMyProfile, updateMyProfile } from "../../lib/socialApi";
 import { getWorkoutLogs } from "../../lib/workoutApi";
+import { useWorkoutStore } from "../../stores/workoutStore";
 
 const formatDate = (isoString) => {
     if (!isoString) return "--";
@@ -110,6 +111,9 @@ export default function Profile() {
 
     const [isLoading, setIsLoading] = useState(true);
 
+    const needsProfileRefresh = useWorkoutStore(state => state.needsProfileRefresh);
+    const clearProfileRefresh = useWorkoutStore(state => state.clearProfileRefresh);
+
     useEffect(() => {
         if(params.name) {
             setName(params.name);
@@ -128,9 +132,7 @@ const loadProfileData = async () => {
             const token = await getToken();
             if (!token) return;
 
-            // Fetch user profile using socialApi
             const data = await getMyProfile();
-            
             if (data.profile) {
                 setUsername(data.profile.user_name || "Username");
                 setName(data.profile.full_name || "Name");
@@ -145,6 +147,7 @@ const loadProfileData = async () => {
                 .filter(log => log.completed_at)
                 .sort((a, b) => new Date(b.completed_at) - new Date(a.completed_at));
             setWorkoutLogs(completedLogs);
+            clearProfileRefresh();
         } catch (error) {
             console.log("Failed to load profile data (Network error)", error);
         } finally {
@@ -154,8 +157,10 @@ const loadProfileData = async () => {
 
     useFocusEffect(
         useCallback(() => {
-            loadProfileData();
-        }, [])
+            if (workoutLogs.length === 0 || needsProfileRefresh) {
+                loadProfileData();
+            }
+        }, [needsProfileRefresh])
     );
 
     // Force navigation bar to be dark
