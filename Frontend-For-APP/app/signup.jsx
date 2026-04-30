@@ -83,6 +83,7 @@ export default function SignUp() {
   const [passwordError, setPasswordError] = useState("");
   const [confirmPasswordError, setConfirmPasswordError] = useState("");
   const [serverError, setServerError] = useState("");
+  const [registeredEmail, setRegisteredEmail] = useState("");
 
   const usernameRef = useRef(null);
   const passwordRef = useRef(null);
@@ -113,10 +114,7 @@ export default function SignUp() {
         username: username.trim(),
         password: password,
       });
-      router.replace({
-        pathname: "/",
-        params: { registered: "true" },
-      });
+      setRegisteredEmail(email.trim());
     } catch (error) {
       const msg = error.message || "Something went wrong.";
       // Show user-friendly messages for common backend errors
@@ -133,6 +131,28 @@ export default function SignUp() {
       setLoading(false);
     }
   };
+
+  if (registeredEmail) {
+    return (
+      <ScreenContainer scrollable={false} keyboardAvoid={false}>
+        <View style={styles.content}>
+          <Ionicons name="mail-outline" size={64} color={colors.primary} style={{ marginBottom: spacing.lg }} />
+          <Text style={styles.title}>Check your email</Text>
+          <Text style={[styles.subtitle, { textAlign: "center", marginTop: spacing.sm, marginBottom: spacing.xl }]}>
+            We sent a confirmation link to{"\n"}
+            <Text style={{ color: colors.text, fontWeight: "600" }}>{registeredEmail}</Text>
+            {"\n\n"}Tap the link in that email to verify your account, then come back here to log in.
+          </Text>
+          <Pressable
+            style={[styles.button, { width: "100%", maxWidth: FORM_MAX_WIDTH }]}
+            onPress={() => router.replace("/")}
+          >
+            <Text style={styles.buttonText}>Back to Login</Text>
+          </Pressable>
+        </View>
+      </ScreenContainer>
+    );
+  }
 
   return (
     <ScreenContainer scrollable={true} keyboardAvoid={true}>
