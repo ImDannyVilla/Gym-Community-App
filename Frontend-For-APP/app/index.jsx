@@ -13,7 +13,7 @@ import {
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { typography, colors, layout, spacing, iconSizes } from "../lib/theme";
-import { loginUser } from "../lib/authApi";
+import { loginWithEmailOrUsername } from "../lib/authApi";
 import { saveToken, saveRefreshToken } from "../lib/tokenStorage";
 import ScreenContainer from "./_components/ScreenContainer";
 
@@ -21,9 +21,8 @@ const APP_ICON_SIZE = 120;
 const ICON_BORDER_RADIUS = 24;
 const FORM_MAX_WIDTH = 400;
 
-const validateEmail = (email) => {
-  if (!email.trim()) return "Email is required";
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return "Invalid email format";
+const validateEmailOrUsername = (input) => {
+  if (!input.trim()) return "Email or username is required";
   return "";
 };
 
@@ -47,7 +46,7 @@ export default function LoginScreen() {
     Keyboard.dismiss();
     setServerError("");
 
-    const emailErr = validateEmail(email);
+    const emailErr = validateEmailOrUsername(email);
     const passwordErr = validatePassword(password);
 
     setEmailError(emailErr);
@@ -57,10 +56,7 @@ export default function LoginScreen() {
 
     try {
       setLoading(true);
-      const data = await loginUser({
-        email: email.trim(),
-        password: password,
-      });
+      const data = await loginWithEmailOrUsername(email.trim(), password);
 
       if (data.access_token) {
         await saveToken(data.access_token);
@@ -71,9 +67,10 @@ export default function LoginScreen() {
       }
     } catch (error) {
       const msg = error.message || "Something went wrong.";
-      // Show user-friendly messages for common errors
       if (msg.toLowerCase().includes("invalid credentials")) {
-        setServerError("Incorrect email or password. Please try again.");
+        setServerError("Incorrect email/username or password. Please try again.");
+      } else if (msg.toLowerCase().includes("no account found")) {
+        setServerError(msg);
       } else if (msg.toLowerCase().includes("network") || msg.toLowerCase().includes("fetch")) {
         setServerError("Unable to connect to the server. Check your internet connection.");
       } else {
@@ -110,10 +107,10 @@ export default function LoginScreen() {
             )}
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Email</Text>
+              <Text style={styles.label}>Email or Username</Text>
               <TextInput
                 style={[styles.input, emailError ? styles.inputError : null]}
-                placeholder="Enter your email"
+                placeholder="Email or Username"
                 placeholderTextColor={colors.textTertiary}
                 value={email}
                 onChangeText={(text) => {
@@ -122,13 +119,12 @@ export default function LoginScreen() {
                   if (serverError) setServerError("");
                 }}
                 autoCapitalize="none"
-                keyboardType="email-address"
                 autoCorrect={false}
                 returnKeyType="next"
                 onSubmitEditing={() => passwordRef.current?.focus()}
                 blurOnSubmit={false}
-                textContentType="emailAddress"
-                autoComplete="email"
+                textContentType="username"
+                autoComplete="username"
               />
               {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
             </View>

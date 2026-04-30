@@ -69,6 +69,21 @@ export async function loginUser({ email, password }) {
   return data;
 }
 
+export async function loginWithEmailOrUsername(input, password) {
+  let email = input;
+
+  if (!input.includes('@')) {
+    const response = await fetch(`${API_BASE_URL}/auth/forgot-email?username=${encodeURIComponent(input)}`);
+    const data = await response.json();
+    if (!data.email) {
+      throw new Error('No account found with that username');
+    }
+    email = data.email;
+  }
+
+  return loginUser({ email, password });
+}
+
 export async function forgotPasswordEmail({ email }) {
   const response = await fetch(`${API_BASE_URL}/auth/request-password-reset`, {
     method: "POST",
