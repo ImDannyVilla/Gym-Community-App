@@ -526,7 +526,7 @@ export default function ActiveWorkout() {
           )}
           ListEmptyComponent={
             <View style={styles.emptyState}>
-              <Text style={styles.emptyIcon}>🏋️</Text>
+              <Ionicons name="barbell-outline" size={48} color="#333" />
               <Text style={styles.emptyTitle}>No exercises yet</Text>
               <Text style={styles.emptySubtitle}>Tap "Add Exercise" to get started</Text>
             </View>
@@ -818,10 +818,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingTop: 80,
   },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
+
   emptyTitle: {
     color: '#fff',
     fontSize: 18,
