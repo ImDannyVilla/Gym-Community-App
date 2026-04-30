@@ -1,6 +1,6 @@
 import {useState, useEffect, useCallback, useMemo} from "react";
-import {useRouter, useLocalSearchParams, useFocusEffect, useWindowDimensions} from "expo-router";
-import {View, Text, Image, Pressable, StyleSheet, Alert, Platform, ActivityIndicator, ScrollView, FlatList} from "react-native";
+import {useRouter, useLocalSearchParams, useFocusEffect} from "expo-router";
+import {View, Text, Image, Pressable, StyleSheet, Alert, Platform, ActivityIndicator, ScrollView, FlatList, useWindowDimensions} from "react-native";
 import Svg, { Path, Line as SvgLine, Text as SvgText } from 'react-native-svg';
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
