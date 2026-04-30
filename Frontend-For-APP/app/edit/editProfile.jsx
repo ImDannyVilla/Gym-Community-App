@@ -119,7 +119,7 @@ export default function editProfile()
                         placeholderTextColor={colors.textSecondary}
                         multiline
                         onContentSizeChange={(event) => {setInputHeight(event.nativeEvent.contentSize.height);}}
-                        style={[styles.input, {height: Math.max(60, inputHeight)}]}
+                        style={[styles.input, {height: Math.max(60, inputHeight), textAlignVertical: "top"}]}
                     />
 
                     <Text style={styles.text}>Gym Level:</Text>
@@ -201,17 +201,15 @@ const styles = StyleSheet.create({
     input:
     {
         alignSelf: "center",
-        height: 50, 
         width: "90%",
         borderWidth: 1,
         borderColor: colors.border,
-        backgroundColor: colors.surface,
+        backgroundColor: '#1a1a1a',
         color: colors.text,
         fontSize: 16,
         borderRadius: 10,
-        textAlignVertical: "top",
-        paddingHorizontal: 10,
-        paddingTop: 12
+        paddingHorizontal: 16,
+        paddingVertical: 12,
     },
     alertBox: {
         backgroundColor: colors.surface,
