@@ -7,9 +7,10 @@ import * as NavigationBar from "expo-navigation-bar";
 import Modal from "react-native-modal";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing, layout } from "../../lib/theme";
-import { getToken } from "../../lib/tokenStorage";
+import { getToken, clearAllTokens } from "../../lib/tokenStorage";
 import { getMyProfile, updateMyProfile } from "../../lib/socialApi";
 import { uploadAvatar } from "../../lib/supabaseStorage";
+import { logoutUser } from "../../lib/authApi";
 import { getWorkoutLogs } from "../../lib/workoutApi";
 import { useWorkoutStore } from "../../stores/workoutStore";
 
@@ -127,6 +128,12 @@ export default function Profile() {
         }
     }, [params.name, params.username, params.about]);
 
+    const handleLogout = async () => {
+        await clearAllTokens();
+        logoutUser(); // fire-and-forget server-side invalidation
+        router.replace("/");
+    };
+
 const loadProfileData = async () => {
         try {
             setIsLoading(true);
@@ -237,6 +244,9 @@ const loadProfileData = async () => {
                 <View style={styles.editProfile}>
                     <Pressable style={styles.editButton} onPress={() => {router.push({ pathname: "../edit/editProfile", params: {name, username, about, gymLevel, weight}})}}>
                         <Text style={styles.edit}>Edit Profile</Text>
+                    </Pressable>
+                    <Pressable style={styles.logoutButton} onPress={handleLogout}>
+                        <Text style={styles.logoutText}>Log Out</Text>
                     </Pressable>
                 </View>
 
@@ -397,6 +407,7 @@ const styles = StyleSheet.create({
     editProfile: {
         flexDirection: "row",
         justifyContent: "center",
+        gap: 8,
         marginBottom: 12,
         width: "80%"
     },
@@ -412,6 +423,22 @@ const styles = StyleSheet.create({
     edit: {
         textAlign: "center",
         color: "white",
+        fontWeight: "bold",
+        fontSize: 13,
+    },
+
+    logoutButton: {
+        borderRadius: 8,
+        width: "45%",
+        paddingVertical: "2%",
+        alignItems: "center",
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+
+    logoutText: {
+        textAlign: "center",
+        color: colors.textSecondary,
         fontWeight: "bold",
         fontSize: 13,
     },

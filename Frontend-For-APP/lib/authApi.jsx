@@ -123,6 +123,16 @@ export async function updatePassword({ new_password }, token) {
   return data;
 }
 
+export async function logoutUser() {
+  // Best-effort server-side session invalidation — client clears tokens regardless
+  const { getAuthHeader } = await import("./api");
+  const authHeader = await getAuthHeader();
+  await fetch(`${API_BASE_URL}/auth/logout`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeader },
+  }).catch(() => {});
+}
+
 export async function resendConfirmation({ email }) {
   const response = await fetch(`${API_BASE_URL}/auth/resend-confirmation`, {
     method: "POST",

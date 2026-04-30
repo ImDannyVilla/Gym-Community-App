@@ -1,5 +1,6 @@
+from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status, Header
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from uuid import UUID
@@ -18,6 +19,8 @@ from app.schemas.user import (
 )
 from app.dependencies import AsyncSessionDep, CurrentUser
 from app.core.supabase_client import get_auth_client
+
+_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 router = APIRouter(prefix="/auth", tags=["auth"]) #all routes start with /auth; in API they are grouped under auth
 
@@ -195,6 +198,16 @@ async def refresh_token(data: RefreshRequest):
         raise
     except Exception as e:
         raise HTTPException(status_code=401, detail="Token refresh failed")
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+async def logout(token: Annotated[str, Depends(_oauth2_scheme)]):
+    try:
+        auth_client = get_auth_client()
+        auth_client.auth.set_session(token, "")
+        auth_client.auth.sign_out()
+    except Exception:
+        pass
 
 
 @router.post("/resend-confirmation")
