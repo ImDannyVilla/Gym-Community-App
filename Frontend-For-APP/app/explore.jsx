@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, Pressable, FlatList, Image, ActivityIndicator, TextInput } from "react-native";
+import React, { useState, useEffect, memo } from "react";
+import { View, Text, StyleSheet, Pressable, FlatList, ActivityIndicator, TextInput } from "react-native";
+import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -18,6 +19,31 @@ const WORKOUT_COVERS = {
   'Shoulders & Arms': require('../assets/workout_covers/Arms and Delts.png'),
   'Core & Abs': require('../assets/workout_covers/Core and Abs.png'),
 };
+
+const WorkoutCard = memo(({ item, onPress }) => {
+  const [imageLoaded, setImageLoaded] = useState(false);
+
+  return (
+    <View style={styles.workoutCard}>
+      <Pressable style={styles.workoutCardContent} onPress={onPress}>
+        <View style={styles.imageContainer}>
+          {!imageLoaded && <View style={[styles.workoutImage, styles.imageSkeleton]} />}
+          <Image
+            source={WORKOUT_COVERS[item.name] || { uri: item.cover_image_url }}
+            style={[styles.workoutImage, !imageLoaded && styles.imageHidden]}
+            contentFit="cover"
+            transition={150}
+            onLoad={() => setImageLoaded(true)}
+          />
+        </View>
+        <View style={styles.workoutInfo}>
+          <Text style={styles.workoutName} numberOfLines={1}>{item.name}</Text>
+          <Text style={styles.workoutMeta}>{item.difficulty} · {item.duration_minutes} min</Text>
+        </View>
+      </Pressable>
+    </View>
+  );
+});
 
 export default function ExploreScreen() {
   const [workouts, setWorkouts] = useState([]);
@@ -130,32 +156,11 @@ export default function ExploreScreen() {
           data={workouts}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          initialNumToRender={9}
           renderItem={({ item }) => (
-            <View style={styles.workoutCard}>
-              <Pressable
-                style={styles.workoutCardContent}
-                onPress={() => handleWorkoutPress(item.id)}
-              >
-                {/* Cover Image */}
-                <Image
-                  source={WORKOUT_COVERS[item.name] || { uri: item.cover_image_url }}
-                  style={styles.workoutImage}
-                  resizeMode="cover"
-                />
-                
-                {/* Workout Info */}
-                <View style={styles.workoutInfo}>
-                  <Text style={styles.workoutName} numberOfLines={1}>
-                    {item.name}
-                  </Text>
-                  <Text style={styles.workoutMeta}>
-                    {item.difficulty} · {item.duration_minutes} min
-                  </Text>
-                </View>
-              </Pressable>
-              </View>
-            )}
-            keyExtractor={(item) => item.id}
+            <WorkoutCard item={item} onPress={() => handleWorkoutPress(item.id)} />
+          )}
+          keyExtractor={(item) => item.id}
         />
       )}
     </SafeAreaView>
@@ -280,10 +285,26 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flex: 1,
   },
+  imageContainer: {
+    width: 120,
+    height: 120,
+    position: 'relative',
+  },
   workoutImage: {
     width: 120,
     height: 120,
     backgroundColor: colors.card,
+  },
+  imageSkeleton: {
+    backgroundColor: '#1a1a1a',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  imageHidden: {
+    opacity: 0,
   },
   workoutInfo: {
     flex: 1,
