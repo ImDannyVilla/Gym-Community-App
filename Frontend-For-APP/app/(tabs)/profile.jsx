@@ -1,5 +1,5 @@
 import {useState, useEffect, useCallback, useMemo} from "react";
-import {useRouter, useLocalSearchParams, useFocusEffect} from "expo-router";
+import {useRouter, useLocalSearchParams, useFocusEffect, router} from "expo-router";
 import {View, Text, Image, Pressable, StyleSheet, Alert, Platform, ActivityIndicator, ScrollView, FlatList, useWindowDimensions} from "react-native";
 import Svg, { Line as SvgLine, Text as SvgText, Rect, G } from 'react-native-svg';
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -80,10 +80,16 @@ function WorkoutsTab({ workoutLogs, isLoading }) {
                     .length;
 
                 return (
-                    <View style={styles.workoutCard}>
+                    <Pressable
+                        style={styles.workoutCard}
+                        onPress={() => router.push(`/workout-log-detail?logId=${item.id}`)}
+                    >
                         <View style={styles.cardHeader}>
                             <Text style={styles.cardTitle}>{item.name}</Text>
-                            <Text style={styles.exerciseCount}>{completedExerciseCount} exercises</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                <Text style={styles.exerciseCount}>{completedExerciseCount} exercises</Text>
+                                <Ionicons name="chevron-forward" size={14} color="#555" />
+                            </View>
                         </View>
                         <Text style={styles.cardDate}>Finished {formatDateTime(item.completed_at || item.started_at)}</Text>
                         {item.duration && (
@@ -91,7 +97,7 @@ function WorkoutsTab({ workoutLogs, isLoading }) {
                                  {formatTime(item.duration)}
                             </Text>
                         )}
-                    </View>
+                    </Pressable>
                 );
             }}
         />

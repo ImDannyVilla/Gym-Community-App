@@ -17,6 +17,7 @@ export default function Layout() {
   const [isAuthenticated, setIsAuthenticated] = useState(null);
   const isActiveWorkoutScreen = pathname === '/activeWorkout';
   const isWorkoutSummaryScreen = pathname === '/workout-summary';
+  const isWorkoutLogDetailScreen = pathname === '/workout-log-detail';
 
   // Re-check auth token whenever the route changes (covers post-login/register navigation)
   const checkAuth = useCallback(async () => {
@@ -72,9 +73,10 @@ export default function Layout() {
           <Stack.Screen name="exercise-search" />
           <Stack.Screen name="exercise-history" />
           <Stack.Screen name="workout-summary" />
+          <Stack.Screen name="workout-log-detail" />
         </Stack>
-        {isWorkoutActive && isAuthenticated && !isActiveWorkoutScreen && !isWorkoutSummaryScreen && <ActiveWorkoutMiniWidget />}
-        {isAuthenticated && !isActiveWorkoutScreen && !isWorkoutSummaryScreen && <BottomNav />}
+        {isWorkoutActive && isAuthenticated && !isActiveWorkoutScreen && !isWorkoutSummaryScreen && !isWorkoutLogDetailScreen && <ActiveWorkoutMiniWidget />}
+        {isAuthenticated && !isActiveWorkoutScreen && !isWorkoutSummaryScreen && !isWorkoutLogDetailScreen && <BottomNav />}
       </View>
     </SafeAreaProvider>
   );

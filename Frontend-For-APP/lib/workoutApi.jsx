@@ -194,3 +194,8 @@ export async function getExerciseHistory(exerciseId) {
   const authHeader = await getAuthHeader();
   return fetchWithAuth(`/exercises/${exerciseId}/history`, { headers: authHeader });
 }
+
+export async function getExerciseRecords(exerciseId) {
+  const authHeader = await getAuthHeader();
+  return fetchWithAuth(`/exercises/${exerciseId}/records`, { headers: authHeader });
+}

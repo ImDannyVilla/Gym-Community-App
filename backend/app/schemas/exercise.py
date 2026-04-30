@@ -25,3 +25,13 @@ class ExerciseHistoryResponse(BaseModel):
     sets: List[WorkoutLogSetResponse] = []
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ExerciseRecordsResponse(BaseModel):
+    best_weight_lbs: float = 0.0
+    best_reps: int = 0
+    best_volume: float = 0.0
+    total_sets_logged: int = 0
+    last_performed: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)

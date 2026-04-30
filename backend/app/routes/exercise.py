@@ -7,8 +7,8 @@ from sqlalchemy.orm import selectinload
 
 from app.models.exerciseLibrary import ExerciseLibrary
 from app.dependencies import AsyncSessionDep, CurrentUser
-from app.models.workout_log import WorkoutLogExercise, WorkoutLog
-from app.schemas.exercise import ExerciseLibraryResponse, ExerciseHistoryResponse
+from app.models.workout_log import WorkoutLogExercise, WorkoutLog, WorkoutLogSet
+from app.schemas.exercise import ExerciseLibraryResponse, ExerciseHistoryResponse, ExerciseRecordsResponse
 
 router = APIRouter(prefix="/exercises", tags=["Exercises"])
 
@@ -76,6 +76,42 @@ async def get_equipment_types(db: AsyncSessionDep):
         .order_by(ExerciseLibrary.equipment)
     )
     return [row for row in result.scalars().all()]
+
+@router.get("/{exercise_id}/records", response_model=ExerciseRecordsResponse)
+async def get_exercise_records(
+    exercise_id: str,
+    db: AsyncSessionDep,
+    current_user: CurrentUser
+):
+    """Get personal records (best weight, reps, volume) for an exercise across all completed sets."""
+    from sqlalchemy import func as sqlfunc
+    result = await db.execute(
+        select(
+            sqlfunc.max(WorkoutLogSet.weight_lbs).label("best_weight_lbs"),
+            sqlfunc.max(WorkoutLogSet.reps).label("best_reps"),
+            sqlfunc.max(WorkoutLogSet.weight_lbs * WorkoutLogSet.reps).label("best_volume"),
+            sqlfunc.count(WorkoutLogSet.id).label("total_sets_logged"),
+            sqlfunc.max(WorkoutLog.completed_at).label("last_performed"),
+        )
+        .join(WorkoutLogExercise, WorkoutLogSet.workout_log_exercise_id == WorkoutLogExercise.id)
+        .join(WorkoutLog, WorkoutLogExercise.workout_log_id == WorkoutLog.id)
+        .where(WorkoutLog.user_id == current_user.id)
+        .where(WorkoutLogExercise.exercise_id == exercise_id)
+        .where(WorkoutLogSet.completed == True)
+    )
+    row = result.first()
+
+    if row is None or (row.total_sets_logged or 0) == 0:
+        raise HTTPException(status_code=404, detail="No records found for this exercise")
+
+    return ExerciseRecordsResponse(
+        best_weight_lbs=float(row.best_weight_lbs or 0),
+        best_reps=int(row.best_reps or 0),
+        best_volume=float(row.best_volume or 0),
+        total_sets_logged=int(row.total_sets_logged or 0),
+        last_performed=row.last_performed,
+    )
+
 
 @router.get("/{exercise_id}/history", response_model=List[ExerciseHistoryResponse])
 async def get_exercise_history(
