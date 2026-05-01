@@ -53,7 +53,7 @@ export default function ExerciseDetailScreen() {
       const data = await getExerciseHistory(params.exerciseId);
       setHistory(data);
     } catch (error) {
-      console.error("Failed to load exercise history:", error);
+      if (error.status !== 404) console.warn("Failed to load exercise history:", error.message);
       setHistory(null);
     } finally {
       setIsLoadingHistory(false);

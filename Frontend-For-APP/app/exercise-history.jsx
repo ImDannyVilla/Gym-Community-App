@@ -24,7 +24,10 @@ export default function ExerciseHistoryScreen() {
     }
     getExerciseHistory(exerciseId)
       .then(setSessions)
-      .catch(() => setError("Could not load history."))
+      .catch((err) => {
+        if (err.status !== 404) console.warn("Failed to load exercise history:", err.message);
+        // 404 = no history yet — sessions stays [] and shows "No history yet"
+      })
       .finally(() => setIsLoading(false));
   }, [exerciseId]);
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, memo, useMemo, useRef } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet, FlatList, SafeAreaView, KeyboardAvoidingView, Platform, Alert } from "react-native";
+import { View, Text, TextInput, Pressable, StyleSheet, FlatList, KeyboardAvoidingView, Platform, Alert } from "react-native";
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
