@@ -12,7 +12,7 @@ import { useWorkoutStore } from "../../stores/workoutStore";
 export default function WorkoutsScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [isStarting, setIsStarting] = useState(false);
+  const [startingRoutineId, setStartingRoutineId] = useState(null);
   const {
     isActive: hasActiveWorkout,
     activeLogId,
@@ -85,7 +85,7 @@ export default function WorkoutsScreen() {
   };
 
   const startNewWorkout = async (name, routineId, errorMessage) => {
-    setIsStarting(true);
+    setStartingRoutineId(routineId);
     try {
       // 1. Create the workout log (empty — exercises are NOT pre-added to the backend)
       const log = await startWorkout(name, routineId, false);
@@ -133,7 +133,7 @@ export default function WorkoutsScreen() {
       console.error(errorMessage, e.message);
       Alert.alert('Error', `${errorMessage}. Please try again.`);
     } finally {
-      setIsStarting(false);
+      setStartingRoutineId(null);
     }
   };
 
@@ -321,9 +321,9 @@ export default function WorkoutsScreen() {
                 <Pressable
                   style={styles.startButton}
                   onPress={() => handleStartRoutine(routine.id, routine.name)}
-                  disabled={isStarting}
+                  disabled={startingRoutineId === routine.id}
                 >
-                  {isStarting
+                  {startingRoutineId === routine.id
                     ? <ActivityIndicator size="small" color={colors.text} />
                     : <Text style={styles.startButtonText}>Start</Text>}
                 </Pressable>
