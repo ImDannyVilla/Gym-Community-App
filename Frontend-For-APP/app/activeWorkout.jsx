@@ -6,8 +6,7 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Modal from "react-native-modal";
 import { colors, layout, typography, spacing } from "../lib/theme";
-import { startWorkout, updateWorkoutLog, addExerciseToLog, deleteWorkoutLog, getExerciseHistory } from "../lib/workoutApi";
-import { saveToCache, CACHE_KEYS } from "../lib/localCache";
+import { startWorkout, deleteWorkoutLog, getExerciseHistory } from "../lib/workoutApi";
 import { useWorkoutStore } from "../stores/workoutStore";
 import RestTimer from "./_components/RestTimer";
 
@@ -200,9 +199,6 @@ export default function ActiveWorkout() {
   const [isLoading, setIsLoading] = useState(false);
   const [showEmptyAlert, setShowEmptyAlert] = useState(false);
   const [exerciseHistoryById, setExerciseHistoryById] = useState({});
-  const [showFinishSheet, setShowFinishSheet] = useState(false);
-  const [finishTitle, setFinishTitle] = useState('');
-  const [pendingExercises, setPendingExercises] = useState([]);
   
   const flatListRef = useRef(null);
   const deletingIdsRef = useRef(new Set());
@@ -420,72 +416,7 @@ export default function ActiveWorkout() {
       return;
     }
 
-    if (activeRoutineId) {
-      // Routine workout — name is already set, skip the naming sheet
-      doSaveWorkout(workoutName, completedExercises);
-    } else {
-      setFinishTitle('');
-      setPendingExercises(completedExercises);
-      setShowFinishSheet(true);
-    }
-  };
-
-  const doSaveWorkout = async (title, completedExercises) => {
-    setShowFinishSheet(false);
-    setIsLoading(true);
-    const logId = currentLogId;
-    try {
-      const completedAt = new Date().toISOString();
-
-      for (const ex of completedExercises) {
-        const exerciseLibraryId = getExerciseLibraryId(ex);
-
-        if (!exerciseLibraryId) {
-          throw new Error(`Missing exercise library id for ${ex.name || "exercise"}`);
-        }
-
-        await addExerciseToLog(logId, {
-          exercise_id: exerciseLibraryId,
-          name: ex.name,
-          gif_url: ex.gif_url || null,
-          category: ex.category,
-          target: ex.target,
-          equipment: ex.equipment,
-          order: exercises.findIndex(e => e.id === ex.id),
-          target_sets: ex.target_sets,
-          target_reps_min: ex.target_reps_min,
-          target_reps_max: ex.target_reps_max,
-          target_weight_lbs: ex.target_weight_lbs,
-          sets: ex.sets.map((s, i) => ({
-            set_number: i + 1,
-            reps: s.reps,
-            weight_lbs: s.weight_lbs,
-            completed: s.completed,
-          })),
-        });
-      }
-
-      await updateWorkoutLog(logId, {
-        name: title,
-        completed_at: completedAt,
-        duration: timer,
-        is_public: false,
-      });
-
-      await Promise.all([
-        saveToCache(CACHE_KEYS.WORKOUT_LOGS, null),
-        saveToCache(CACHE_KEYS.STREAK, null),
-      ]).catch(() => {});
-
-      endWorkout();
-      useWorkoutStore.persist.clearStorage();
-      router.replace(`/workout-summary?logId=${logId}`);
-    } catch (e) {
-      console.error("Failed to save workout:", e.message);
-      Alert.alert("Error", "Failed to save workout.");
-    } finally {
-      setIsLoading(false);
-    }
+    router.push('/save-workout');
   };
 
   const handleMinimize = () => {
@@ -593,42 +524,6 @@ export default function ActiveWorkout() {
           }
         />
       </KeyboardAvoidingView>
-
-      {/* Finish Workout Sheet */}
-      <Modal
-        isVisible={showFinishSheet}
-        onBackdropPress={() => setShowFinishSheet(false)}
-        style={styles.bottomModal}
-        backdropOpacity={0.6}
-        animationIn="slideInUp"
-        animationOut="slideOutDown"
-        useNativeDriver={true}
-        avoidKeyboard={true}
-      >
-        <View style={styles.finishSheet}>
-          <View style={styles.finishSheetHandle} />
-          <Text style={styles.finishSheetTitle}>Name Your Workout</Text>
-          <TextInput
-            style={styles.finishTitleInput}
-            placeholder={`Workout — ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
-            placeholderTextColor="#666"
-            value={finishTitle}
-            onChangeText={setFinishTitle}
-            autoFocus
-            maxLength={50}
-          />
-          <Pressable
-            style={[styles.saveBtnStyle, isLoading && { opacity: 0.6 }]}
-            onPress={() => doSaveWorkout(finishTitle || `Workout — ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`, pendingExercises)}
-            disabled={isLoading}
-          >
-            <Text style={styles.saveBtnTextStyle}>Save Workout</Text>
-          </Pressable>
-          <Pressable style={styles.cancelBtnStyle} onPress={() => setShowFinishSheet(false)}>
-            <Text style={styles.cancelBtnTextStyle}>Cancel</Text>
-          </Pressable>
-        </View>
-      </Modal>
 
       {/* Empty Workout Alert Modal */}
       <Modal

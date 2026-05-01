@@ -19,6 +19,8 @@ export default function Layout() {
   const isWorkoutSummaryScreen = pathname === '/workout-summary';
   const isWorkoutLogDetailScreen = pathname === '/workout-log-detail';
   const isPostWorkoutShareScreen = pathname === '/post-workout-share';
+  const isSaveWorkoutScreen = pathname === '/save-workout';
+  const isWorkoutCompleteScreen = pathname === '/workout-complete';
 
   // Re-check auth token whenever the route changes (covers post-login/register navigation)
   const checkAuth = useCallback(async () => {
@@ -76,11 +78,13 @@ export default function Layout() {
           <Stack.Screen name="workout-summary" options={{ gestureEnabled: false }} />
           <Stack.Screen name="workout-log-detail" />
           <Stack.Screen name="post-workout-share" options={{ gestureEnabled: false }} />
+          <Stack.Screen name="save-workout" options={{ gestureEnabled: false }} />
+          <Stack.Screen name="workout-complete" options={{ gestureEnabled: false }} />
           <Stack.Screen name="user-search" />
           <Stack.Screen name="user-profile" />
         </Stack>
-        {isWorkoutActive && isAuthenticated && !isActiveWorkoutScreen && !isWorkoutSummaryScreen && !isWorkoutLogDetailScreen && !isPostWorkoutShareScreen && <ActiveWorkoutMiniWidget />}
-        {isAuthenticated && !isActiveWorkoutScreen && !isWorkoutSummaryScreen && !isWorkoutLogDetailScreen && !isPostWorkoutShareScreen && <BottomNav />}
+        {isWorkoutActive && isAuthenticated && !isActiveWorkoutScreen && !isWorkoutSummaryScreen && !isWorkoutLogDetailScreen && !isPostWorkoutShareScreen && !isSaveWorkoutScreen && !isWorkoutCompleteScreen && <ActiveWorkoutMiniWidget />}
+        {isAuthenticated && !isActiveWorkoutScreen && !isWorkoutSummaryScreen && !isWorkoutLogDetailScreen && !isPostWorkoutShareScreen && !isSaveWorkoutScreen && !isWorkoutCompleteScreen && <BottomNav />}
       </View>
     </SafeAreaProvider>
   );
