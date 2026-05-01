@@ -4,11 +4,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter, usePathname } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, iconSizes, layout } from '../../lib/theme';
+import { useWorkoutStore } from '../../stores/workoutStore';
 
 export default function BottomNav({ state, descriptors, navigation }) {
   const router = useRouter();
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
+  const isWorkoutActive = useWorkoutStore(s => s.isActive);
 
   // Define tab routes
   const tabs = [
@@ -98,7 +100,13 @@ export default function BottomNav({ state, descriptors, navigation }) {
               isActive && styles.navButtonActive,
               pressed && styles.navButtonPressed,
             ]}
-            onPress={() => router.push(tab.route)}
+            onPress={() => {
+              if (tab.name === 'workouts' && isWorkoutActive) {
+                router.push('/activeWorkout');
+              } else {
+                router.push(tab.route);
+              }
+            }}
             activeOpacity={0.7}
           >
             <Ionicons
