@@ -4,7 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, layout, spacing } from "../../lib/theme";
-import { getMyRoutines, startWorkout, getWorkoutStreak, deleteWorkoutLog, getRoutine, addExerciseToLog, deleteRoutine } from "../../lib/workoutApi";
+import { getMyRoutines, startWorkout, getWorkoutLog, getWorkoutStreak, deleteWorkoutLog, getRoutine, addExerciseToLog, deleteRoutine } from "../../lib/workoutApi";
 import { loadFromCache, saveToCache, CACHE_KEYS } from "../../lib/localCache";
 import { getMyProfile } from "../../lib/socialApi";
 import { useWorkoutStore } from "../../stores/workoutStore";
@@ -123,9 +123,11 @@ export default function WorkoutsScreen() {
         }
       }
 
-      // 3. Populate store with backend-created exercises (with real IDs and sets)
-      //    then navigate — exercises are guaranteed present before screen mounts
-      setWorkoutActive({ ...log, exercises: addedExercises });
+      // 3. Fetch updated log — the add-exercise endpoint returns the full WorkoutLog
+      //    (not just the exercise), so we can't use the individual Promise.all responses.
+      //    One final GET gives us all exercises with their real IDs and sets.
+      const updatedLog = routineId ? await getWorkoutLog(log.id) : log;
+      setWorkoutActive(updatedLog);
       router.push('/activeWorkout');
     } catch (e) {
       console.error(errorMessage, e.message);
