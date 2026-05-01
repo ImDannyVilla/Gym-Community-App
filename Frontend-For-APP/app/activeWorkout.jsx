@@ -46,6 +46,25 @@ const getExerciseLibraryId = (exercise) => exercise.exercise_id || exercise.libr
 
 // Memoized Set Row to prevent re-renders when other inputs change
 const SetRow = memo(({ set, setIndex, exerciseId, exercise, previousSet, handleUpdateSet, handleToggleComplete, handleSetOptions, exerciseIndex, handleInputFocus }) => {
+  const handleWeightChange = useCallback((val) => {
+    const cleaned = val.replace(/[^0-9.]/g, '');
+    const parts = cleaned.split('.');
+    const formatted = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : cleaned;
+    const [whole, decimal] = formatted.split('.');
+    const limitedWhole = whole.slice(0, 4);
+    const limitedFormatted = decimal !== undefined
+      ? `${limitedWhole}.${decimal.slice(0, 2)}`
+      : limitedWhole;
+    if (parseFloat(limitedFormatted) > 9999) return;
+    handleUpdateSet(exerciseId, set.id, 'weight_lbs', limitedFormatted);
+  }, [exerciseId, set.id, handleUpdateSet]);
+
+  const handleRepsChange = useCallback((val) => {
+    const cleaned = val.replace(/[^0-9]/g, '');
+    if (parseInt(cleaned) > 999) return;
+    handleUpdateSet(exerciseId, set.id, 'reps', cleaned);
+  }, [exerciseId, set.id, handleUpdateSet]);
+
   return (
     <View style={[styles.setRow, set.completed && styles.setRowCompleted]}>
       <Pressable style={styles.setIndexButton} onPress={() => handleSetOptions(exerciseId, set.id, set)}>
@@ -61,8 +80,9 @@ const SetRow = memo(({ set, setIndex, exerciseId, exercise, previousSet, handleU
       <TextInput
         style={[styles.inputBox, set.completed && styles.inputBoxCompleted]}
         keyboardType="decimal-pad"
+        maxLength={7}
         value={set.weight_lbs > 0 ? set.weight_lbs.toString() : ''}
-        onChangeText={(val) => handleUpdateSet(exerciseId, set.id, "weight_lbs", parseFloat(val) || 0)}
+        onChangeText={handleWeightChange}
         onFocus={() => handleInputFocus(exerciseIndex)}
         placeholder="-"
         placeholderTextColor="#666"
@@ -71,8 +91,9 @@ const SetRow = memo(({ set, setIndex, exerciseId, exercise, previousSet, handleU
       <TextInput
         style={[styles.inputBox, set.completed && styles.inputBoxCompleted]}
         keyboardType="number-pad"
+        maxLength={3}
         value={set.reps > 0 ? set.reps.toString() : ''}
-        onChangeText={(val) => handleUpdateSet(exerciseId, set.id, "reps", parseInt(val) || 0)}
+        onChangeText={handleRepsChange}
         onFocus={() => handleInputFocus(exerciseIndex)}
         placeholder="-"
         placeholderTextColor="#666"
