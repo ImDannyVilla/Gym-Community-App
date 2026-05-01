@@ -45,7 +45,7 @@ const normalizeCompletedSet = (set) => {
 const getExerciseLibraryId = (exercise) => exercise.exercise_id || exercise.library_exercise_id || null;
 
 // Memoized Set Row to prevent re-renders when other inputs change
-const SetRow = memo(({ set, setIndex, exerciseId, exercise, previousSet, handleUpdateSet, handleToggleComplete, handleSetOptions }) => {
+const SetRow = memo(({ set, setIndex, exerciseId, exercise, previousSet, handleUpdateSet, handleToggleComplete, handleSetOptions, exerciseIndex, handleInputFocus }) => {
   return (
     <View style={[styles.setRow, set.completed && styles.setRowCompleted]}>
       <Pressable style={styles.setIndexButton} onPress={() => handleSetOptions(exerciseId, set.id, set)}>
@@ -63,6 +63,7 @@ const SetRow = memo(({ set, setIndex, exerciseId, exercise, previousSet, handleU
         keyboardType="decimal-pad"
         value={set.weight_lbs > 0 ? set.weight_lbs.toString() : ''}
         onChangeText={(val) => handleUpdateSet(exerciseId, set.id, "weight_lbs", parseFloat(val) || 0)}
+        onFocus={() => handleInputFocus(exerciseIndex)}
         placeholder="-"
         placeholderTextColor="#666"
         editable={!set.completed}
@@ -72,6 +73,7 @@ const SetRow = memo(({ set, setIndex, exerciseId, exercise, previousSet, handleU
         keyboardType="number-pad"
         value={set.reps > 0 ? set.reps.toString() : ''}
         onChangeText={(val) => handleUpdateSet(exerciseId, set.id, "reps", parseInt(val) || 0)}
+        onFocus={() => handleInputFocus(exerciseIndex)}
         placeholder="-"
         placeholderTextColor="#666"
         editable={!set.completed}
@@ -87,7 +89,7 @@ const SetRow = memo(({ set, setIndex, exerciseId, exercise, previousSet, handleU
 });
 
 // Memoized Exercise Card
-const ExerciseCard = memo(({ ex, exerciseHistory, handleUpdateSet, handleToggleComplete, handleAddSet, handleSetOptions, handleOpenExerciseDetails }) => {
+const ExerciseCard = memo(({ ex, exerciseIndex, exerciseHistory, handleUpdateSet, handleToggleComplete, handleAddSet, handleSetOptions, handleOpenExerciseDetails, handleInputFocus }) => {
   const previousSets = exerciseHistory?.[0]?.sets || [];
   const restTimerTriggerRef = useRef(null);
 
@@ -149,6 +151,8 @@ const ExerciseCard = memo(({ ex, exerciseHistory, handleUpdateSet, handleToggleC
         handleUpdateSet={handleUpdateSet}
         handleToggleComplete={handleToggleCompleteWithTimer}
         handleSetOptions={handleSetOptions}
+        exerciseIndex={exerciseIndex}
+        handleInputFocus={handleInputFocus}
       />
     ))}
 
@@ -172,6 +176,8 @@ export default function ActiveWorkout() {
   const [finishTitle, setFinishTitle] = useState('');
   const [pendingExercises, setPendingExercises] = useState([]);
   
+  const flatListRef = useRef(null);
+
   const {
     activeLogId,
     activeWorkoutName,
@@ -187,6 +193,14 @@ export default function ActiveWorkout() {
     startWorkout: storeStartWorkout,
     setWorkoutName: setStoreWorkoutName,
   } = useWorkoutStore();
+
+  const handleInputFocus = useCallback((exerciseIndex) => {
+    flatListRef.current?.scrollToIndex({
+      index: exerciseIndex,
+      animated: true,
+      viewOffset: 100,
+    });
+  }, []);
 
   const getStartTimeMs = useCallback((value) => {
     if (!value) return Date.now();
@@ -450,7 +464,11 @@ export default function ActiveWorkout() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView style={styles.keyboardView} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+      >
         
         {/* Header */}
         <View style={styles.header}>
@@ -474,6 +492,7 @@ export default function ActiveWorkout() {
 
         {/* Exercises List */}
         <FlatList
+          ref={flatListRef}
           style={styles.exercisesScroll}
           contentContainerStyle={styles.exercisesContent}
           data={exercises}
@@ -481,15 +500,17 @@ export default function ActiveWorkout() {
           removeClippedSubviews={true}
           maxToRenderPerBatch={10}
           windowSize={5}
-          renderItem={({ item }) => (
+          renderItem={({ item, index }) => (
             <ExerciseCard
               ex={item}
+              exerciseIndex={index}
               exerciseHistory={exerciseHistoryById[item.exercise_id]}
               handleUpdateSet={handleUpdateSet}
               handleToggleComplete={handleToggleComplete}
               handleAddSet={handleAddSet}
               handleSetOptions={handleSetOptions}
               handleOpenExerciseDetails={handleOpenExerciseDetails}
+              handleInputFocus={handleInputFocus}
             />
           )}
           ListEmptyComponent={
@@ -629,7 +650,7 @@ const styles = StyleSheet.create({
   },
   exercisesContent: {
     padding: layout.screenPadding,
-    paddingBottom: 40,
+    paddingBottom: 200,
   },
   exerciseCard: {
     backgroundColor: colors.surface,
