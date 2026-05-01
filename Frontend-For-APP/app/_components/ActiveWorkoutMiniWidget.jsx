@@ -74,27 +74,6 @@ export default function ActiveWorkoutMiniWidget() {
     router.push('/activeWorkout');
   };
 
-  const discardWorkout = () => {
-    const logId = activeLogId;
-
-    // 1. Clear in-memory store synchronously — bar disappears on next render
-    endWorkout();
-
-    // 2. Wipe the persisted AsyncStorage entry immediately so no stale
-    //    isActive:true can be rehydrated back during the navigation re-renders
-    useWorkoutStore.persist.clearStorage();
-
-    // 3. Navigate away — bar is already gone
-    router.replace('/(tabs)/workouts');
-
-    // 4. Delete from backend — fire and forget, never block UI on this
-    if (logId) {
-      deleteWorkoutLog(logId).catch(e => {
-        if (e.status !== 404) console.warn('Failed to delete workout log:', e.message);
-      });
-    }
-  };
-
   const handleDiscard = () => {
     const activeWorkoutHasActivity = hasWorkoutActivity();
 
@@ -105,7 +84,19 @@ export default function ActiveWorkoutMiniWidget() {
         : 'This empty workout will be discarded without being saved.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Discard', style: 'destructive', onPress: discardWorkout },
+        {
+          text: 'Discard',
+          style: 'destructive',
+          onPress: () => {
+            const logId = useWorkoutStore.getState().activeLogId;
+            endWorkout();
+            useWorkoutStore.persist.clearStorage();
+            router.replace('/(tabs)');
+            if (logId) {
+              deleteWorkoutLog(logId).catch(console.warn);
+            }
+          },
+        },
       ]
     );
   };
