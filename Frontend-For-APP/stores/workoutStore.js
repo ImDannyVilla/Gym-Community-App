@@ -164,6 +164,12 @@ export const useWorkoutStore = create(persist((set, get) => ({
     }));
   },
   
+  removeExercise: (exerciseId) => {
+    set((state) => ({
+      exercises: state.exercises.filter(ex => ex.id !== exerciseId)
+    }));
+  },
+
   clearExercises: () => set({ exercises: [] }),
 }), {
   name: 'active-workout-storage',

@@ -6,7 +6,7 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Modal from "react-native-modal";
 import { colors, layout, typography, spacing } from "../lib/theme";
-import { startWorkout, updateWorkoutLog, addExerciseToLog, deleteWorkoutLog, getExerciseHistory } from "../lib/workoutApi";
+import { startWorkout, updateWorkoutLog, addExerciseToLog, deleteWorkoutLog, deleteExerciseFromLog, getExerciseHistory } from "../lib/workoutApi";
 import { saveToCache, CACHE_KEYS } from "../lib/localCache";
 import { useWorkoutStore } from "../stores/workoutStore";
 import RestTimer from "./_components/RestTimer";
@@ -89,7 +89,7 @@ const SetRow = memo(({ set, setIndex, exerciseId, exercise, previousSet, handleU
 });
 
 // Memoized Exercise Card
-const ExerciseCard = memo(({ ex, exerciseIndex, exerciseHistory, handleUpdateSet, handleToggleComplete, handleAddSet, handleSetOptions, handleOpenExerciseDetails, handleInputFocus }) => {
+const ExerciseCard = memo(({ ex, exerciseIndex, exerciseHistory, handleUpdateSet, handleToggleComplete, handleAddSet, handleSetOptions, handleOpenExerciseDetails, handleInputFocus, handleDeleteExercise }) => {
   const previousSets = exerciseHistory?.[0]?.sets || [];
   const restTimerTriggerRef = useRef(null);
 
@@ -124,6 +124,13 @@ const ExerciseCard = memo(({ ex, exerciseIndex, exerciseHistory, handleUpdateSet
         <Ionicons name="information-circle-outline" size={20} color={colors.textSecondary} />
       </Pressable>
       <RestTimer onSetComplete={restTimerTriggerRef} />
+      <Pressable
+        onPress={() => handleDeleteExercise(ex)}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        style={styles.deleteExerciseBtn}
+      >
+        <Ionicons name="trash-outline" size={18} color="#555" />
+      </Pressable>
     </View>
 
     {lastSessionLabel && (
@@ -188,6 +195,7 @@ export default function ActiveWorkout() {
     toggleSetComplete,
     addSet,
     removeSet,
+    removeExercise,
     toggleWarmupSet,
     endWorkout,
     startWorkout: storeStartWorkout,
@@ -240,6 +248,32 @@ export default function ActiveWorkout() {
       },
     ]);
   }, [removeSet, toggleWarmupSet]);
+
+  const handleDeleteExercise = useCallback((ex) => {
+    Alert.alert(
+      'Remove Exercise',
+      `Remove ${ex.name} from this workout?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            const snapshot = useWorkoutStore.getState().exercises;
+            removeExercise(ex.id);
+            try {
+              await deleteExerciseFromLog(activeLogId, ex.id);
+            } catch (e) {
+              if (e.status !== 404) {
+                useWorkoutStore.setState({ exercises: snapshot });
+                Alert.alert('Error', 'Failed to remove exercise. Please try again.');
+              }
+            }
+          },
+        },
+      ]
+    );
+  }, [removeExercise, activeLogId]);
 
   const handleOpenExerciseDetails = useCallback((exercise) => {
     router.push({
@@ -515,6 +549,7 @@ export default function ActiveWorkout() {
               handleSetOptions={handleSetOptions}
               handleOpenExerciseDetails={handleOpenExerciseDetails}
               handleInputFocus={handleInputFocus}
+              handleDeleteExercise={handleDeleteExercise}
             />
           )}
           ListEmptyComponent={
@@ -775,6 +810,10 @@ const styles = StyleSheet.create({
     color: colors.textTertiary,
     fontSize: 14,
     fontWeight: "bold",
+  },
+  deleteExerciseBtn: {
+    padding: spacing.xs,
+    marginLeft: spacing.xs,
   },
   exerciseThumb: {
     width: 44,

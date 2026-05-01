@@ -452,6 +452,35 @@ async def add_exercise_to_log(
     )
     return result.scalars().first()
 
+@router.delete("/{log_id}/exercises/{exercise_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_exercise_from_log(
+    log_id: UUID,
+    exercise_id: UUID,
+    db: AsyncSessionDep,
+    current_user: CurrentUser
+):
+    """Remove an exercise and its sets from a workout log."""
+    log_result = await db.execute(
+        select(WorkoutLog)
+        .where(WorkoutLog.id == log_id)
+        .where(WorkoutLog.user_id == current_user.id)
+    )
+    if not log_result.scalars().first():
+        raise HTTPException(status_code=404, detail="Workout log not found")
+
+    result = await db.execute(
+        select(WorkoutLogExercise)
+        .where(WorkoutLogExercise.id == exercise_id)
+        .where(WorkoutLogExercise.workout_log_id == log_id)
+    )
+    exercise = result.scalars().first()
+    if not exercise:
+        raise HTTPException(status_code=404, detail="Exercise not found")
+
+    await db.delete(exercise)
+    await db.commit()
+
+
 @router.post("/{log_id}/save-as-routine", response_model=RoutineResponse, status_code=status.HTTP_201_CREATED)
 async def save_log_as_routine(
     log_id: UUID,

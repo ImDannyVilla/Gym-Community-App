@@ -105,6 +105,12 @@ export async function addExerciseToLog(logId, exerciseData) {
   });
 }
 
+export async function deleteExerciseFromLog(logId, exerciseId) {
+  return fetchWithAuth(`/workout-logs/${logId}/exercises/${exerciseId}`, {
+    method: 'DELETE',
+  });
+}
+
 export async function saveLogAsRoutine(logId, name = null) {
   const authHeader = await getAuthHeader();
   const params = name ? `?name=${encodeURIComponent(name)}` : "";
