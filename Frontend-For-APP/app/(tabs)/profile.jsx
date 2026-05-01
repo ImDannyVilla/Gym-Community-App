@@ -314,9 +314,8 @@ const loadProfileData = async (hasCache = false) => {
                 // 2. If Zustand is empty (app restart), hydrate from AsyncStorage
                 let hasCache = hasZustandCache;
                 if (!hasZustandCache) {
-                    const [asyncProfile, asyncLogs, asyncStreak] = await Promise.all([
+                    const [asyncProfile, asyncStreak] = await Promise.all([
                         loadFromCache(CACHE_KEYS.PROFILE),
-                        loadFromCache(CACHE_KEYS.WORKOUT_LOGS),
                         loadFromCache(CACHE_KEYS.STREAK),
                     ]);
                     if (asyncProfile) {
@@ -331,7 +330,6 @@ const loadProfileData = async (hasCache = false) => {
                         setFollowingCount(asyncProfile.following_count ?? 0);
                         setCachedProfile(asyncProfile);
                     }
-                    if (asyncLogs) { setWorkoutLogs(asyncLogs); setCachedWorkoutLogs(asyncLogs); }
                     if (asyncStreak) { setDayStreak(asyncStreak.day_streak ?? 0); setCachedDayStreak(asyncStreak.day_streak ?? 0); }
                 }
 
