@@ -4,7 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, layout, spacing } from "../../lib/theme";
-import { getMyRoutines, startWorkout, getWorkoutLog, getWorkoutStreak, deleteWorkoutLog, getRoutine, addExerciseToLog, deleteRoutine } from "../../lib/workoutApi";
+import { getMyRoutines, startWorkout, getWorkoutStreak, deleteWorkoutLog, getRoutine, deleteRoutine } from "../../lib/workoutApi";
 import { loadFromCache, saveToCache, CACHE_KEYS } from "../../lib/localCache";
 import { getMyProfile } from "../../lib/socialApi";
 import { useWorkoutStore } from "../../stores/workoutStore";
@@ -87,47 +87,47 @@ export default function WorkoutsScreen() {
   const startNewWorkout = async (name, routineId, errorMessage) => {
     setIsStarting(true);
     try {
-      // 1. Create a new workout log
+      // 1. Create the workout log (empty — exercises are NOT pre-added to the backend)
       const log = await startWorkout(name, routineId, false);
-      const logId = log.id;
 
-      // 2. If it's a routine, fetch full routine then add all exercises in parallel
-      let addedExercises = [];
+      // 2. For routines, build exercise objects locally in the same shape the store uses.
+      //    doSaveWorkout adds them to the backend at save time — pre-adding here caused
+      //    duplicates because doSaveWorkout would add them a second time on finish.
+      let exercises = [];
       if (routineId) {
         const routine = await getRoutine(routineId);
         if (routine?.exercises?.length) {
           const sorted = [...routine.exercises].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-          addedExercises = await Promise.all(
-            sorted.map(ex =>
-              addExerciseToLog(logId, {
-                exercise_id: ex.exercise_id,
-                name: ex.name,
-                category: ex.category,
-                target: ex.target,
-                equipment: ex.equipment,
-                gif_url: ex.gif_url,
-                order: ex.order,
-                target_sets: ex.target_sets,
-                target_reps_min: ex.target_reps_min,
-                target_reps_max: ex.target_reps_max,
-                target_weight_lbs: ex.target_weight_lbs,
-                sets: Array.from({ length: ex.target_sets || 3 }, (_, i) => ({
-                  set_number: i + 1,
-                  reps: 0,
-                  weight_lbs: 0.0,
-                  completed: false,
-                })),
-              })
-            )
-          );
+          exercises = sorted.map((ex, idx) => {
+            const instanceId = `${Date.now()}-${idx}`;
+            return {
+              id: instanceId,
+              exercise_id: ex.exercise_id,
+              name: ex.name,
+              category: ex.category,
+              target: ex.target,
+              equipment: ex.equipment,
+              gif_url: ex.gif_url,
+              order: ex.order,
+              target_sets: ex.target_sets,
+              target_reps_min: ex.target_reps_min,
+              target_reps_max: ex.target_reps_max,
+              target_weight_lbs: ex.target_weight_lbs,
+              sets: Array.from({ length: ex.target_sets || 3 }, (_, i) => ({
+                id: `${instanceId}-${i}`,
+                set_number: i + 1,
+                reps: '',
+                weight_lbs: '',
+                completed: false,
+                warmup: false,
+                started: false,
+              })),
+            };
+          });
         }
       }
 
-      // 3. Fetch updated log — the add-exercise endpoint returns the full WorkoutLog
-      //    (not just the exercise), so we can't use the individual Promise.all responses.
-      //    One final GET gives us all exercises with their real IDs and sets.
-      const updatedLog = routineId ? await getWorkoutLog(log.id) : log;
-      setWorkoutActive(updatedLog);
+      setWorkoutActive({ ...log, exercises });
       router.push('/activeWorkout');
     } catch (e) {
       console.error(errorMessage, e.message);
