@@ -234,3 +234,70 @@ async def test_get_public_workout_log_nonexistent_returns_404(client):
     fake_id = "00000000-0000-0000-0000-000000000000"
     response = await client.get(f"/workout-logs/public/{fake_id}")
     assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_streak_endpoint_includes_total_volume(client):
+    """Streak endpoint returns total_volume as sum of weight_lbs * reps for completed sets."""
+    log_r = await client.post("/workout-logs/", json={"name": "Volume Test", "is_public": False})
+    log_id = log_r.json()["id"]
+
+    # 3 sets: 8 @ 135 = 1080, 8 @ 135 = 1080, 6 @ 145 = 870  → total 3030
+    await client.post(f"/workout-logs/{log_id}/exercises", json={
+        "exercise_id": "Barbell_Bench_Press_-_Medium_Grip",
+        "name": "Barbell Bench Press - Medium Grip",
+        "category": "strength",
+        "target": "chest",
+        "equipment": "barbell",
+        "order": 1,
+        "sets": [
+            {"set_number": 1, "reps": 8, "weight_lbs": 135.0, "completed": True},
+            {"set_number": 2, "reps": 8, "weight_lbs": 135.0, "completed": True},
+            {"set_number": 3, "reps": 6, "weight_lbs": 145.0, "completed": True},
+        ],
+    })
+
+    await client.put(f"/workout-logs/{log_id}", json={"completed_at": "2026-04-20T10:00:00Z"})
+
+    streak_r = await client.get("/workout-logs/me/streak")
+    assert streak_r.status_code == 200
+    data = streak_r.json()
+
+    assert "total_volume" in data
+    assert data["total_volume"] == pytest.approx(3030.0)
+
+
+@pytest.mark.asyncio
+async def test_streak_endpoint_total_volume_excludes_incomplete_sets(client):
+    """Sets with completed=False must not count towards total_volume."""
+    log_r = await client.post("/workout-logs/", json={"name": "Partial", "is_public": False})
+    log_id = log_r.json()["id"]
+
+    await client.post(f"/workout-logs/{log_id}/exercises", json={
+        "exercise_id": "Squat",
+        "name": "Squat",
+        "category": "strength",
+        "target": "legs",
+        "equipment": "barbell",
+        "order": 1,
+        "sets": [
+            {"set_number": 1, "reps": 5, "weight_lbs": 200.0, "completed": True},
+            {"set_number": 2, "reps": 5, "weight_lbs": 200.0, "completed": False},
+        ],
+    })
+
+    await client.put(f"/workout-logs/{log_id}", json={"completed_at": "2026-04-20T10:00:00Z"})
+
+    streak_r = await client.get("/workout-logs/me/streak")
+    data = streak_r.json()
+
+    # Only the first set counts: 5 * 200 = 1000
+    assert data["total_volume"] == pytest.approx(1000.0)
+
+
+@pytest.mark.asyncio
+async def test_streak_endpoint_total_volume_zero_with_no_sets(client):
+    """total_volume is 0.0 when there are no completed sets."""
+    streak_r = await client.get("/workout-logs/me/streak")
+    assert streak_r.status_code == 200
+    assert streak_r.json()["total_volume"] == 0.0

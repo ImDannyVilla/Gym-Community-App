@@ -197,18 +197,29 @@ async def get_my_workout_streak(
     )
     total_sets = sets_result.scalar() or 0
     
+    # Total volume lifted (weight_lbs * reps summed across all completed sets)
+    volume_result = await db.execute(
+        select(func.sum(WorkoutLogSet.weight_lbs * WorkoutLogSet.reps))
+        .join(WorkoutLogExercise, WorkoutLogExercise.id == WorkoutLogSet.workout_log_exercise_id)
+        .join(WorkoutLog, WorkoutLog.id == WorkoutLogExercise.workout_log_id)
+        .where(WorkoutLog.user_id == current_user.id)
+        .where(WorkoutLogSet.completed == True)
+    )
+    total_volume = float(volume_result.scalar() or 0)
+
     # Fetch day streak from profile
     profile_result = await db.execute(
         select(UserProfile).where(UserProfile.user_id == current_user.id)
     )
     profile = profile_result.scalars().first()
     day_streak = profile.day_streak if profile else 0
-    
+
     return {
         "workouts_this_week": workouts_this_week,
         "day_streak": day_streak,
         "total_workouts": total_workouts,
-        "total_sets": total_sets
+        "total_sets": total_sets,
+        "total_volume": total_volume,
     }
 
 
