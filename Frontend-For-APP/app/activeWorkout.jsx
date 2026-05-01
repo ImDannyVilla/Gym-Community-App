@@ -424,6 +424,7 @@ export default function ActiveWorkout() {
       ]).catch(() => {});
 
       endWorkout();
+      useWorkoutStore.persist.clearStorage();
       router.replace(`/workout-summary?logId=${logId}`);
     } catch (e) {
       console.error("Failed to save workout:", e.message);
@@ -447,11 +448,13 @@ export default function ActiveWorkout() {
       }
       setShowEmptyAlert(false);
       endWorkout();
+      useWorkoutStore.persist.clearStorage();
       router.replace("/(tabs)/workouts");
     } catch (e) {
       if (e.status === 404) {
         setShowEmptyAlert(false);
         endWorkout();
+        useWorkoutStore.persist.clearStorage();
         router.replace("/(tabs)/workouts");
         return;
       }
