@@ -22,6 +22,7 @@ export const useWorkoutStore = create(persist((set, get) => ({
   cachedProfile: null,
   cachedWorkoutLogs: [],
   cachedDayStreak: 0,
+  cachedSeededWorkouts: [],
 
   setHasHydrated: (hasHydrated) => set({ hasHydrated }),
   clearProfileRefresh: () => set({ needsProfileRefresh: false }),
@@ -30,6 +31,7 @@ export const useWorkoutStore = create(persist((set, get) => ({
   setCachedProfile: (profile) => set({ cachedProfile: profile }),
   setCachedWorkoutLogs: (logs) => set({ cachedWorkoutLogs: logs }),
   setCachedDayStreak: (streak) => set({ cachedDayStreak: streak }),
+  setCachedSeededWorkouts: (workouts) => set({ cachedSeededWorkouts: workouts }),
   
   startWorkout: (log, startTime = null) => set({
     isActive: true,

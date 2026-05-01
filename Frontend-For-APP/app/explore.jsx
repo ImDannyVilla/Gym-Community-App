@@ -6,6 +6,7 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing } from "../lib/theme";
 import { API_BASE_URL } from "../lib/api";
+import { useWorkoutStore } from "../stores/workoutStore";
 
 // Map workout names to local assets
 const WORKOUT_COVERS = {
@@ -46,9 +47,12 @@ const WorkoutCard = memo(({ item, onPress }) => {
 });
 
 export default function ExploreScreen() {
-  const [workouts, setWorkouts] = useState([]);
-  const [allWorkouts, setAllWorkouts] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const cachedSeededWorkouts = useWorkoutStore(state => state.cachedSeededWorkouts);
+  const setCachedSeededWorkouts = useWorkoutStore(state => state.setCachedSeededWorkouts);
+
+  const [workouts, setWorkouts] = useState(cachedSeededWorkouts);
+  const [allWorkouts, setAllWorkouts] = useState(cachedSeededWorkouts);
+  const [isLoading, setIsLoading] = useState(cachedSeededWorkouts.length === 0);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -75,22 +79,22 @@ export default function ExploreScreen() {
   }, [searchQuery, allWorkouts]);
 
   const fetchSeededWorkouts = async () => {
-    setIsLoading(true);
+    const { cachedSeededWorkouts: cached } = useWorkoutStore.getState();
+    if (cached.length === 0) setIsLoading(true);
     setError(null);
     try {
-      // Fetch from public endpoint (no auth required)
       const response = await fetch(`${API_BASE_URL}/workouts/seeded`);
-      
-      if (!response.ok) {
-        throw new Error("Failed to fetch workouts");
-      }
-
+      if (!response.ok) throw new Error("Failed to fetch workouts");
       const data = await response.json();
       setAllWorkouts(data);
       setWorkouts(data);
+      setCachedSeededWorkouts(data);
     } catch (e) {
       console.error("Failed to load seeded workouts:", e.message);
-      setError(e.message);
+      // Only surface the error if we have nothing to show
+      if (useWorkoutStore.getState().cachedSeededWorkouts.length === 0) {
+        setError(e.message);
+      }
     } finally {
       setIsLoading(false);
     }

@@ -4,7 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, layout, spacing } from "../../lib/theme";
-import { getMyRoutines, startWorkout, getWorkoutStreak, deleteWorkoutLog, getRoutine, deleteRoutine } from "../../lib/workoutApi";
+import { getMyRoutines, startWorkout, getWorkoutStreak, deleteWorkoutLog, getRoutine, deleteRoutine, getSeededWorkouts } from "../../lib/workoutApi";
 import { loadFromCache, saveToCache, CACHE_KEYS } from "../../lib/localCache";
 import { getMyProfile } from "../../lib/socialApi";
 import { useWorkoutStore } from "../../stores/workoutStore";
@@ -61,6 +61,13 @@ export default function WorkoutsScreen() {
           dayStreak: streakData.day_streak || 0,
         });
         await saveToCache(CACHE_KEYS.STREAK, streakData);
+      }
+      // Prefetch seeded workouts so Explore screen loads instantly
+      const { cachedSeededWorkouts, setCachedSeededWorkouts } = useWorkoutStore.getState();
+      if (cachedSeededWorkouts.length === 0) {
+        getSeededWorkouts().then(data => {
+          if (data?.length) setCachedSeededWorkouts(data);
+        }).catch(() => {});
       }
     } catch (e) {
       console.warn("Background refresh failed:", e.message);
