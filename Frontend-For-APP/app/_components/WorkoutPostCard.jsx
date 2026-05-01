@@ -136,7 +136,7 @@ export default function WorkoutPostCard({ post, currentUserId, isFollowing: init
         </View>
       </Pressable>
 
-      {/* Save to Library */}
+      {/* Copy Routine */}
       {!isOwnPost && (
         <Pressable
           style={[styles.saveBtn, saved && styles.saveBtnDone]}
@@ -152,7 +152,7 @@ export default function WorkoutPostCard({ post, currentUserId, isFollowing: init
                   color={saved ? colors.success : colors.textSecondary}
                 />
                 <Text style={[styles.saveBtnText, saved && { color: colors.success }]}>
-                  {saved ? 'Saved to Library' : 'Save to Library'}
+                  {saved ? 'Routine Copied' : 'Copy Routine'}
                 </Text>
               </>}
         </Pressable>

@@ -220,7 +220,7 @@ export default function PostDetail() {
                     color={saved ? colors.primary : colors.textSecondary}
                   />
                   <Text style={[styles.saveBtnText, saved && { color: colors.primary }]}>
-                    {saved ? 'Saved to Library' : 'Save to Library'}
+                    {saved ? 'Routine Copied' : 'Copy Routine'}
                   </Text>
                 </>}
           </Pressable>

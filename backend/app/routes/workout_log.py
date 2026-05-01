@@ -7,6 +7,7 @@ from datetime import datetime, timezone, timedelta
 
 from app.models.routine import Routine, RoutineExercise
 from app.models.workout_log import WorkoutLog, WorkoutLogExercise, WorkoutLogSet
+from app.models.exerciseLibrary import ExerciseLibrary
 from app.models.user import UserProfile
 from app.schemas.routine import RoutineResponse
 from app.schemas.workout_log import (
@@ -19,6 +20,21 @@ from app.schemas.workout_log import (
 from app.dependencies import AsyncSessionDep, CurrentUser
 
 router = APIRouter(prefix="/workout-logs", tags=["Workout Logs"])
+
+
+async def enrich_exercises_with_library_gifs(db: AsyncSessionDep, exercises) -> None:
+    """Overwrite gif_url on in-memory WorkoutLogExercise objects with the current ExerciseLibrary value."""
+    exercise_ids = [ex.exercise_id for ex in exercises if ex.exercise_id]
+    if not exercise_ids:
+        return
+    result = await db.execute(
+        select(ExerciseLibrary.exercise_id, ExerciseLibrary.gif_url)
+        .where(ExerciseLibrary.exercise_id.in_(exercise_ids))
+    )
+    gif_map = {row.exercise_id: row.gif_url for row in result}
+    for ex in exercises:
+        if ex.exercise_id in gif_map and gif_map[ex.exercise_id]:
+            ex.gif_url = gif_map[ex.exercise_id]
 
 
 async def update_user_streak(db: AsyncSessionDep, user_id: UUID):
@@ -112,46 +128,6 @@ async def start_workout(
         is_public=data.is_public,
     )
     db.add(log)
-    await db.flush()
-
-    if data.routine_id:
-        # Copy exercises from routine
-        routine_result = await db.execute(
-            select(Routine)
-            .options(selectinload(Routine.exercises))
-            .where(Routine.id == data.routine_id)
-        )
-        routine = routine_result.scalars().first()
-        
-        if routine and routine.exercises:
-            for ex in routine.exercises:
-                log_ex = WorkoutLogExercise(
-                    id=uuid4(),
-                    workout_log_id=log.id,
-                    exercise_id=ex.exercise_id,
-                    name=ex.name,
-                    category=ex.category,
-                    target=ex.target,
-                    equipment=ex.equipment,
-                    gif_url=ex.gif_url,
-                    order=ex.order
-                )
-                db.add(log_ex)
-                await db.flush()
-                
-                # Copy sets
-                target_sets = ex.target_sets or 3
-                for i in range(target_sets):
-                    log_set = WorkoutLogSet(
-                        id=uuid4(),
-                        workout_log_exercise_id=log_ex.id,
-                        set_number=i + 1,
-                        reps=ex.target_reps_max or 0,
-                        weight_lbs=ex.target_weight_lbs or 0,
-                        completed=False
-                    )
-                    db.add(log_set)
-
     await db.commit()
 
     # reload with exercises eagerly loaded
@@ -311,6 +287,8 @@ async def get_public_workout_log(
     if not log:
         raise HTTPException(status_code=404, detail="Workout log not found")
 
+    await enrich_exercises_with_library_gifs(db, log.exercises)
+
     profile_result = await db.execute(
         select(UserProfile).where(UserProfile.user_id == log.user_id)
     )
@@ -351,6 +329,7 @@ async def get_workout_log(
     log = result.scalars().first()
     if not log:
         raise HTTPException(status_code=404, detail="Workout log not found")
+    await enrich_exercises_with_library_gifs(db, log.exercises)
     return log
 
 @router.put("/{log_id}", response_model=WorkoutLogResponse)
