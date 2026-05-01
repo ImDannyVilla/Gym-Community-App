@@ -6,7 +6,7 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Modal from "react-native-modal";
 import { colors, layout, typography, spacing } from "../lib/theme";
-import { startWorkout, updateWorkoutLog, addExerciseToLog, deleteWorkoutLog, deleteExerciseFromLog, getExerciseHistory } from "../lib/workoutApi";
+import { startWorkout, updateWorkoutLog, addExerciseToLog, deleteWorkoutLog, getExerciseHistory } from "../lib/workoutApi";
 import { saveToCache, CACHE_KEYS } from "../lib/localCache";
 import { useWorkoutStore } from "../stores/workoutStore";
 import RestTimer from "./_components/RestTimer";
@@ -286,19 +286,9 @@ export default function ActiveWorkout() {
         {
           text: 'Remove',
           style: 'destructive',
-          onPress: async () => {
-            const snapshot = useWorkoutStore.getState().exercises;
+          onPress: () => {
             removeExercise(ex.id);
-            try {
-              await deleteExerciseFromLog(activeLogId, ex.id);
-            } catch (e) {
-              if (e.status !== 404) {
-                useWorkoutStore.setState({ exercises: snapshot });
-                Alert.alert('Error', 'Failed to remove exercise. Please try again.');
-              }
-            } finally {
-              deletingIdsRef.current.delete(ex.id);
-            }
+            deletingIdsRef.current.delete(ex.id);
           },
         },
       ]
