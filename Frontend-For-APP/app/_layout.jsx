@@ -57,7 +57,7 @@ export default function Layout() {
       <View style={{ flex: 1 }}>
         <Stack screenOptions={{ headerShown: false, animation: 'none' }}>
           <Stack.Screen name="index" />
-          <Stack.Screen name="signup" />
+          <Stack.Screen name="signup" options={{ gestureEnabled: false }} />
           <Stack.Screen name="forgot-password" />
           <Stack.Screen name="forgot-email" />
           <Stack.Screen name="(tabs)" />
@@ -69,13 +69,13 @@ export default function Layout() {
           <Stack.Screen name="programs/cardio" />
           <Stack.Screen name="programs/workouts" />
           <Stack.Screen name="programs/pushpulllegscore" />
-          <Stack.Screen name="activeWorkout" />
+          <Stack.Screen name="activeWorkout" options={{ gestureEnabled: false }} />
           <Stack.Screen name="create-routine" />
           <Stack.Screen name="exercise-search" />
           <Stack.Screen name="exercise-history" />
-          <Stack.Screen name="workout-summary" />
+          <Stack.Screen name="workout-summary" options={{ gestureEnabled: false }} />
           <Stack.Screen name="workout-log-detail" />
-          <Stack.Screen name="post-workout-share" />
+          <Stack.Screen name="post-workout-share" options={{ gestureEnabled: false }} />
           <Stack.Screen name="user-search" />
           <Stack.Screen name="user-profile" />
         </Stack>

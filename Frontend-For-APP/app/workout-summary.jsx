@@ -168,7 +168,7 @@ export default function WorkoutSummary() {
             </Pressable>
           )}
 
-          <Pressable style={styles.doneBtn} onPress={() => router.push(`/post-workout-share?logId=${log.id}`)}>
+          <Pressable style={styles.doneBtn} onPress={() => router.replace(`/post-workout-share?logId=${log.id}`)}>
             <Text style={styles.doneBtnText}>Done</Text>
           </Pressable>
         </View>
