@@ -393,6 +393,7 @@ export default function ActiveWorkout() {
         await addExerciseToLog(logId, {
           exercise_id: exerciseLibraryId,
           name: ex.name,
+          gif_url: ex.gif_url || null,
           category: ex.category,
           target: ex.target,
           equipment: ex.equipment,
