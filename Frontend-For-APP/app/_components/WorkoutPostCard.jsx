@@ -28,7 +28,7 @@ const formatTimeAgo = (isoString) => {
   return new Date(isoString).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 };
 
-export default function WorkoutPostCard({ post, currentUserId, isFollowing: initialIsFollowing, onFollowChange, onPress }) {
+export default function WorkoutPostCard({ post, currentUserId, isFollowing: initialIsFollowing, onFollowChange, onPress, showAuthor = true }) {
   const [isFollowing, setIsFollowing] = useState(initialIsFollowing);
   const [followLoading, setFollowLoading] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
@@ -77,7 +77,7 @@ export default function WorkoutPostCard({ post, currentUserId, isFollowing: init
   return (
     <View style={styles.card}>
       {/* Header: avatar + username + follow button */}
-      <View style={styles.cardHeader}>
+      {showAuthor && <View style={styles.cardHeader}>
         <Pressable
           style={styles.userRow}
           onPress={() => post.user_name && router.push(`/user-profile?username=${post.user_name}`)}
@@ -108,7 +108,7 @@ export default function WorkoutPostCard({ post, currentUserId, isFollowing: init
                 </Text>}
           </Pressable>
         )}
-      </View>
+      </View>}
 
       {/* Tappable card body: media + workout info */}
       <Pressable onPress={() => onPress ? onPress() : router.push(`/post-detail?logId=${post.id}`)}>

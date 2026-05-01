@@ -16,6 +16,7 @@ import { uploadAvatar } from "../../lib/supabaseStorage";
 import { logoutUser } from "../../lib/authApi";
 import { getWorkoutLogs, getWorkoutStreak } from "../../lib/workoutApi";
 import { useWorkoutStore } from "../../stores/workoutStore";
+import WorkoutPostCard from "../_components/WorkoutPostCard";
 
 const formatDate = (isoString) => {
     if (!isoString) return "--";
@@ -54,7 +55,7 @@ const EmptyState = ({ icon, title, subtitle }) => (
     </View>
 );
 
-function WorkoutsTab({ workoutLogs, isLoading }) {
+function WorkoutsTab({ workoutLogs, isLoading, userId }) {
     if (isLoading) {
         return (
             <View style={styles.tabContainer}>
@@ -67,42 +68,19 @@ function WorkoutsTab({ workoutLogs, isLoading }) {
         return <EmptyState icon="barbell-outline" title="No workouts yet" subtitle="Start a workout to track your progress" />;
     }
 
-    return (
-        <FlatList
-            style={styles.scrollView}
-            scrollEnabled={false}
-            showsVerticalScrollIndicator={false}
-            data={workoutLogs}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.listContent}
-            renderItem={({ item }) => {
-                const completedExerciseCount = (item.exercises || [])
-                    .filter(exercise => exercise.sets?.some(set => set.completed))
-                    .length;
-
-                return (
-                    <Pressable
-                        style={styles.workoutCard}
-                        onPress={() => router.push(`/workout-log-detail?logId=${item.id}`)}
-                    >
-                        <View style={styles.cardHeader}>
-                            <Text style={styles.cardTitle}>{item.name}</Text>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                <Text style={styles.exerciseCount}>{completedExerciseCount} exercises</Text>
-                                <Ionicons name="chevron-forward" size={14} color="#555" />
-                            </View>
-                        </View>
-                        <Text style={styles.cardDate}>Finished {formatDateTime(item.completed_at || item.started_at)}</Text>
-                        {item.duration && (
-                            <Text style={styles.logDuration}>
-                                 {formatTime(item.duration)}
-                            </Text>
-                        )}
-                    </Pressable>
-                );
+    return workoutLogs.map(item => (
+        <WorkoutPostCard
+            key={item.id}
+            post={{
+                ...item,
+                user_id: userId,
+                exercise_count: (item.exercises || []).length,
             }}
+            currentUserId={userId}
+            showAuthor={false}
+            onPress={() => router.push(`/workout-log-detail?logId=${item.id}`)}
         />
-    );
+    ));
 }
 
 const GRAPH_ACCENT = '#DC2626';
@@ -591,7 +569,7 @@ const loadProfileData = async (hasCache = false) => {
 
                 <View style={styles.historySection}>
                     <Text style={styles.sectionTitle}>Workout History</Text>
-                    <WorkoutsTab workoutLogs={workoutLogs} isLoading={isLoading} />
+                    <WorkoutsTab workoutLogs={workoutLogs} isLoading={isLoading} userId={userId} />
                 </View>
             </ScrollView>
         </SafeAreaView>
