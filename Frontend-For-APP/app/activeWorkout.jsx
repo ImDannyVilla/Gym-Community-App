@@ -184,6 +184,7 @@ export default function ActiveWorkout() {
   const [pendingExercises, setPendingExercises] = useState([]);
   
   const flatListRef = useRef(null);
+  const deletingIdsRef = useRef(new Set());
 
   const {
     activeLogId,
@@ -250,11 +251,17 @@ export default function ActiveWorkout() {
   }, [removeSet, toggleWarmupSet]);
 
   const handleDeleteExercise = useCallback((ex) => {
+    if (deletingIdsRef.current.has(ex.id)) return;
+    deletingIdsRef.current.add(ex.id);
     Alert.alert(
       'Remove Exercise',
       `Remove ${ex.name} from this workout?`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Cancel',
+          style: 'cancel',
+          onPress: () => deletingIdsRef.current.delete(ex.id),
+        },
         {
           text: 'Remove',
           style: 'destructive',
@@ -268,6 +275,8 @@ export default function ActiveWorkout() {
                 useWorkoutStore.setState({ exercises: snapshot });
                 Alert.alert('Error', 'Failed to remove exercise. Please try again.');
               }
+            } finally {
+              deletingIdsRef.current.delete(ex.id);
             }
           },
         },
