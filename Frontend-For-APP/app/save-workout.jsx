@@ -9,7 +9,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { colors, spacing, layout } from '../lib/theme';
-import { addExerciseToLog, updateWorkoutLog, getWorkoutStreak } from '../lib/workoutApi';
+import { addExerciseToLog, updateWorkoutLog } from '../lib/workoutApi';
 import { uploadWorkoutMedia } from '../lib/supabaseStorage';
 import { getMyProfile } from '../lib/socialApi';
 import { saveToCache, CACHE_KEYS } from '../lib/localCache';
@@ -175,21 +175,15 @@ export default function SaveWorkout() {
         media_type: mediaUrl ? 'photo' : null,
       });
 
+      endWorkout();
+      useWorkoutStore.persist.clearStorage();
+
       await Promise.all([
         saveToCache(CACHE_KEYS.WORKOUT_LOGS, null),
         saveToCache(CACHE_KEYS.STREAK, null),
       ]).catch(() => {});
 
-      const streakData = await getWorkoutStreak().catch(() => null);
-      const totalWorkouts = streakData?.total_workouts ?? 0;
-      const totalVolume = streakData?.total_volume ?? 0;
-
-      endWorkout();
-      useWorkoutStore.persist.clearStorage();
-
-      router.replace(
-        `/workout-complete?logId=${logId}&totalWorkouts=${totalWorkouts}&totalVolume=${Math.round(totalVolume)}`
-      );
+      router.replace(`/workout-complete?logId=${logId}`);
     } catch (e) {
       console.error('Save workout failed:', e.message);
       Alert.alert('Error', 'Failed to save workout. Please try again.');
