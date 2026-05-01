@@ -72,10 +72,12 @@ export default function WorkoutsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      if (routines.length === 0 || needsProfileRefresh) {
+      // Read directly from store to avoid stale closure over `routines`
+      const { cachedRoutines, needsProfileRefresh: refresh } = useWorkoutStore.getState();
+      if (cachedRoutines.length === 0 || refresh) {
         fetchData();
       }
-    }, [needsProfileRefresh])
+    }, [])
   );
 
   const getCurrentDate = () => {
