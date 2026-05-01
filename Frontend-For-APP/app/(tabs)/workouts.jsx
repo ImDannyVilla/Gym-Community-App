@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView, Alert, RefreshControl } from "react-native";
+import { View, Text, StyleSheet, Pressable, ScrollView, Alert, RefreshControl, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -12,6 +12,7 @@ import { useWorkoutStore } from "../../stores/workoutStore";
 export default function WorkoutsScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
   const {
     isActive: hasActiveWorkout,
     activeLogId,
@@ -84,26 +85,21 @@ export default function WorkoutsScreen() {
   };
 
   const startNewWorkout = async (name, routineId, errorMessage) => {
+    setIsStarting(true);
     try {
       // 1. Create a new workout log
       const log = await startWorkout(name, routineId, false);
       const logId = log.id;
 
-      // 2. If it's a routine, fetch exercises and add them with EMPTY sets
+      // 2. If it's a routine, fetch full routine then add all exercises in parallel
+      let addedExercises = [];
       if (routineId) {
-        try {
-          const routine = await getRoutine(routineId);
-          if (routine && routine.exercises) {
-            for (const ex of routine.exercises) {
-              // Create sets array with placeholder values (0 as requested)
-              const sets = Array.from({ length: ex.target_sets || 1 }, (_, index) => ({
-                set_number: index + 1,
-                reps: 0,
-                weight_lbs: 0.0,
-                completed: false,
-              }));
-
-              await addExerciseToLog(logId, {
+        const routine = await getRoutine(routineId);
+        if (routine?.exercises?.length) {
+          const sorted = [...routine.exercises].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+          addedExercises = await Promise.all(
+            sorted.map(ex =>
+              addExerciseToLog(logId, {
                 exercise_id: ex.exercise_id,
                 name: ex.name,
                 category: ex.category,
@@ -115,20 +111,27 @@ export default function WorkoutsScreen() {
                 target_reps_min: ex.target_reps_min,
                 target_reps_max: ex.target_reps_max,
                 target_weight_lbs: ex.target_weight_lbs,
-                sets: sets,
-              });
-            }
-          }
-        } catch (routineError) {
-          console.error("Failed to add routine exercises:", routineError.message);
+                sets: Array.from({ length: ex.target_sets || 3 }, (_, i) => ({
+                  set_number: i + 1,
+                  reps: 0,
+                  weight_lbs: 0.0,
+                  completed: false,
+                })),
+              })
+            )
+          );
         }
       }
 
-      setWorkoutActive(log);
-      router.push("/activeWorkout");
+      // 3. Populate store with backend-created exercises (with real IDs and sets)
+      //    then navigate — exercises are guaranteed present before screen mounts
+      setWorkoutActive({ ...log, exercises: addedExercises });
+      router.push('/activeWorkout');
     } catch (e) {
       console.error(errorMessage, e.message);
-      Alert.alert("Error", `${errorMessage}. Please try again.`);
+      Alert.alert('Error', `${errorMessage}. Please try again.`);
+    } finally {
+      setIsStarting(false);
     }
   };
 
@@ -316,8 +319,11 @@ export default function WorkoutsScreen() {
                 <Pressable
                   style={styles.startButton}
                   onPress={() => handleStartRoutine(routine.id, routine.name)}
+                  disabled={isStarting}
                 >
-                  <Text style={styles.startButtonText}>Start</Text>
+                  {isStarting
+                    ? <ActivityIndicator size="small" color={colors.text} />
+                    : <Text style={styles.startButtonText}>Start</Text>}
                 </Pressable>
               </View>
             </View>
