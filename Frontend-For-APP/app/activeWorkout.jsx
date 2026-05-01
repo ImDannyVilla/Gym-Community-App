@@ -433,13 +433,13 @@ export default function ActiveWorkout() {
       }
       setShowEmptyAlert(false);
       endWorkout();
-      useWorkoutStore.persist.clearStorage();
+      await useWorkoutStore.persist.clearStorage();
       router.replace("/(tabs)/workouts");
     } catch (e) {
       if (e.status === 404) {
         setShowEmptyAlert(false);
         endWorkout();
-        useWorkoutStore.persist.clearStorage();
+        await useWorkoutStore.persist.clearStorage();
         router.replace("/(tabs)/workouts");
         return;
       }

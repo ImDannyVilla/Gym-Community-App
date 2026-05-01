@@ -87,10 +87,10 @@ export default function ActiveWorkoutMiniWidget() {
         {
           text: 'Discard',
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
             const logId = useWorkoutStore.getState().activeLogId;
             endWorkout();
-            useWorkoutStore.persist.clearStorage();
+            await useWorkoutStore.persist.clearStorage();
             router.replace('/(tabs)');
             if (logId) {
               deleteWorkoutLog(logId).catch(console.warn);

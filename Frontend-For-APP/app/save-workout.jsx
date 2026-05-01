@@ -176,7 +176,7 @@ export default function SaveWorkout() {
       });
 
       endWorkout();
-      useWorkoutStore.persist.clearStorage();
+      await useWorkoutStore.persist.clearStorage();
 
       await Promise.all([
         saveToCache(CACHE_KEYS.WORKOUT_LOGS, null),
@@ -207,7 +207,7 @@ export default function SaveWorkout() {
               if (activeLogId) await deleteWorkoutLog(activeLogId).catch(() => {});
             } finally {
               endWorkout();
-              useWorkoutStore.persist.clearStorage();
+              await useWorkoutStore.persist.clearStorage();
               router.replace('/(tabs)/workouts');
             }
           },
