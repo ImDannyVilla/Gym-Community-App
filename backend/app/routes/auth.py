@@ -148,7 +148,7 @@ async def forgot_email(username: str, db: AsyncSessionDep):
         else:
             masked_email = email
 
-        return {"masked_email": masked_email, "message": "Email found"}
+        return {"email": email, "masked_email": masked_email, "message": "Email found"}
     except Exception as e:
         return {"masked_email": None, "message": "No account found with this username"}
 
