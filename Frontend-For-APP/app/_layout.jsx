@@ -4,10 +4,13 @@ import { View, ActivityIndicator } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import BottomNav from "./_components/BottomNav";
+import ActiveWorkoutMiniWidget from "./_components/ActiveWorkoutMiniWidget";
+import { useWorkoutStore } from "../stores/workoutStore";
 import { getToken } from "../lib/tokenStorage";
 import { useEffect, useState, useCallback } from "react";
 
 export default function Layout() {
+  const isWorkoutActive = useWorkoutStore(state => state.isActive);
   const segments = useSegments();
   const pathname = usePathname();
   const router = useRouter();
@@ -80,6 +83,7 @@ export default function Layout() {
           <Stack.Screen name="user-search" />
           <Stack.Screen name="user-profile" />
         </Stack>
+        {isWorkoutActive && isAuthenticated && !isActiveWorkoutScreen && <ActiveWorkoutMiniWidget />}
         {isAuthenticated && !isActiveWorkoutScreen && !isWorkoutSummaryScreen && !isWorkoutLogDetailScreen && !isPostWorkoutShareScreen && !isSaveWorkoutScreen && !isWorkoutCompleteScreen && <BottomNav />}
       </View>
     </SafeAreaProvider>
