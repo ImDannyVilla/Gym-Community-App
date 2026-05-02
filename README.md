@@ -1,85 +1,137 @@
-# Gym Community App
+# Angles App
 
-Workout tracking and gym community platform for Iron Arms Gym
+Personal workout tracking app — log workouts, track progress, and hit personal records.
 
-The website is made for gym owners to access, view, and manage customer information quickly and efficiently.
+## Stack
 
-The app is made for gym customers who wish to access their barcode digitally, with added features that allow for customer interactions. 
+| Layer | Tech |
+|-------|------|
+| Backend | FastAPI, SQLAlchemy 2.0 async, Alembic |
+| Database | Supabase PostgreSQL |
+| Auth | Supabase Auth (JWT) |
+| Frontend | React Native, Expo (SDK 54), Expo Router |
+| State | Zustand + AsyncStorage |
+| Package managers | `uv` (backend), `npm` (frontend) |
 
-## Backend Setup
+Live API: https://gym-community-app.onrender.com
+
+---
+
+## Features
+
+- **Workout logging** — start an empty workout or from a saved routine, log sets with weight and reps
+- **Routines** — create and edit reusable workout templates
+- **Explore** — browse seeded workout programs (Push/Pull/Legs, Upper/Lower, etc.)
+- **Rest timer** — configurable auto-timer after each completed set
+- **Workout summary** — post-workout summary screen with stats and option to save as routine
+- **Workout history** — full log history on your profile with a tappable detail view
+- **Personal records** — per-exercise PR detection shown on the workout detail screen
+- **Progress graphs** — 14-day volume and reps bar charts on the profile screen
+- **Exercise library** — searchable exercise database with GIF demos and history per exercise
+- **Profile** — avatar, bio, day streak, and lifetime stats
+
+---
+
+## Backend
+
 ```bash
 cd backend
 uv sync
-cp .env.example .env   # Then fill in real values
-uv run uvicorn app.app:app --reload
+cp .env.example .env   # fill in real values
+uv run uvicorn app.main:gym_app --reload
 ```
 
-API Docs: http://localhost:8000/docs
+API docs: http://localhost:8000/docs
 
-## Frontend Setup
+### Required environment variables (`backend/.env`)
 
-### Package Requirements
-Java Development Kit: Version 17  
-React: 19.1.0  
-React Native: 0.81.5   
-Expo: 54.0.33  
-Package Manager: npm (Node Package Manager)  
-Emulator: Android Studio  
+```
+DATABASE_URL=postgresql+asyncpg://...
+SUPABASE_URL=https://...
+SUPABASE_KEY=...
+SUPABASE_SERVICE_KEY=...
+SUPABASE_JWT_SECRET=...
+```
 
-### Running the App
+### Database migrations
 
-1. Open Android Studio
-2. Click the "Device Manager" icon on the right
-3. Click the "+" -> "Create Virtual Device"
-4. Choose Phone Model
-5. Finish
+```bash
+# Apply all pending migrations
+uv run alembic upgrade head
 
-## Setting up Environment Variables
-# Windows 
-1. **Locate your Android SDK Platform-Tools folder.**
-   * By default, Android Studio installs this at: `C:\Users\YOUR_USERNAME\AppData\Local\Android\Sdk\platform-tools`
-   * *(Note: `AppData` is a hidden folder. You can type `%LOCALAPPDATA%\Android\Sdk\platform-tools` directly into the File Explorer address bar to find it).*
-2. **Open Environment Variables.**
-   * Press the **Windows Key**, type `Environment Variables`, and select **Edit the system environment variables**.
-3. **Edit the Path variable.**
-   * In the System Properties window, click the **Environment Variables...** button at the bottom.
-   * Under the "User variables for [YourName]" section, find and select the variable named `Path`, then click **Edit...**.
-4. **Add the new path.**
-   * Click **New**, and paste the full path to your `platform-tools` folder (e.g., `C:\Users\YOUR_USERNAME\AppData\Local\Android\Sdk\platform-tools`).
-5. **Save and Apply.**
-   * Click **OK** on all three windows to save your changes.
-6. **Restart your terminal.**
-   * Close any open Command Prompt, PowerShell, or VS Code terminals and open a new one. Type `adb devices` to verify it works.
+# Generate a new migration after model changes
+uv run alembic revision --autogenerate -m "description"
+```
 
-# Linux
-1. **Locate your Android SDK Platform-Tools folder.**
-   * By default, Android Studio installs this at: `~/Android/Sdk/platform-tools`
-2. **Open your shell profile file.**
-   * Depending on your shell, this will usually be `~/.bashrc` or `~/.zshrc`.
-   * Open your terminal and use a text editor to open the file, for example: `nano ~/.bashrc`
-3. **Add the export path command.**
-   * Scroll to the very bottom of the file and add the following line:
-     ```bash
-     export PATH=$PATH:~/Android/Sdk/platform-tools
-     ```
-4. **Save the file.**
-5. **Apply the changes.**
-   * To make the changes take effect immediately in your current terminal, run:
-     ```bash
-     source ~/.bashrc
-     ```
-     *(Replace `.bashrc` with `.zshrc` if you are using Zsh).*
-6. **Verify.**
-   * Type `adb devices` in your terminal to ensure the command is recognized.
+### Tests
 
+```bash
+uv run pytest -v
+```
 
---- 
+Tests use SQLite in-memory and require a live Supabase connection to create test users.
+
+---
+
+## Frontend
+
+### Prerequisites
+
+- Node.js + npm
+- Expo Go (mobile) or Android Studio / Xcode (emulator)
+- JDK 17 if using Android emulator
 
 ```bash
 cd Frontend-For-APP
 npm install
 npx expo start
 ```
+
+Scan the QR code with Expo Go, or press `a` for Android emulator / `i` for iOS simulator.
+
+### Android emulator setup (first time)
+
+1. Install Android Studio and open **Device Manager**
+2. Create a virtual device (any Phone profile)
+3. Add `platform-tools` to your PATH:
+   - **Windows:** `%LOCALAPPDATA%\Android\Sdk\platform-tools`
+   - **Linux/macOS:** `~/Android/Sdk/platform-tools` → add `export PATH=$PATH:~/Android/Sdk/platform-tools` to `~/.bashrc` or `~/.zshrc`
+4. Run `adb devices` to verify, then `npx expo start` and press `a`
+
+---
+
+## Project structure
+
+```
+Gym-Community-App/
+├── backend/
+│   ├── app/
+│   │   ├── main.py          # FastAPI app, CORS, routers
+│   │   ├── dependencies.py  # Auth (JWT decode + Supabase fallback)
+│   │   ├── db.py            # SQLAlchemy engine, Base, GUID type
+│   │   ├── models/          # SQLAlchemy ORM models
+│   │   ├── schemas/         # Pydantic v2 request/response models
+│   │   └── routes/          # FastAPI routers
+│   ├── alembic/             # Migration history
+│   └── tests/
+└── Frontend-For-APP/
+    ├── app/                 # Expo Router screens
+    │   ├── (tabs)/          # workouts + profile tabs
+    │   ├── activeWorkout.jsx
+    │   ├── workout-summary.jsx
+    │   ├── workout-log-detail.jsx
+    │   └── explore.jsx
+    ├── stores/
+    │   └── workoutStore.js  # Zustand store (active workout + cache)
+    ├── lib/
+    │   ├── workoutApi.jsx   # All workout/exercise API calls
+    │   ├── api.jsx          # Base fetch + auth header
+    │   └── localCache.jsx   # AsyncStorage cache layer
+    └── assets/
+        └── workout_covers/  # Local cover images for seeded workouts
+```
+
+---
 
 ## Team
 

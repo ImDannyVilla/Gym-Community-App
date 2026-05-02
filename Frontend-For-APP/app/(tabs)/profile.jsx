@@ -1,50 +1,208 @@
-import {useState, useEffect} from "react";
-import {useRouter, useLocalSearchParams} from "expo-router";
-import {View, Text, Image, Pressable, StyleSheet, Alert, Platform} from "react-native";
+import {useState, useEffect, useCallback, useMemo} from "react";
+import {useRouter, useLocalSearchParams, useFocusEffect, router} from "expo-router";
+import {View, Text, Pressable, StyleSheet, Alert, Platform, ActionSheetIOS, ActivityIndicator, ScrollView, FlatList, useWindowDimensions} from "react-native";
+import { Image } from "expo-image";
+import Svg, { Line as SvgLine, Text as SvgText, Rect, G } from 'react-native-svg';
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import * as NavigationBar from "expo-navigation-bar";
 import Modal from "react-native-modal";
-import {Tabs, MaterialTabBar} from "react-native-collapsible-tab-view";
-import Posts from "../posts";
-import Workouts from "../workouts"
-import { colors } from "../../lib/theme";
+import { Ionicons } from "@expo/vector-icons";
+import { colors, spacing, layout } from "../../lib/theme";
+import { getToken, clearAllTokens } from "../../lib/tokenStorage";
+import { loadFromCache, saveToCache, clearCache, CACHE_KEYS } from "../../lib/localCache";
+import { getMyProfile, updateMyProfile } from "../../lib/socialApi";
+import { uploadAvatar } from "../../lib/supabaseStorage";
+import { logoutUser } from "../../lib/authApi";
+import { getWorkoutLogs, getWorkoutStreak } from "../../lib/workoutApi";
+import { useWorkoutStore } from "../../stores/workoutStore";
+import WorkoutPostCard from "../_components/WorkoutPostCard";
+
+const formatDate = (isoString) => {
+    if (!isoString) return "--";
+    const date = new Date(isoString);
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+};
+
+const formatDateTime = (isoString) => {
+    if (!isoString) return "--";
+    const date = new Date(isoString);
+    return date.toLocaleString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+    });
+};
+
+const formatTime = (seconds) => {
+    if (!seconds) return "--";
+    const m = Math.floor(seconds / 60);
+    return `${m} min`;
+};
+
+const formatLastWorkout = (log) => {
+    if (!log) return "No completed workouts yet";
+    return `${log.name || "Workout"} • ${formatDateTime(log.completed_at || log.started_at)}`;
+};
+
+const EmptyState = ({ icon, title, subtitle }) => (
+    <View style={styles.tabContainer}>
+        <Ionicons name={icon} size={48} color={colors.border} />
+        <Text style={styles.emptyText}>{title}</Text>
+        <Text style={styles.emptySubtext}>{subtitle}</Text>
+    </View>
+);
+
+function WorkoutsTab({ workoutLogs, isLoading, userId }) {
+    if (isLoading) {
+        return (
+            <View style={styles.tabContainer}>
+                <ActivityIndicator size="small" color={colors.primary} />
+            </View>
+        );
+    }
+
+    if (workoutLogs.length === 0) {
+        return <EmptyState icon="barbell-outline" title="No workouts yet" subtitle="Start a workout to track your progress" />;
+    }
+
+    return workoutLogs.map(item => (
+        <WorkoutPostCard
+            key={item.id}
+            post={{
+                ...item,
+                user_id: userId,
+                exercise_count: (item.exercises || []).length,
+            }}
+            currentUserId={userId}
+            showAuthor={false}
+            onPress={() => router.push(`/workout-log-detail?logId=${item.id}`)}
+        />
+    ));
+}
+
+const GRAPH_ACCENT = '#DC2626';
+const GRAPH_ACCENT_SEL = '#FF4444';
+const G_H = 110;
+const G_PAD = { t: 8, b: 28, l: 4, r: 4 };
+
+function ProgressGraph({ data, label, graphWidth }) {
+  const [selectedIndex, setSelectedIndex] = useState(null);
+
+  const pW = graphWidth - G_PAD.l - G_PAD.r;
+  const pH = G_H - G_PAD.t - G_PAD.b;
+  const n = data.length;
+  const maxVal = Math.max(...data.map(d => d.value), 1);
+
+  const barSlot = pW / n;
+  const barW = barSlot * 0.6;
+  const xCenter = (i) => G_PAD.l + i * barSlot + barSlot / 2;
+  const bH = (v) => v === 0 ? 3 : Math.max(4, (v / maxVal) * pH);
+  const bY = (v) => G_PAD.t + pH - bH(v);
+
+  const sel = selectedIndex !== null ? data[selectedIndex] : null;
+
+  return (
+    <View style={graphStyles.card}>
+      <Text style={graphStyles.label}>{label}</Text>
+      <Text style={graphStyles.tooltip} numberOfLines={1}>
+        {sel ? `${sel.fullDate} — ${sel.tooltipText}` : ' '}
+      </Text>
+      <Svg width={graphWidth} height={G_H}>
+        <SvgLine
+          x1={G_PAD.l} y1={G_PAD.t + pH}
+          x2={G_PAD.l + pW} y2={G_PAD.t + pH}
+          stroke="#333" strokeWidth={1}
+        />
+        {data.map((d, i) => (
+          <G key={i} onPress={() => setSelectedIndex(i === selectedIndex ? null : i)}>
+            <Rect
+              x={xCenter(i) - barSlot / 2}
+              y={G_PAD.t}
+              width={barSlot}
+              height={pH}
+              fill="rgba(0,0,0,0.01)"
+            />
+            <Rect
+              x={xCenter(i) - barW / 2}
+              y={bY(d.value)}
+              width={barW}
+              height={bH(d.value)}
+              rx={2}
+              fill={i === selectedIndex ? GRAPH_ACCENT_SEL : GRAPH_ACCENT}
+            />
+            {i % 2 === 0 && (
+              <SvgText x={xCenter(i)} y={G_H - 4} fontSize={7} fill="#888" textAnchor="middle">
+                {d.label}
+              </SvgText>
+            )}
+          </G>
+        ))}
+      </Svg>
+    </View>
+  );
+}
+
+const graphStyles = StyleSheet.create({
+  card: {
+    width: '100%',
+    marginBottom: 12,
+    backgroundColor: colors.surface,
+    borderRadius: layout.borderRadius,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 12,
+    paddingBottom: 6,
+  },
+  label: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+    marginBottom: 2,
+  },
+  tooltip: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 6,
+    minHeight: 16,
+  },
+});
 
 export default function Profile() {
-    // Create router for navigation to editProfile
     const router = useRouter();
+    const { width: screenWidth } = useWindowDimensions();
 
     const params = useLocalSearchParams();
 
-    const [name, setName] = useState("Name")
-    const [username, setUsername] = useState("Username");
-    const [about, setAbout] = useState("This is a little about me.");
-    const [weight, setWeight] = useState("185 lbs");
-    const [calorieIntake, setCalorieIntake] = useState("2,500 kcal");
-    const [lastWorkout, setLastWorkout] = useState("Chest & Triceps");
-    const [currentWorkout, setCurrentWorkout] = useState("Back & Biceps");
+    const [name, setName] = useState("")
+    const [username, setUsername] = useState("");
+    const [about, setAbout] = useState("");
+    const [gymLevel, setGymLevel] = useState("");
+    const [weight, setWeight] = useState("");
+    const [avatarUrl, setAvatarUrl] = useState("");
+    const [userId, setUserId] = useState(null);
+    const [followersCount, setFollowersCount] = useState(0);
+    const [followingCount, setFollowingCount] = useState(0);
+    const [isUploading, setIsUploading] = useState(false);
 
-    const [totalWorkouts, setTotalWorkouts] = useState("847");
-    const [dayStreak, setDayStreak] = useState("45");
-    const [totalCalories, setTotalCalories] = useState("18k");
+    const [workoutLogs, setWorkoutLogs] = useState([]);
+    const [dayStreak, setDayStreak] = useState(0);
 
-    const [isStreakModalVisible, setStreakModalVisible] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
 
-    const currentDate = new Date();
-    const currentMonth = currentDate.toLocaleString('default', { month: 'long' });
-    const currentYear = currentDate.getFullYear();
-    const todayNum = currentDate.getDate();
-
-    const daysInMonth = new Date(currentYear, currentDate.getMonth() + 1, 0).getDate();
-    const firstDayOfMonth = new Date(currentYear, currentDate.getMonth(), 1).getDay();
-
-    const daysArray = [];
-    for (let i = 0; i < firstDayOfMonth; i++) {
-        daysArray.push(null);
-    }
-    for (let i = 1; i <= daysInMonth; i++) {
-        daysArray.push(i);
-    }
+    const needsProfileRefresh = useWorkoutStore(state => state.needsProfileRefresh);
+    const clearProfileRefresh = useWorkoutStore(state => state.clearProfileRefresh);
+    const cachedProfile = useWorkoutStore(state => state.cachedProfile);
+    const cachedWorkoutLogs = useWorkoutStore(state => state.cachedWorkoutLogs);
+    const cachedDayStreak = useWorkoutStore(state => state.cachedDayStreak);
+    const setCachedProfile = useWorkoutStore(state => state.setCachedProfile);
+    const setCachedWorkoutLogs = useWorkoutStore(state => state.setCachedWorkoutLogs);
+    const setCachedDayStreak = useWorkoutStore(state => state.setCachedDayStreak);
 
     useEffect(() => {
         if(params.name) {
@@ -56,19 +214,109 @@ export default function Profile() {
         if(params.about) {
             setAbout(params.about);
         }
-        if(params.weight) {
-            setWeight(params.weight);
+    }, [params.name, params.username, params.about]);
+
+    const handleLogout = async () => {
+        await clearCache();
+        await clearAllTokens();
+        logoutUser(); // fire-and-forget server-side invalidation
+        router.replace("/");
+    };
+
+const loadProfileData = async (hasCache = false) => {
+        if (!hasCache) setIsLoading(true);
+        try {
+            const token = await getToken();
+            if (!token) return;
+
+            const data = await getMyProfile();
+            if (data.id) setUserId(String(data.id));
+            if (data.profile) {
+                setUsername(data.profile.user_name || "Username");
+                setName(data.profile.full_name || "");
+                setAbout(data.profile.bio || "This is a little about me.");
+                setGymLevel(data.profile.gym_level || "");
+                setWeight(data.profile.weight?.toString() || "");
+                setAvatarUrl(data.profile.avatar_url || "");
+                setFollowersCount(data.profile.followers_count ?? 0);
+                setFollowingCount(data.profile.following_count ?? 0);
+                setCachedProfile(data.profile);
+            }
+
+            const [logsData, streakData] = await Promise.all([
+                getWorkoutLogs(),
+                getWorkoutStreak().catch(() => null),
+            ]);
+            const completedLogs = (logsData || [])
+                .filter(log => log.completed_at)
+                .sort((a, b) => new Date(b.completed_at) - new Date(a.completed_at));
+            setWorkoutLogs(completedLogs);
+            setCachedWorkoutLogs(completedLogs);
+            if (streakData) {
+                setDayStreak(streakData.day_streak ?? 0);
+                setCachedDayStreak(streakData.day_streak ?? 0);
+            }
+            clearProfileRefresh();
+
+            // Persist fresh data to AsyncStorage for cross-session cache
+            await Promise.all([
+                data.profile ? saveToCache(CACHE_KEYS.PROFILE, data.profile) : Promise.resolve(),
+                saveToCache(CACHE_KEYS.WORKOUT_LOGS, completedLogs),
+                streakData ? saveToCache(CACHE_KEYS.STREAK, streakData) : Promise.resolve(),
+            ]).catch(() => {});
+        } catch (error) {
+            console.log("Failed to load profile data (Network error)", error);
+        } finally {
+            setIsLoading(false);
         }
-        if(params.calorieIntake) {
-            setCalorieIntake(params.calorieIntake);
-        }
-        if(params.lastWorkout) {
-            setLastWorkout(params.lastWorkout);
-        }
-        if(params.currentWorkout) {
-            setCurrentWorkout(params.currentWorkout);
-        }
-    }, [params.name, params.username, params.about, params.weight, params.calorieIntake, params.lastWorkout, params.currentWorkout]);
+    };
+
+    useFocusEffect(
+        useCallback(() => {
+            const initAndLoad = async () => {
+                // 1. Populate from Zustand immediately (same-session, zero latency)
+                const hasZustandCache = !!cachedProfile;
+                if (hasZustandCache) {
+                    setUsername(cachedProfile.user_name || "Username");
+                    setName(cachedProfile.full_name || "");
+                    setAbout(cachedProfile.bio || "This is a little about me.");
+                    setGymLevel(cachedProfile.gym_level || "");
+                    setWeight(cachedProfile.weight?.toString() || "");
+                    setAvatarUrl(cachedProfile.avatar_url || "");
+                    setFollowersCount(cachedProfile.followers_count ?? 0);
+                    setFollowingCount(cachedProfile.following_count ?? 0);
+                }
+                if (cachedWorkoutLogs.length > 0) setWorkoutLogs(cachedWorkoutLogs);
+                if (cachedDayStreak) setDayStreak(cachedDayStreak);
+
+                // 2. If Zustand is empty (app restart), hydrate from AsyncStorage
+                let hasCache = hasZustandCache;
+                if (!hasZustandCache) {
+                    const [asyncProfile, asyncStreak] = await Promise.all([
+                        loadFromCache(CACHE_KEYS.PROFILE),
+                        loadFromCache(CACHE_KEYS.STREAK),
+                    ]);
+                    if (asyncProfile) {
+                        hasCache = true;
+                        setUsername(asyncProfile.user_name || "Username");
+                        setName(asyncProfile.full_name || "");
+                        setAbout(asyncProfile.bio || "This is a little about me.");
+                        setGymLevel(asyncProfile.gym_level || "");
+                        setWeight(asyncProfile.weight?.toString() || "");
+                        setAvatarUrl(asyncProfile.avatar_url || "");
+                        setFollowersCount(asyncProfile.followers_count ?? 0);
+                        setFollowingCount(asyncProfile.following_count ?? 0);
+                        setCachedProfile(asyncProfile);
+                    }
+                    if (asyncStreak) { setDayStreak(asyncStreak.day_streak ?? 0); setCachedDayStreak(asyncStreak.day_streak ?? 0); }
+                }
+
+                // 3. Background fetch (no spinner if any cache exists)
+                loadProfileData(hasCache);
+            };
+            initAndLoad();
+        }, [needsProfileRefresh])
+    );
 
     // Force navigation bar to be dark
     useEffect(() => {
@@ -78,91 +326,132 @@ export default function Profile() {
         }
     }, []);
 
-    const [profilePhotoUri, setProfilePhotoUri] = useState(
-        "https://picsum.photos/800/400"
-    );
-
-    const changeProfilePhoto = async () => {
-        // Ask permission
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== "granted") {
-            Alert.alert(
-                "Permission needed",
-                "Please allow photo library access to upload a profile picture."
+    const handleAvatarPress = () => {
+        if (Platform.OS === 'ios') {
+            ActionSheetIOS.showActionSheetWithOptions(
+                {
+                    options: ['Cancel', 'Take Photo', 'Choose from Library'],
+                    cancelButtonIndex: 0,
+                },
+                (buttonIndex) => {
+                    if (buttonIndex === 1) takePhoto();
+                    if (buttonIndex === 2) pickFromLibrary();
+                }
             );
+        } else {
+            Alert.alert('Profile Photo', 'Choose an option', [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Take Photo', onPress: takePhoto },
+                { text: 'Choose from Library', onPress: pickFromLibrary },
+            ]);
+        }
+    };
+
+    const takePhoto = async () => {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== 'granted') {
+            Alert.alert('Permission needed', 'Please allow camera access to take a profile photo.');
             return;
         }
-
-        // Open gallery
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ['images'], // Only allows images for upload
-            allowsEditing: true, // lets them crop
-            aspect: [1, 1], // square crop
-            quality: 1,
+        const result = await ImagePicker.launchCameraAsync({
+            mediaTypes: ['images'],
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.7,
         });
-
         if (!result.canceled && result.assets?.length) {
-            setProfilePhotoUri(result.assets[0].uri);
+            await uploadAvatarPhoto(result.assets[0].uri);
+        }
+    };
+
+    const pickFromLibrary = async () => {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+            Alert.alert('Permission needed', 'Please allow photo library access to upload a profile picture.');
+            return;
+        }
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images'],
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.7,
+        });
+        if (!result.canceled && result.assets?.length) {
+            await uploadAvatarPhoto(result.assets[0].uri);
+        }
+    };
+
+    const uploadAvatarPhoto = async (localUri) => {
+        setIsUploading(true);
+        try {
+            const publicUrl = await uploadAvatar(localUri, userId);
+            await updateMyProfile({ avatar_url: publicUrl });
+            setAvatarUrl(publicUrl);
+            const updatedProfile = { ...cachedProfile, avatar_url: publicUrl };
+            setCachedProfile(updatedProfile);
+            await saveToCache(CACHE_KEYS.PROFILE, updatedProfile).catch(() => {});
+        } catch (error) {
+            console.error('Avatar upload error:', error);
+            Alert.alert('Upload Failed', 'Could not upload photo. Please try again.');
+        } finally {
+            setIsUploading(false);
         }
     };
 
     const profileHeader = () => {
         return (
             <View style={{width: "100%", alignItems: "center"}}>
-                <View style={styles.photoContainer}>
-                    <Image
-                        source={{ uri: profilePhotoUri }}
-                        style={styles.profilePhoto}
-                        resizeMode="cover"
-                    />
+                <Pressable onPress={handleAvatarPress} style={styles.avatarContainer}>
+                    {avatarUrl ? (
+                        <Image
+                            source={{ uri: avatarUrl }}
+                            style={styles.avatar}
+                            contentFit="cover"
+                        />
+                    ) : (
+                        <View style={[styles.avatar, styles.avatarPlaceholder]}>
+                            <Ionicons name="person-outline" size={40} color="#555" />
+                        </View>
+                    )}
+                    {isUploading ? (
+                        <View style={styles.avatarOverlay}>
+                            <ActivityIndicator color="#fff" />
+                        </View>
+                    ) : (
+                        <View style={styles.cameraIconOverlay}>
+                            <Ionicons name="camera" size={14} color="#fff" />
+                        </View>
+                    )}
+                </Pressable>
 
-                    <Pressable style={styles.editProfilePhoto} onPress={changeProfilePhoto}>
-                        <Text style={styles.plusIcon}>+</Text>
-                    </Pressable>
-                </View>
-
-                <Text style={styles.name}>{name}</Text>
+                {name ? <Text style={styles.name}>{name}</Text> : null}
                 <Text style={styles.userName}>@{username}</Text>
 
-                <View style={styles.topStatsContainer}>
-                    <View style={styles.topStatItem}>
-                        <Text style={styles.topStatValue} adjustsFontSizeToFit numberOfLines={1}>{totalWorkouts}</Text>
-                        <Text style={styles.topStatLabel} adjustsFontSizeToFit numberOfLines={1}>Workouts</Text>
-                    </View>
-                    <Pressable style={styles.topStatItem} onPress={() => setStreakModalVisible(true)}>
-                        <Text style={styles.topStatValue} adjustsFontSizeToFit numberOfLines={1}>{dayStreak}</Text>
-                        <Text style={styles.topStatLabel} adjustsFontSizeToFit numberOfLines={1}>Day Streak</Text>
+                <View style={styles.followRow}>
+                    <Pressable
+                        style={styles.followStat}
+                        onPress={() => userId && router.push(`/followers-list?userId=${userId}&type=followers`)}
+                    >
+                        <Text style={styles.followNumber}>{followersCount}</Text>
+                        <Text style={styles.followLabel}>Followers</Text>
                     </Pressable>
-                    <View style={styles.topStatItem}>
-                        <Text style={styles.topStatValue} adjustsFontSizeToFit numberOfLines={1}>{totalCalories}</Text>
-                        <Text style={styles.topStatLabel} adjustsFontSizeToFit numberOfLines={1}>Calories</Text>
-                    </View>
+                    <View style={{ width: 1, height: 28, backgroundColor: colors.border }} />
+                    <Pressable
+                        style={styles.followStat}
+                        onPress={() => userId && router.push(`/followers-list?userId=${userId}&type=following`)}
+                    >
+                        <Text style={styles.followNumber}>{followingCount}</Text>
+                        <Text style={styles.followLabel}>Following</Text>
+                    </Pressable>
                 </View>
 
                 <View style={styles.editProfile}>
-                    {/* Pass in username and about variables into the editProfile page */}
-                    <Pressable style={styles.editButton} onPress={() => {router.push({ pathname: "../edit/editProfile", params: {name, username, about, weight, calorieIntake, lastWorkout, currentWorkout}})}}>
+                    <Pressable style={styles.editButton} onPress={() => {router.push({ pathname: "../edit/editProfile", params: {name, username, about, gymLevel, weight}})}}>
                         <Text style={styles.edit}>Edit Profile</Text>
                     </Pressable>
-                </View>
-
-                <View style={styles.cardContainer} pointerEvents="none">
-                    <View style={styles.statCard}>
-                        <Text style={styles.cardTitle} adjustsFontSizeToFit numberOfLines={1}>Weight</Text>
-                        <Text style={styles.cardValue} adjustsFontSizeToFit numberOfLines={1}>{weight}</Text>
-                    </View>
-                    <View style={styles.statCard}>
-                        <Text style={styles.cardTitle} adjustsFontSizeToFit numberOfLines={1}>Daily Calorie Intake</Text>
-                        <Text style={styles.cardValue} adjustsFontSizeToFit numberOfLines={1}>{calorieIntake}</Text>
-                    </View>
-                    <View style={styles.statCard}>
-                        <Text style={styles.cardTitle} adjustsFontSizeToFit numberOfLines={1}>Last Workout</Text>
-                        <Text style={styles.cardValue} adjustsFontSizeToFit numberOfLines={1}>{lastWorkout}</Text>
-                    </View>
-                    <View style={styles.statCard}>
-                        <Text style={styles.cardTitle} adjustsFontSizeToFit numberOfLines={1}>Current Workout</Text>
-                        <Text style={styles.cardValue} adjustsFontSizeToFit numberOfLines={1}>{currentWorkout}</Text>
-                    </View>
+                    <Pressable style={styles.logoutButton} onPress={handleLogout}>
+                        <Text style={styles.logoutText}>Log Out</Text>
+                    </Pressable>
                 </View>
 
                 <View style={styles.aboutContainer}>
@@ -173,70 +462,127 @@ export default function Profile() {
         );
     };
 
+    const completedWorkouts = workoutLogs;
+    const totalDuration = completedWorkouts.reduce((total, log) => total + (log.duration || 0), 0);
+    const lastCompletedWorkout = [...completedWorkouts].sort((a, b) => new Date(b.completed_at) - new Date(a.completed_at))[0];
+
+    const last14Days = useMemo(() => {
+        const days = [];
+        for (let i = 13; i >= 0; i--) {
+            const d = new Date();
+            d.setHours(0, 0, 0, 0);
+            d.setDate(d.getDate() - i);
+            days.push(d);
+        }
+        return days;
+    }, []);
+
+    // Bucket key in the user's local TZ. Using toISOString().slice(0,10) here
+    // would bucket by UTC date, which silently drops evening workouts in
+    // negative-UTC TZs (their UTC date is "tomorrow") and shifts everything
+    // a day in positive-UTC TZs.
+    const localDateKey = (d) => {
+        const yr = d.getFullYear();
+        const mo = String(d.getMonth() + 1).padStart(2, '0');
+        const dy = String(d.getDate()).padStart(2, '0');
+        return `${yr}-${mo}-${dy}`;
+    };
+
+    const volumeData = useMemo(() => last14Days.map(day => {
+        const ds = localDateKey(day);
+        const vol = completedWorkouts
+            .filter(log => log.completed_at && localDateKey(new Date(log.completed_at)) === ds)
+            .reduce((t, log) => t + (log.exercises || []).reduce((et, ex) =>
+                et + (ex.sets || []).filter(s => s.completed).reduce((st, s) =>
+                    st + (s.weight_lbs || 0) * (s.reps || 0), 0), 0), 0);
+        const rounded = Math.round(vol);
+        return {
+            value: rounded,
+            label: day.toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 1),
+            fullDate: day.toLocaleDateString('en-US', { month: 'long', day: 'numeric' }),
+            tooltipText: `${rounded.toLocaleString()} lbs total volume`,
+        };
+    }), [completedWorkouts, last14Days]);
+
+    const repsData = useMemo(() => last14Days.map(day => {
+        const ds = localDateKey(day);
+        const reps = completedWorkouts
+            .filter(log => log.completed_at && localDateKey(new Date(log.completed_at)) === ds)
+            .reduce((t, log) => t + (log.exercises || []).reduce((et, ex) =>
+                et + (ex.sets || []).filter(s => s.completed).reduce((st, s) =>
+                    st + (s.reps || 0), 0), 0), 0);
+        return {
+            value: reps,
+            label: day.toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 1),
+            fullDate: day.toLocaleDateString('en-US', { month: 'long', day: 'numeric' }),
+            tooltipText: `${reps.toLocaleString()} total reps`,
+        };
+    }), [completedWorkouts, last14Days]);
+
+    if (isLoading && !cachedProfile) {
+        return (
+            <SafeAreaView style={[styles.scrollWindow, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]} edges={['top']}>
+                <ActivityIndicator size="large" color={colors.primary} />
+            </SafeAreaView>
+        );
+    }
+
     return (
         <SafeAreaView style={[styles.scrollWindow, { backgroundColor: colors.background }]} edges={['top']}>
-            <Tabs.Container
-                renderHeader={profileHeader}
-                headerContainerStyle={{paddingTop: 10, backgroundColor: colors.background, elevation: 0, shadowOpacity: 0}}
-                renderTabBar={(props) => (
-                    <MaterialTabBar
-                        {...props}
-                        activeColor={colors.text}
-                        inactiveColor={colors.textSecondary}
-                        indicatorStyle={{
-                            backgroundColor: colors.primary,
-                            height: 3,
-                            borderRadius: 4,
-                        }}
-                        style={{ backgroundColor: colors.background }}
-                    />
-                )}
-            >
-                <Tabs.Tab name="posts" label="Posts">
-                    <Posts/>
-                </Tabs.Tab>
+            <ScrollView style={styles.scrollView} contentContainerStyle={styles.profileContent} showsVerticalScrollIndicator={false}>
+                {profileHeader()}
 
-                <Tabs.Tab name="workouts" label="Workouts">
-                    <Workouts/>
-                </Tabs.Tab>
-            </Tabs.Container>
+                <View style={styles.progressSection}>
+                    <Text style={styles.sectionTitle}>My Progress</Text>
 
-            <Modal
-                isVisible={isStreakModalVisible}
-                onSwipeComplete={() => setStreakModalVisible(false)}
-                swipeDirection="down"
-                onBackdropPress={() => setStreakModalVisible(false)}
-                style={styles.bottomModal}
-            >
-                <View style={styles.modalContent}>
-                    <View style={styles.dragHandle} />
-
-                    <View style={styles.calendarContainer}>
-                        <Text style={styles.monthTitle}>{currentMonth} {currentYear}</Text>
-
-                        <View style={styles.weekDaysRow}>
-                            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
-                                <Text key={index} style={styles.weekDayText}>{day}</Text>
-                            ))}
+                    <View style={styles.summaryRow}>
+                        <View style={styles.summaryItem}>
+                            <Text style={styles.summaryValue}>{completedWorkouts.length}</Text>
+                            <Text style={styles.summaryLabel}>Workouts</Text>
                         </View>
-
-                        <View style={styles.daysGrid}>
-                            {daysArray.map((day, index) => {
-                                const isToday = day === todayNum;
-                                return (
-                                    <View key={index} style={styles.dayCell}>
-                                        <View style={[styles.dayCircle, isToday && styles.currentDayCircle]}>
-                                            <Text style={[styles.dayText, isToday && styles.currentDayText]}>
-                                                {day !== null ? day : ''}
-                                            </Text>
-                                        </View>
-                                    </View>
-                                );
-                            })}
+                        <View style={styles.summaryDivider} />
+                        <View style={styles.summaryItem}>
+                            <Text style={styles.summaryValue}>{dayStreak}</Text>
+                            <Text style={styles.summaryLabel}>Day Streak</Text>
+                        </View>
+                        <View style={styles.summaryDivider} />
+                        <View style={styles.summaryItem}>
+                            <Text style={styles.summaryValue}>{Math.floor(totalDuration / 60)}</Text>
+                            <Text style={styles.summaryLabel}>Minutes</Text>
                         </View>
                     </View>
+
+                    <View style={styles.lastWorkoutCard}>
+                        <Ionicons name="calendar-outline" size={18} color={colors.primary} />
+                        <View style={styles.lastWorkoutTextWrap}>
+                            <Text style={styles.dashboardLabel}>Last workout</Text>
+                            <Text style={styles.lastWorkoutText}>{formatLastWorkout(lastCompletedWorkout)}</Text>
+                        </View>
+                    </View>
+
+                    {isLoading ? (
+                        <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 20 }} />
+                    ) : (
+                        <>
+                            <ProgressGraph
+                                data={volumeData}
+                                label="Volume (lbs)"
+                                graphWidth={screenWidth * 0.9 - 24}
+                            />
+                            <ProgressGraph
+                                data={repsData}
+                                label="Total Reps"
+                                graphWidth={screenWidth * 0.9 - 24}
+                            />
+                        </>
+                    )}
                 </View>
-            </Modal>
+
+                <View style={styles.historySection}>
+                    <Text style={styles.sectionTitle}>Workout History</Text>
+                    <WorkoutsTab workoutLogs={workoutLogs} isLoading={isLoading} userId={userId} />
+                </View>
+            </ScrollView>
         </SafeAreaView>
     );
 }
@@ -255,34 +601,52 @@ const styles = StyleSheet.create({
         backgroundColor: colors.background
     },
 
-    photoContainer: {
-        marginBottom: 8
+    profileContent: {
+        paddingTop: 10,
+        paddingBottom: 120,
+        alignItems: "center",
     },
 
-    profilePhoto: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: "#ccc",
+    avatarContainer: {
+        position: 'relative',
+        alignSelf: 'center',
+        marginBottom: 8,
     },
 
-    editProfilePhoto: {
-        position: "absolute",
+    avatar: {
+        width: 90,
+        height: 90,
+        borderRadius: 45,
+        backgroundColor: '#2a2a2a',
+    },
+
+    avatarPlaceholder: {
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+
+    avatarOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        borderRadius: 45,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+
+    cameraIconOverlay: {
+        position: 'absolute',
         bottom: 0,
         right: 0,
+        backgroundColor: colors.primary,
         borderRadius: 12,
         width: 24,
         height: 24,
-        backgroundColor: colors.primary,
-        alignItems: "center",
-        justifyContent: "center",
-    },
-
-    plusIcon: {
-        fontSize: 20,
-        fontWeight: "bold",
-        color: colors.text,
-        lineHeight: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
 
     name: {
@@ -300,7 +664,7 @@ const styles = StyleSheet.create({
     topStatsContainer: {
         flexDirection: "row",
         justifyContent: "center",
-        gap: 32,
+        gap: 64,
         width: "90%",
         marginBottom: 12,
     },
@@ -324,6 +688,7 @@ const styles = StyleSheet.create({
     editProfile: {
         flexDirection: "row",
         justifyContent: "center",
+        gap: 8,
         marginBottom: 12,
         width: "80%"
     },
@@ -339,6 +704,22 @@ const styles = StyleSheet.create({
     edit: {
         textAlign: "center",
         color: "white",
+        fontWeight: "bold",
+        fontSize: 13,
+    },
+
+    logoutButton: {
+        borderRadius: 8,
+        width: "45%",
+        paddingVertical: "2%",
+        alignItems: "center",
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+
+    logoutText: {
+        textAlign: "center",
+        color: colors.textSecondary,
         fontWeight: "bold",
         fontSize: 13,
     },
@@ -359,6 +740,102 @@ const styles = StyleSheet.create({
         fontSize: 16,
         width: "90%",
         color: colors.textSecondary,
+    },
+
+    progressSection: {
+        width: "90%",
+        marginBottom: spacing.lg,
+    },
+
+    summaryRow: {
+        flexDirection: "row",
+        backgroundColor: colors.surface,
+        borderRadius: layout.borderRadius,
+        borderWidth: 1,
+        borderColor: colors.border,
+        paddingVertical: spacing.md,
+        marginBottom: spacing.sm,
+        alignItems: "center",
+    },
+    summaryItem: {
+        flex: 1,
+        alignItems: "center",
+    },
+    summaryDivider: {
+        width: 1,
+        height: 32,
+        backgroundColor: colors.border,
+    },
+    summaryValue: {
+        fontSize: 24,
+        fontWeight: "900",
+        color: colors.primary,
+        lineHeight: 26,
+    },
+    summaryLabel: {
+        fontSize: 10,
+        color: colors.textSecondary,
+        textTransform: "uppercase",
+        letterSpacing: 0.5,
+        marginTop: 2,
+    },
+
+    sectionTitle: {
+        color: colors.text,
+        fontSize: 18,
+        fontWeight: "bold",
+        marginBottom: spacing.md,
+    },
+
+    dashboardGrid: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: spacing.sm,
+        marginBottom: spacing.md,
+    },
+
+    dashboardStat: {
+        flexBasis: "48%",
+        backgroundColor: colors.background,
+        borderRadius: layout.borderRadius,
+        padding: spacing.md,
+        alignItems: "center",
+    },
+
+    dashboardValue: {
+        color: colors.primary,
+        fontSize: 24,
+        fontWeight: "bold",
+    },
+
+    dashboardLabel: {
+        color: colors.textSecondary,
+        fontSize: 12,
+        marginTop: 2,
+    },
+
+    lastWorkoutCard: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: spacing.sm,
+        backgroundColor: colors.background,
+        borderRadius: layout.borderRadius,
+        padding: spacing.md,
+    },
+
+    lastWorkoutTextWrap: {
+        flex: 1,
+    },
+
+    lastWorkoutText: {
+        color: colors.text,
+        fontSize: 14,
+        fontWeight: "600",
+        marginTop: 2,
+    },
+
+    historySection: {
+        width: "90%",
     },
 
     cardContainer: 
@@ -468,5 +945,157 @@ const styles = StyleSheet.create({
     currentDayText: {
         color: colors.text,
         fontWeight: "bold",
+    },
+
+    tabContainer: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        backgroundColor: colors.background,
+        padding: spacing.lg,
+    },
+    emptyText: {
+        fontSize: 18,
+        fontWeight: "bold",
+        color: colors.textSecondary,
+        marginTop: spacing.md,
+    },
+    emptySubtext: {
+        fontSize: 14,
+        color: colors.textTertiary,
+        marginTop: spacing.xs,
+    },
+    listContent: {
+        padding: layout.screenPadding,
+        paddingBottom: layout.bottomSafeArea + 80,
+    },
+    postCard: {
+        backgroundColor: colors.surface,
+        padding: spacing.md,
+        borderRadius: 12,
+        marginBottom: spacing.md,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    workoutCard: {
+        backgroundColor: colors.surface,
+        padding: spacing.md,
+        borderRadius: 12,
+        marginBottom: spacing.md,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    cardHeader: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: spacing.sm,
+    },
+    cardTitle: {
+        fontSize: 16,
+        fontWeight: "bold",
+        color: colors.text,
+        flex: 1,
+    },
+    cardDate: {
+        fontSize: 12,
+        color: colors.textTertiary,
+    },
+    caption: {
+        fontSize: 14,
+        color: colors.textSecondary,
+        marginBottom: spacing.sm,
+        lineHeight: 20,
+    },
+    statsRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: spacing.sm,
+    },
+    statChip: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: colors.background,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 6,
+        gap: 4,
+    },
+    statChipText: {
+        fontSize: 12,
+        color: colors.textSecondary,
+        fontWeight: "500",
+    },
+    exerciseCount: {
+        fontSize: 12,
+        color: colors.textSecondary,
+    },
+    scrollView: {
+        flex: 1,
+        backgroundColor: colors.background,
+    },
+    streakStatsRow: {
+        flexDirection: "row",
+        justifyContent: "space-around",
+        paddingVertical: 16,
+        borderTopWidth: 1,
+        borderBottomWidth: 1,
+        borderColor: '#222',
+    },
+    statBox: {
+        alignItems: "center",
+    },
+    statNumber: {
+        fontSize: 22,
+        fontWeight: "bold",
+        color: colors.text,
+    },
+    statLabel: {
+        fontSize: 12,
+        color: colors.textSecondary,
+        marginTop: 2,
+    },
+    followRow: {
+        flexDirection: "row",
+        gap: 24,
+        justifyContent: "center",
+        paddingVertical: 12,
+    },
+    followStat: {
+        alignItems: "center",
+    },
+    followNumber: {
+        fontSize: 18,
+        fontWeight: "bold",
+        color: colors.text,
+    },
+    followLabel: {
+        fontSize: 12,
+        color: colors.textSecondary,
+    },
+    badge: {
+        borderRadius: 20,
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+    },
+    badgePublic: {
+        backgroundColor: '#052e16',
+    },
+    badgePrivate: {
+        backgroundColor: '#1c1917',
+    },
+    badgeText: {
+        fontSize: 11,
+        color: '#999',
+    },
+    logDuration: {
+        fontSize: 12,
+        color: colors.textSecondary,
+        marginTop: 2,
+    },
+    logIncomplete: {
+        fontSize: 12,
+        color: '#F59E0B',
+        marginTop: 4,
     },
 });

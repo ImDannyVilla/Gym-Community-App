@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -6,7 +6,8 @@ import {
   Pressable,
   StyleSheet,
   ActivityIndicator,
-  Alert,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -16,134 +17,366 @@ import ScreenContainer from "./_components/ScreenContainer";
 
 const FORM_MAX_WIDTH = 400;
 
+// Matches backend validate_password() rules exactly:
+// 8-20 chars, uppercase, lowercase, digit, special char, no spaces
+const passwordRequirements = [
+  { label: "8-20 characters", test: (p) => p.length >= 8 && p.length <= 20 },
+  { label: "One uppercase letter", test: (p) => /[A-Z]/.test(p) },
+  { label: "One lowercase letter", test: (p) => /[a-z]/.test(p) },
+  { label: "One number", test: (p) => /[0-9]/.test(p) },
+  { label: "One special character", test: (p) => /[^A-Za-z0-9\s]/.test(p) },
+  { label: "No spaces", test: (p) => p.length > 0 && !/\s/.test(p) },
+];
+
+const getPasswordStrength = (password) => {
+  if (!password) return { level: "", color: colors.textTertiary, width: "0%" };
+  const metCount = passwordRequirements.filter((req) => req.test(password)).length;
+  if (metCount <= 2) return { level: "Weak", color: colors.error, width: "33%" };
+  if (metCount <= 4) return { level: "Medium", color: colors.warning, width: "66%" };
+  return { level: "Strong", color: colors.success, width: "100%" };
+};
+
+const validateEmail = (email) => {
+  if (!email.trim()) return "Email is required";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return "Invalid email format";
+  return "";
+};
+
+// Matches backend validate_username(): 3-20 chars, alphanumeric + underscore + hyphen
+const validateUsername = (username) => {
+  if (!username.trim()) return "Username is required";
+  if (username.trim().length < 3) return "Username must be at least 3 characters";
+  if (username.trim().length > 20) return "Username must be 20 characters or less";
+  if (!/^[a-zA-Z0-9_-]+$/.test(username.trim())) {
+    return "Only letters, numbers, underscores, and hyphens allowed";
+  }
+  return "";
+};
+
+// Matches backend validate_password() exactly
+const validatePassword = (password) => {
+  if (!password) return "Password is required";
+  if (password.length < 8) return "Password must be at least 8 characters";
+  if (password.length > 20) return "Password must be 20 characters or less";
+  if (/\s/.test(password)) return "Password must not contain spaces";
+  const allMet = passwordRequirements.every((req) => req.test(password));
+  if (!allMet) return "Password does not meet all requirements";
+  return "";
+};
+
+const validateConfirmPassword = (password, confirmPassword) => {
+  if (!confirmPassword) return "Please confirm your password";
+  if (password !== confirmPassword) return "Passwords do not match";
+  return "";
+};
+
 export default function SignUp() {
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [emailError, setEmailError] = useState("");
+  const [usernameError, setUsernameError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [confirmPasswordError, setConfirmPasswordError] = useState("");
+  const [serverError, setServerError] = useState("");
+  const [registeredEmail, setRegisteredEmail] = useState("");
+
+  const usernameRef = useRef(null);
+  const passwordRef = useRef(null);
+  const confirmPasswordRef = useRef(null);
+
+  const passwordStrength = getPasswordStrength(password);
 
   const handleCreateAccount = async () => {
-    if (!email.trim() || !username.trim() || !password.trim()) {
-      Alert.alert("Missing Info", "Please enter your email, username, and password.");
-      return;
-    }
+    Keyboard.dismiss();
+    setServerError("");
+
+    const emailErr = validateEmail(email);
+    const usernameErr = validateUsername(username);
+    const passwordErr = validatePassword(password);
+    const confirmPasswordErr = validateConfirmPassword(password, confirmPassword);
+
+    setEmailError(emailErr);
+    setUsernameError(usernameErr);
+    setPasswordError(passwordErr);
+    setConfirmPasswordError(confirmPasswordErr);
+
+    if (emailErr || usernameErr || passwordErr || confirmPasswordErr) return;
 
     try {
       setLoading(true);
       await registerUser({
         email: email.trim(),
         username: username.trim(),
-        password: password.trim(),
+        password: password,
       });
-      Alert.alert("Success", "Account created. Please log in.");
-      router.replace("/");
+      setRegisteredEmail(email.trim());
     } catch (error) {
-      Alert.alert("Sign Up Failed", error.message || "Something went wrong.");
+      const msg = error.message || "Something went wrong.";
+      // Show user-friendly messages for common backend errors
+      if (msg.toLowerCase().includes("username") && msg.toLowerCase().includes("taken")) {
+        setUsernameError("This username is already taken");
+      } else if (msg.toLowerCase().includes("email") && (msg.toLowerCase().includes("taken") || msg.toLowerCase().includes("exists") || msg.toLowerCase().includes("registered"))) {
+        setEmailError("An account with this email already exists");
+      } else if (msg.toLowerCase().includes("network") || msg.toLowerCase().includes("fetch")) {
+        setServerError("Unable to connect to the server. Check your internet connection.");
+      } else {
+        setServerError(msg);
+      }
     } finally {
       setLoading(false);
     }
   };
 
-
+  if (registeredEmail) {
+    return (
+      <ScreenContainer scrollable={false} keyboardAvoid={false}>
+        <View style={styles.content}>
+          <Ionicons name="mail-outline" size={64} color={colors.primary} style={{ marginBottom: spacing.lg }} />
+          <Text style={styles.title}>Check your email</Text>
+          <Text style={[styles.subtitle, { textAlign: "center", marginTop: spacing.sm, marginBottom: spacing.xl }]}>
+            We sent a confirmation link to{"\n"}
+            <Text style={{ color: colors.text, fontWeight: "600" }}>{registeredEmail}</Text>
+            {"\n\n"}Tap the link in that email to verify your account, then come back here to log in.
+          </Text>
+          <Pressable
+            style={[styles.button, { width: "100%", maxWidth: FORM_MAX_WIDTH }]}
+            onPress={() => router.replace("/")}
+          >
+            <Text style={styles.buttonText}>Back to Login</Text>
+          </Pressable>
+        </View>
+      </ScreenContainer>
+    );
+  }
 
   return (
-    <ScreenContainer scrollable={false} keyboardAvoid={true}>
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.title}>
-            Create Account
-          </Text>
-          <Text style={styles.subtitle}>
-            Sign up to get started
-          </Text>
-        </View>
-
-        <View style={styles.form}>
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>
-              Email
-            </Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your email"
-              placeholderTextColor={colors.textTertiary}
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-            />
+    <ScreenContainer scrollable={true} keyboardAvoid={true}>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <View style={styles.content}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Create Account</Text>
+            <Text style={styles.subtitle}>Sign up to get started</Text>
           </View>
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>
-              Username
-            </Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your username"
-              placeholderTextColor={colors.textTertiary}
-              value={username}
-              onChangeText={setUsername}
-              autoCapitalize="none"
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>
-              Password
-            </Text>
-            <View style={styles.passwordContainer}>
-              <TextInput
-                style={styles.passwordInput}
-                placeholder="Enter your password"
-                placeholderTextColor={colors.textTertiary}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-              />
-              <Pressable onPress={() => setShowPassword(!showPassword)}>
-                <Ionicons
-                  name={showPassword ? "eye-off" : "eye"}
-                  size={iconSizes.navIcon}
-                  color={colors.textTertiary}
-                />
-              </Pressable>
-            </View>
-          </View>
-
-          <Pressable
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleCreateAccount}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color={colors.text} />
-            ) : (
-              <Text style={styles.buttonText}>
-                Create Account
-              </Text>
+          <View style={styles.form}>
+            {serverError !== "" && (
+              <View style={styles.serverErrorContainer}>
+                <Ionicons name="alert-circle" size={18} color={colors.error} />
+                <Text style={styles.serverErrorText}>{serverError}</Text>
+              </View>
             )}
-          </Pressable>
 
-          <Pressable style={styles.linkButton} onPress={() => router.back()}>
-            <Text style={styles.linkText}>
-              Already have an account? Login
-            </Text>
-          </Pressable>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Email</Text>
+              <TextInput
+                style={[styles.input, emailError ? styles.inputError : null]}
+                placeholder="Enter your email"
+                placeholderTextColor={colors.textTertiary}
+                value={email}
+                onChangeText={(text) => {
+                  setEmail(text);
+                  if (emailError) setEmailError("");
+                  if (serverError) setServerError("");
+                }}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                autoCorrect={false}
+                returnKeyType="next"
+                onSubmitEditing={() => usernameRef.current?.focus()}
+                blurOnSubmit={false}
+                textContentType="emailAddress"
+                autoComplete="email"
+              />
+              {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Username</Text>
+              <TextInput
+                ref={usernameRef}
+                style={[styles.input, usernameError ? styles.inputError : null]}
+                placeholder="Letters, numbers, _ and - only"
+                placeholderTextColor={colors.textTertiary}
+                value={username}
+                onChangeText={(text) => {
+                  setUsername(text);
+                  if (usernameError) setUsernameError("");
+                  if (serverError) setServerError("");
+                }}
+                autoCapitalize="none"
+                autoCorrect={false}
+                returnKeyType="next"
+                onSubmitEditing={() => passwordRef.current?.focus()}
+                blurOnSubmit={false}
+                maxLength={20}
+                textContentType="username"
+                autoComplete="username-new"
+              />
+              {usernameError ? <Text style={styles.errorText}>{usernameError}</Text> : null}
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Password</Text>
+              <View style={[styles.passwordContainer, passwordError ? styles.inputError : null]}>
+                <TextInput
+                  ref={passwordRef}
+                  style={styles.passwordInput}
+                  placeholder="Create a strong password"
+                  placeholderTextColor={colors.textTertiary}
+                  value={password}
+                  onChangeText={(text) => {
+                    setPassword(text);
+                    if (passwordError) setPasswordError("");
+                    if (serverError) setServerError("");
+                  }}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  returnKeyType="next"
+                  onSubmitEditing={() => confirmPasswordRef.current?.focus()}
+                  blurOnSubmit={false}
+                  maxLength={20}
+                  textContentType="newPassword"
+                  autoComplete="password-new"
+                />
+                <Pressable
+                  onPress={() => setShowPassword(!showPassword)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Ionicons
+                    name={showPassword ? "eye-off" : "eye"}
+                    size={iconSizes.navIcon}
+                    color={colors.textTertiary}
+                  />
+                </Pressable>
+              </View>
+              {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
+
+              {password.length > 0 && (
+                <View style={styles.passwordSection}>
+                  <View style={styles.strengthBar}>
+                    <View
+                      style={[
+                        styles.strengthFill,
+                        {
+                          backgroundColor: passwordStrength.color,
+                          width: passwordStrength.width,
+                        },
+                      ]}
+                    />
+                  </View>
+                  <Text style={[styles.strengthText, { color: passwordStrength.color }]}>
+                    {passwordStrength.level}
+                  </Text>
+
+                  <View style={styles.requirementsList}>
+                    {passwordRequirements.map((req, index) => {
+                      const met = req.test(password);
+                      return (
+                        <View key={index} style={styles.requirementItem}>
+                          <Ionicons
+                            name={met ? "checkmark-circle" : "close-circle"}
+                            size={14}
+                            color={met ? colors.success : colors.error}
+                          />
+                          <Text
+                            style={[
+                              styles.requirementText,
+                              { color: met ? colors.success : colors.textTertiary },
+                            ]}
+                          >
+                            {req.label}
+                          </Text>
+                        </View>
+                      );
+                    })}
+                  </View>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Confirm Password</Text>
+              <View style={[styles.passwordContainer, confirmPasswordError ? styles.inputError : null]}>
+                <TextInput
+                  ref={confirmPasswordRef}
+                  style={styles.passwordInput}
+                  placeholder="Re-enter your password"
+                  placeholderTextColor={colors.textTertiary}
+                  value={confirmPassword}
+                  onChangeText={(text) => {
+                    setConfirmPassword(text);
+                    if (confirmPasswordError) setConfirmPasswordError("");
+                    if (serverError) setServerError("");
+                  }}
+                  secureTextEntry={!showConfirmPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  returnKeyType="go"
+                  onSubmitEditing={handleCreateAccount}
+                  maxLength={20}
+                  textContentType="newPassword"
+                  autoComplete="password-new"
+                />
+                <Pressable
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Ionicons
+                    name={showConfirmPassword ? "eye-off" : "eye"}
+                    size={iconSizes.navIcon}
+                    color={colors.textTertiary}
+                  />
+                </Pressable>
+              </View>
+              {confirmPasswordError ? <Text style={styles.errorText}>{confirmPasswordError}</Text> : null}
+            </View>
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.button,
+                loading && styles.buttonDisabled,
+                pressed && !loading && styles.buttonPressed,
+              ]}
+              onPress={handleCreateAccount}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color={colors.text} />
+              ) : (
+                <Text style={styles.buttonText}>Create Account</Text>
+              )}
+            </Pressable>
+
+            <Pressable
+              style={styles.linkButton}
+              onPress={() => router.back()}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.linkText}>
+                Already have an account? Login
+              </Text>
+            </Pressable>
+          </View>
         </View>
-      </View>
+      </TouchableWithoutFeedback>
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
   content: {
-    flex: 1,
+    flexGrow: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: layout.screenPadding,
+    paddingVertical: spacing.xl,
+    minHeight: "100%",
   },
   header: {
     alignItems: "center",
@@ -165,6 +398,25 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: FORM_MAX_WIDTH,
     alignItems: "center",
+  },
+  serverErrorContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 59, 59, 0.1)",
+    borderWidth: 1,
+    borderColor: colors.error,
+    borderRadius: 10,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    marginBottom: spacing.md,
+    width: "100%",
+    gap: spacing.sm,
+  },
+  serverErrorText: {
+    color: colors.error,
+    fontSize: typography.bodySmall.fontSize,
+    lineHeight: typography.bodySmall.lineHeight,
+    flex: 1,
   },
   inputContainer: {
     width: "100%",
@@ -214,6 +466,9 @@ const styles = StyleSheet.create({
   buttonDisabled: {
     opacity: 0.7,
   },
+  buttonPressed: {
+    backgroundColor: colors.primaryDark,
+  },
   buttonText: {
     fontWeight: "bold",
     fontSize: typography.body.fontSize,
@@ -227,5 +482,45 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: typography.bodySmall.fontSize,
     fontWeight: "600",
+  },
+  inputError: {
+    borderColor: colors.error,
+  },
+  errorText: {
+    color: colors.error,
+    fontSize: typography.caption.fontSize,
+    marginTop: spacing.xs,
+  },
+  passwordSection: {
+    marginTop: spacing.sm,
+  },
+  strengthBar: {
+    height: 4,
+    backgroundColor: colors.surface,
+    borderRadius: 2,
+    overflow: "hidden",
+    marginBottom: spacing.xs,
+  },
+  strengthFill: {
+    height: "100%",
+    borderRadius: 2,
+  },
+  strengthText: {
+    fontSize: typography.caption.fontSize,
+    fontWeight: "600",
+    marginBottom: spacing.sm,
+  },
+  requirementsList: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+  },
+  requirementItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  requirementText: {
+    fontSize: 12,
   },
 });

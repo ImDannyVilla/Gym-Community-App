@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -7,148 +7,293 @@ import {
   StyleSheet,
   Image,
   ActivityIndicator,
-  Alert,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import Modal from "react-native-modal";
 import { typography, colors, layout, spacing, iconSizes } from "../lib/theme";
-import { loginUser } from "../lib/authApi";
-import { saveToken } from "../lib/tokenStorage";
+import { loginWithEmailOrUsername, forgotPasswordEmail } from "../lib/authApi";
+import { saveToken, saveRefreshToken } from "../lib/tokenStorage";
 import ScreenContainer from "./_components/ScreenContainer";
 
 const APP_ICON_SIZE = 120;
 const ICON_BORDER_RADIUS = 24;
 const FORM_MAX_WIDTH = 400;
 
+const validateEmailOrUsername = (input) => {
+  if (!input.trim()) return "Email or username is required";
+  return "";
+};
+
+const validatePassword = (password) => {
+  if (!password) return "Password is required";
+  return "";
+};
+
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [serverError, setServerError] = useState("");
+
+  const passwordRef = useRef(null);
+
+  const [forgotModalVisible, setForgotModalVisible] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotEmailError, setForgotEmailError] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotSuccess, setForgotSuccess] = useState("");
+
+  const closeForgotModal = () => {
+    setForgotModalVisible(false);
+    setForgotEmail("");
+    setForgotEmailError("");
+    setForgotSuccess("");
+  };
+
+  const handleSendResetLink = async () => {
+    if (!forgotEmail.trim()) { setForgotEmailError("Email is required"); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(forgotEmail.trim())) { setForgotEmailError("Invalid email format"); return; }
+    try {
+      setForgotLoading(true);
+      await forgotPasswordEmail({ email: forgotEmail.trim() });
+      setForgotSuccess("Check your email for a reset link");
+    } catch (error) {
+      setForgotEmailError(error.message || "Something went wrong");
+    } finally {
+      setForgotLoading(false);
+    }
+  };
 
   const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
-      Alert.alert("Missing Info", "Please enter your email and password.");
-      return;
-    }
+    Keyboard.dismiss();
+    setServerError("");
+
+    const emailErr = validateEmailOrUsername(email);
+    const passwordErr = validatePassword(password);
+
+    setEmailError(emailErr);
+    setPasswordError(passwordErr);
+
+    if (emailErr || passwordErr) return;
 
     try {
       setLoading(true);
-      const data = await loginUser({
-        email: email.trim(),
-        password: password.trim(),
-      });
+      const data = await loginWithEmailOrUsername(email.trim(), password);
 
       if (data.access_token) {
         await saveToken(data.access_token);
-        router.replace("/dashboard");
+        if (data.refresh_token) await saveRefreshToken(data.refresh_token);
+        router.replace("/workouts");
       } else {
-        Alert.alert("Login Failed", "No access token received.");
+        setServerError("No access token received. Please try again.");
       }
     } catch (error) {
-      Alert.alert("Login Failed", error.message || "Something went wrong.");
+      const msg = error.message || "Something went wrong.";
+      if (msg.toLowerCase().includes("invalid credentials")) {
+        setServerError("Incorrect email/username or password. Please try again.");
+      } else if (msg.toLowerCase().includes("no account found")) {
+        setServerError(msg);
+      } else if (msg.toLowerCase().includes("network") || msg.toLowerCase().includes("fetch")) {
+        setServerError("Unable to connect to the server. Check your internet connection.");
+      } else {
+        setServerError(msg);
+      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <ScreenContainer scrollable={false} keyboardAvoid={true}>
-      <View style={styles.content}>
-        <View style={styles.appIconWrapper}>
-          <Image
-            source={require("../assets/AppIcon.png")}
-            style={styles.appIcon}
-            resizeMode="contain"
-          />
-        </View>
-
-        <View style={styles.header}>
-          <Text style={styles.title}>
-            Welcome Back
-          </Text>
-          <Text style={styles.subtitle}>
-            Sign in to continue
-          </Text>
-        </View>
-
-        <View style={styles.form}>
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>
-              Email
-            </Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your email"
-              placeholderTextColor={colors.textTertiary}
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
+    <ScreenContainer scrollable={true} keyboardAvoid={true}>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <View style={styles.content}>
+          <View style={styles.appIconWrapper}>
+            <Image
+              source={require("../assets/AppIcon.png")}
+              style={styles.appIcon}
+              resizeMode="contain"
             />
           </View>
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>
-              Password
-            </Text>
-            <View style={styles.passwordContainer}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Welcome Back</Text>
+            <Text style={styles.subtitle}>Sign in to continue</Text>
+          </View>
+
+          <View style={styles.form}>
+            {serverError !== "" && (
+              <View style={styles.serverErrorContainer}>
+                <Ionicons name="alert-circle" size={18} color={colors.error} />
+                <Text style={styles.serverErrorText}>{serverError}</Text>
+              </View>
+            )}
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Email or Username</Text>
               <TextInput
-                style={styles.passwordInput}
-                placeholder="Enter your password"
+                style={[styles.input, emailError ? styles.inputError : null]}
+                placeholder="Email or Username"
                 placeholderTextColor={colors.textTertiary}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
+                value={email}
+                onChangeText={(text) => {
+                  setEmail(text);
+                  if (emailError) setEmailError("");
+                  if (serverError) setServerError("");
+                }}
                 autoCapitalize="none"
+                autoCorrect={false}
+                returnKeyType="next"
+                onSubmitEditing={() => passwordRef.current?.focus()}
+                blurOnSubmit={false}
+                textContentType="username"
+                autoComplete="username"
               />
-              <Pressable onPress={() => setShowPassword(!showPassword)}>
-                <Ionicons
-                  name={showPassword ? "eye-off" : "eye"}
-                  size={iconSizes.navIcon}
-                  color={colors.textTertiary}
+              {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Password</Text>
+              <View style={[styles.passwordContainer, passwordError ? styles.inputError : null]}>
+                <TextInput
+                  ref={passwordRef}
+                  style={styles.passwordInput}
+                  placeholder="Enter your password"
+                  placeholderTextColor={colors.textTertiary}
+                  value={password}
+                  onChangeText={(text) => {
+                    setPassword(text);
+                    if (passwordError) setPasswordError("");
+                    if (serverError) setServerError("");
+                  }}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  returnKeyType="go"
+                  onSubmitEditing={handleLogin}
+                  textContentType="password"
+                  autoComplete="password"
                 />
+                <Pressable
+                  onPress={() => setShowPassword(!showPassword)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Ionicons
+                    name={showPassword ? "eye-off" : "eye"}
+                    size={iconSizes.navIcon}
+                    color={colors.textTertiary}
+                  />
+                </Pressable>
+              </View>
+              {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
+            </View>
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.button,
+                loading && styles.buttonDisabled,
+                pressed && !loading && styles.buttonPressed,
+              ]}
+              onPress={handleLogin}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color={colors.text} />
+              ) : (
+                <Text style={styles.buttonText}>Login</Text>
+              )}
+            </Pressable>
+
+            <Pressable
+              style={styles.linkButton}
+              onPress={() => router.push("/signup")}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.linkText}>
+                Don't have an account? Sign Up
+              </Text>
+            </Pressable>
+
+            <View style={styles.forgotRow}>
+              <Pressable
+                onPress={() => setForgotModalVisible(true)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Text style={styles.forgotText}>Forgot Password?</Text>
               </Pressable>
             </View>
           </View>
+        </View>
+      </TouchableWithoutFeedback>
 
-          <Pressable
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleLogin}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color={colors.text} />
-            ) : (
-              <Text style={styles.buttonText}>
-                Login
-              </Text>
-            )}
-          </Pressable>
+      <Modal
+        isVisible={forgotModalVisible}
+        backdropOpacity={0.6}
+        animationIn="slideInUp"
+        animationOut="slideOutDown"
+        useNativeDriver={true}
+        onBackdropPress={closeForgotModal}
+        style={styles.forgotModalOuter}
+      >
+        <View style={styles.forgotModalInner}>
+          <View style={styles.forgotModalHandle} />
+          <Text style={styles.forgotModalTitle}>Reset Password</Text>
+          <Text style={styles.forgotModalSubtitle}>Enter your email to receive a reset link</Text>
 
-          <Pressable style={styles.linkButton} onPress={() => router.push("/signup")}>
-            <Text style={styles.linkText}>
-              Don't have an account? Sign Up
-            </Text>
-          </Pressable>
+          {forgotSuccess ? (
+            <View style={styles.forgotSuccessBox}>
+              <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+              <Text style={styles.forgotSuccessText}>{forgotSuccess}</Text>
+            </View>
+          ) : (
+            <>
+              <TextInput
+                style={[styles.input, forgotEmailError ? styles.inputError : null]}
+                placeholder="Enter your email"
+                placeholderTextColor={colors.textTertiary}
+                value={forgotEmail}
+                onChangeText={(text) => { setForgotEmail(text); if (forgotEmailError) setForgotEmailError(""); }}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                autoCorrect={false}
+              />
+              {forgotEmailError ? <Text style={styles.errorText}>{forgotEmailError}</Text> : null}
+              <Pressable
+                style={[styles.button, forgotLoading && styles.buttonDisabled, { marginTop: spacing.md }]}
+                onPress={handleSendResetLink}
+                disabled={forgotLoading}
+              >
+                {forgotLoading ? (
+                  <ActivityIndicator color={colors.text} />
+                ) : (
+                  <Text style={styles.buttonText}>Send Reset Link</Text>
+                )}
+              </Pressable>
+            </>
+          )}
 
-          <Pressable style={styles.adminButton} onPress={() => router.replace("/dashboard")}>
-            <Text style={styles.adminButtonText}>
-              Admin Pass
-            </Text>
+          <Pressable style={styles.linkButton} onPress={closeForgotModal}>
+            <Text style={styles.linkText}>{forgotSuccess ? "Close" : "Cancel"}</Text>
           </Pressable>
         </View>
-      </View>
+      </Modal>
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
   content: {
-    flex: 1,
+    flexGrow: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: layout.screenPadding,
+    paddingVertical: spacing.xl,
+    minHeight: "100%",
   },
   appIconWrapper: {
     width: APP_ICON_SIZE,
@@ -156,7 +301,7 @@ const styles = StyleSheet.create({
     borderRadius: ICON_BORDER_RADIUS,
     marginBottom: spacing.lg,
     backgroundColor: colors.surface,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   appIcon: {
     width: APP_ICON_SIZE,
@@ -183,6 +328,25 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: FORM_MAX_WIDTH,
     alignItems: "center",
+  },
+  serverErrorContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 59, 59, 0.1)",
+    borderWidth: 1,
+    borderColor: colors.error,
+    borderRadius: 10,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    marginBottom: spacing.md,
+    width: "100%",
+    gap: spacing.sm,
+  },
+  serverErrorText: {
+    color: colors.error,
+    fontSize: typography.bodySmall.fontSize,
+    lineHeight: typography.bodySmall.lineHeight,
+    flex: 1,
   },
   inputContainer: {
     width: "100%",
@@ -232,6 +396,9 @@ const styles = StyleSheet.create({
   buttonDisabled: {
     opacity: 0.7,
   },
+  buttonPressed: {
+    backgroundColor: colors.primaryDark,
+  },
   buttonText: {
     fontWeight: "bold",
     fontSize: typography.body.fontSize,
@@ -246,16 +413,72 @@ const styles = StyleSheet.create({
     fontSize: typography.bodySmall.fontSize,
     fontWeight: "600",
   },
-  adminButton: {
-    marginTop: spacing.lg,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.textTertiary,
-    borderRadius: 8,
+  forgotRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: spacing.md,
+    gap: spacing.sm,
   },
-  adminButtonText: {
-    color: colors.textTertiary,
+  forgotText: {
+    color: colors.primary,
     fontSize: typography.bodySmall.fontSize,
+    fontWeight: "600",
+  },
+  inputError: {
+    borderColor: colors.error,
+  },
+  errorText: {
+    color: colors.error,
+    fontSize: typography.caption.fontSize,
+    marginTop: spacing.xs,
+    width: "100%",
+  },
+  forgotModalOuter: {
+    justifyContent: "flex-end",
+    margin: 0,
+  },
+  forgotModalInner: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 40,
+  },
+  forgotModalHandle: {
+    width: 40,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: colors.border,
+    alignSelf: "center",
+    marginBottom: 20,
+  },
+  forgotModalTitle: {
+    fontSize: 22,
+    fontWeight: "bold",
+    color: colors.text,
+    marginBottom: spacing.xs,
+  },
+  forgotModalSubtitle: {
+    fontSize: typography.body.fontSize,
+    color: colors.textSecondary,
+    marginBottom: spacing.lg,
+  },
+  forgotSuccessBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    backgroundColor: "rgba(220, 38, 38, 0.1)",
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: 10,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    marginBottom: spacing.md,
+  },
+  forgotSuccessText: {
+    color: colors.text,
+    fontSize: typography.bodySmall.fontSize,
+    flex: 1,
   },
 });

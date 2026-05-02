@@ -1,74 +1,124 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
-from typing import List
+from typing import List, Optional
+from uuid import UUID, uuid4
 
-from app.db import get_db
-from app.models.workout import Workout
-from app.models.exercise import Exercise
-from app.schemas.workout import WorkoutResponse, WorkoutSummary
-from app.dependencies import AsyncSessionDep
+from app.models.seededWorkout import SeededWorkout
+from app.models.seeded_workout_exercise import SeededWorkoutExercise
+from app.models.routine import Routine, RoutineExercise
+from app.schemas.workout import SeededWorkoutSummary, SeededWorkoutResponse
+from app.schemas.routine import RoutineResponse
+from app.dependencies import AsyncSessionDep, CurrentUser
 
 router = APIRouter(prefix="/workouts", tags=["Workouts"])
 
 
-@router.get("/category/{category}", response_model=List[WorkoutSummary])
-async def get_workouts_by_category(
-        category: str,
-        db: AsyncSession = Depends(get_db)
+def enrich_seeded_exercise(exercise: SeededWorkoutExercise) -> SeededWorkoutExercise:
+    library_exercise = exercise.exercise_library
+    if library_exercise:
+        exercise.exercise_id = library_exercise.exercise_id
+        exercise.equipment = library_exercise.equipment
+        exercise.secondary_muscles = library_exercise.secondary_muscles
+        exercise.instructions = library_exercise.instructions
+        exercise.category = exercise.category or library_exercise.category
+        exercise.target = exercise.target or library_exercise.target
+        exercise.gif_url = exercise.gif_url or library_exercise.gif_url
+    return exercise
+
+
+@router.get("/seeded", response_model=List[SeededWorkoutSummary])
+async def get_seeded_workouts(
+    db: AsyncSessionDep,
+    category: Optional[str] = None,
+    difficulty: Optional[str] = None,
 ):
-
-#Get workouts by category.
-    result = await db.execute(
-        select(Workout)
-        .where(Workout.category == category)
-        .where(Workout.is_preset == True)
-        .order_by(Workout.created_at.desc())
-    )
-    workouts = result.scalars().all()
-
-    return workouts
-
-
-@router.get("/", response_model=List[WorkoutSummary])
-async def get_all_workouts(
-        db: AsyncSessionDep,
-        category: str | None = None
-):
-
-#   Get all preset workouts.
-#   Optional filter: ?category=Push
-    query = select(Workout).where(Workout.is_preset == True)
+    """Get all seeded workouts. Optional filters: ?category=Push&difficulty=Intermediate"""
+    query = select(SeededWorkout).where(SeededWorkout.is_preset == True)
 
     if category:
-        query = query.where(Workout.category == category)
+        query = query.where(SeededWorkout.category == category)
+    if difficulty:
+        query = query.where(SeededWorkout.difficulty == difficulty)
 
-    result = await db.execute(query.order_by(Workout.created_at.desc()))
-    workouts = result.scalars().all()
+    query = query.order_by(SeededWorkout.name)
+    result = await db.execute(query)
+    return result.scalars().all()
 
-    return workouts
 
-
-@router.get("/{workout_id}", response_model=WorkoutResponse)
-async def get_workout_detail(
-        workout_id: int,
-        db: AsyncSession = Depends(get_db)
-):
-#    Get specific workout with all exercises.
+@router.get("/seeded/{workout_id}", response_model=SeededWorkoutResponse)
+async def get_seeded_workout(workout_id: UUID, db: AsyncSessionDep):
     result = await db.execute(
-        select(Workout)
-        .options(selectinload(Workout.exercises))
-        .where(Workout.id == workout_id)
-
+        select(SeededWorkout)
+        .options(
+            selectinload(SeededWorkout.exercises)
+            .selectinload(SeededWorkoutExercise.exercise_library)
+        )
+        .where(SeededWorkout.id == workout_id)
     )
     workout = result.scalars().first()
 
     if not workout:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Workout not found"
-        )
+        raise HTTPException(status_code=404, detail="Workout not found")
+
+    workout.exercises = [enrich_seeded_exercise(exercise) for exercise in workout.exercises]
 
     return workout
 
+@router.post("/seeded/{workout_id}/save-as-routine", response_model=RoutineResponse, status_code=status.HTTP_201_CREATED)
+async def save_seeded_workout_as_routine(
+    workout_id: UUID,
+    db: AsyncSessionDep,
+    current_user: CurrentUser
+):
+    """Save a seeded workout to user's routines"""
+    result = await db.execute(
+        select(SeededWorkout)
+        .options(
+            selectinload(SeededWorkout.exercises)
+            .selectinload(SeededWorkoutExercise.exercise_library)
+        )
+        .where(SeededWorkout.id == workout_id)
+    )
+    workout = result.scalars().first()
+
+    if not workout:
+        raise HTTPException(status_code=404, detail="Workout not found")
+
+    new_routine = Routine(
+        id=uuid4(),
+        user_id=current_user.id,
+        name=workout.name,
+        description=workout.description or f"Saved from {workout.name} workout",
+        is_public=False,
+    )
+    db.add(new_routine)
+    await db.flush()
+
+    for ex in workout.exercises:
+        routine_ex = RoutineExercise(
+            id=uuid4(),
+            routine_id=new_routine.id,
+            exercise_id=str(ex.exercise_library_id),
+            name=ex.name,
+            gif_url=ex.gif_url,
+            category=ex.category,
+            target=ex.target,
+            equipment=None,
+            order=ex.order,
+            target_sets=ex.sets,
+            target_reps_min=ex.reps if ex.reps else 8,
+            target_reps_max=ex.reps if ex.reps else 12,
+            target_weight_lbs=None,
+            notes=ex.notes,
+        )
+        db.add(routine_ex)
+
+    await db.commit()
+
+    result = await db.execute(
+        select(Routine)
+        .options(selectinload(Routine.exercises))
+        .where(Routine.id == new_routine.id)
+    )
+    return result.scalars().first()

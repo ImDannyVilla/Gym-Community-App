@@ -1,22 +1,24 @@
 # app/models/user.py
 from datetime import datetime
 from typing import Optional, List
-
+from uuid import UUID, uuid4
 from sqlalchemy import Integer, String, Boolean, DateTime, ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
-
-from app.db import Base
+from app.db import Base, GUID
 
 
 class User(Base):
     """User authentication model"""
     __tablename__ = "users"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    id: Mapped[UUID] = mapped_column(
+        GUID(),
+        primary_key=True,
+        default=uuid4,
+        index=True
+    )
     email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
-    username: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
-    hashed_password: Mapped[str] = mapped_column(String, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
@@ -45,18 +47,34 @@ class UserProfile(Base):
     """User profile information"""
     __tablename__ = "user_profiles"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    user_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("users.id", ondelete="CASCADE"), unique=True
+    id: Mapped[UUID] = mapped_column(
+        GUID(),
+        primary_key=True,
+        default=uuid4,
+        index=True
+    )
+    user_id: Mapped[UUID] = mapped_column(
+        GUID(),
+        ForeignKey("users.id", ondelete="CASCADE"), unique=True
     )
 
     #gym_name: Mapped[str] = mapped_column(String(100), nullable = False)#required at signup
 
     # user fills these later
     full_name: Mapped[Optional[str]] = mapped_column(String(100))
+    user_name: Mapped[Optional[str]] = mapped_column(String(100))
     gym_level: Mapped[Optional[str]] = mapped_column(String(20))  # Beginner/Intermediate/Advanced
     bio: Mapped[Optional[str]] = mapped_column(Text)
     avatar_url: Mapped[Optional[str]] = mapped_column(String)
+
+    # New fitness fields
+    weight: Mapped[Optional[int]] = mapped_column(Integer)
+    last_workout: Mapped[Optional[str]] = mapped_column(String)
+    current_workout: Mapped[Optional[str]] = mapped_column(String)
+    
+    # Read-only top stats
+    total_workouts: Mapped[int] = mapped_column(Integer, default=0)
+    day_streak: Mapped[int] = mapped_column(Integer, default=0)
 
     # Cached counts
     followers_count: Mapped[int] = mapped_column(Integer, default=0)
@@ -77,12 +95,16 @@ class Follow(Base):
     """Social following relationships"""
     __tablename__ = "follows"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    follower_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("users.id", ondelete="CASCADE")
+    id: Mapped[UUID] = mapped_column(
+        GUID(),
+        primary_key=True,
+        default=uuid4,
     )
-    following_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("users.id", ondelete="CASCADE")
+    follower_id: Mapped[UUID] = mapped_column(
+        GUID(), ForeignKey("users.id", ondelete="CASCADE")
+    )
+    following_id: Mapped[UUID] = mapped_column(
+        GUID(), ForeignKey("users.id", ondelete="CASCADE")
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

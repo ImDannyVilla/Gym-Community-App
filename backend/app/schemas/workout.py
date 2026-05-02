@@ -1,34 +1,49 @@
 from pydantic import BaseModel, ConfigDict
-from datetime import datetime
 from typing import Optional, List
-from .exercise import ExerciseResponse, ExerciseCreate
+from uuid import UUID
 
-# Workout Schemas
-class WorkoutBase(BaseModel):
+class SeededWorkoutExerciseResponse(BaseModel):
+    id: UUID
+    exercise_library_id: UUID
+    exercise_id: Optional[str] = None
     name: str
-    description: Optional[str] = None
-    category: Optional[str] = None  # "Push", "Pull", "Legs"
-    difficulty: Optional[str] = None  # "Beginner", "Intermediate", "Advanced"
-    duration_minutes: Optional[int] = None
-
-#data to create workot
-class WorkoutCreate(WorkoutBase):
-    exercises: Optional[List[ExerciseCreate]] = []
-
-#wokout data going to front end
-class WorkoutResponse(WorkoutBase):
-    id: int
-    category:str
-    is_preset: bool
-    created_at: datetime
-    exercises: List[ExerciseResponse] = []
+    category: Optional[str] = None
+    target: Optional[str] = None
+    equipment: Optional[str] = None
+    secondary_muscles: Optional[str] = None
+    instructions: Optional[str] = None
+    sets: int
+    reps: int
+    rest_period_seconds: Optional[int] = None
+    order: int
+    notes: Optional[str] = None
+    gif_url: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
-#Workout list view (no exercises)
-class WorkoutSummary(WorkoutBase):
-    id: int
-    is_preset: bool
-    created_at: datetime
+
+class SeededWorkoutSummary(BaseModel):
+    """List view — no exercises"""
+    id: UUID
+    name: str
+    category: str
+    difficulty: Optional[str] = None
+    duration_minutes: Optional[int] = None
+    description: Optional[str] = None
+    cover_image_url: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SeededWorkoutResponse(BaseModel):
+    """Detail view — includes exercises"""
+    id: UUID
+    name: str
+    category: str
+    difficulty: Optional[str] = None
+    duration_minutes: Optional[int] = None
+    description: Optional[str] = None
+    cover_image_url: Optional[str] = None
+    exercises: List[SeededWorkoutExerciseResponse] = []
 
     model_config = ConfigDict(from_attributes=True)

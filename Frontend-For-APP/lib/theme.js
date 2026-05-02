@@ -66,29 +66,43 @@ export const cards = {
   },
 };
 
-// Colors
+// Colors - Red & Black theme
 export const colors = {
+  // Primary accent color (RED)
   primary: '#DC2626',
   primaryDark: '#B91C1C',
   primaryLight: '#EF4444',
-  
-  background: '#1a1a1a',
-  surface: '#262626',
-  surfaceLight: '#333333',
-  
-  text: '#FFFFFF',
-  textSecondary: '#A3A3A3',
-  textTertiary: '#737373',
-  
+
+  // Dark backgrounds
+  background: '#0B0B0B',
+  surface: '#161616',
+  surfaceLight: '#1E1E1E',
+  card: '#1E1E1E',
+
+  // Text colors
+  text: '#F0F0F0',
+  textSecondary: '#999999',
+  textTertiary: '#666666',
+
+  // Accent colors
   gold: '#FBBF24',
   goldLight: '#FDE047',
-  
-  border: '#404040',
-  divider: '#333333',
-  
+
+  // Borders and dividers
+  border: '#252525',
+  divider: '#252525',
+
+  // Status colors
   success: '#22C55E',
-  error: '#EF4444',
+  error: '#FF3B3B',
   warning: '#F59E0B',
+  red: '#DC2626',
+
+  // Additional colors
+  accent: '#DC2626',
+  accentDim: '#B91C1C',
+  muted: '#666666',
+  white: '#FFFFFF',
 };
 
 // Shadows

@@ -7,23 +7,40 @@ import {
   Pressable,
   Image,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { loginUser } from "../lib/authApi";
-import { saveToken } from "../lib/tokenStorage";
+import { saveToken, saveRefreshToken } from "../lib/tokenStorage";
+
+const validateEmail = (email) => {
+  if (!email.trim()) return "Email is required";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "Invalid email format";
+  return "";
+};
+
+const validatePassword = (password) => {
+  if (!password) return "Password is required";
+  return "";
+};
 
 const LoginScreen = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
 
   const onLogin = async () => {
-    if (!email.trim() || !password.trim()) {
-      Alert.alert("Missing info", "Enter your email and password.");
-      return;
-    }
+    const emailErr = validateEmail(email);
+    const passwordErr = validatePassword(password);
+
+    setEmailError(emailErr);
+    setPasswordError(passwordErr);
+
+    if (emailErr || passwordErr) return;
 
     try {
       setLoading(true);
@@ -35,7 +52,8 @@ const LoginScreen = () => {
 
       if (data.access_token) {
         await saveToken(data.access_token);
-        router.replace("/dashboard");
+        if (data.refresh_token) await saveRefreshToken(data.refresh_token);
+        router.replace("/workouts");
       } else {
         Alert.alert("Login failed", "No access token received.");
       }
@@ -52,22 +70,31 @@ const LoginScreen = () => {
 
         <Text style={styles.label}>Email</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, emailError && styles.inputError]}
           placeholder="Enter your email"
+          placeholderTextColor="#999"
           value={email}
-          onChangeText={setEmail}
+          onChangeText={(text) => {
+            setEmail(text);
+            if (emailError) setEmailError("");
+          }}
           autoCapitalize="none"
           keyboardType="email-address"
         />
+        {emailError && <Text style={styles.errorText}>{emailError}</Text>}
 
         <Text style={styles.label}>Password</Text>
 
-        <View style={styles.passwordContainer}>
+        <View style={[styles.passwordContainer, passwordError && styles.inputError]}>
           <TextInput
             style={styles.passwordInput}
             placeholder="Enter your password"
+            placeholderTextColor="#999"
             value={password}
-            onChangeText={setPassword}
+            onChangeText={(text) => {
+              setPassword(text);
+              if (passwordError) setPasswordError("");
+            }}
             secureTextEntry={!showPassword}
             autoCapitalize="none"
           />
@@ -80,15 +107,18 @@ const LoginScreen = () => {
             />
           </Pressable>
         </View>
+        {passwordError && <Text style={styles.errorText}>{passwordError}</Text>}
 
         <Pressable
           style={[styles.button, loading && styles.buttonDisabled]}
           onPress={onLogin}
           disabled={loading}
         >
-          <Text style={styles.buttonText}>
-            {loading ? "Logging in..." : "Login"}
-          </Text>
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>Login</Text>
+          )}
         </Pressable>
 
         <Pressable onPress={() => router.push("/signup")}>
@@ -176,6 +206,15 @@ const styles = StyleSheet.create({
   signUpText: {
     marginTop: 15,
     color: "#007BFF",
+  },
+  inputError: {
+    borderColor: "#EF4444",
+  },
+  errorText: {
+    color: "#EF4444",
+    fontSize: 12,
+    marginTop: -10,
+    marginBottom: 10,
   },
 });
 

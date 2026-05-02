@@ -6,17 +6,15 @@ AsyncSession, async_sessionmaker, create_async_engine
 )
 from typing import AsyncGenerator
 
-from app.db import Base, get_db
+from app.db import Base, GUID
 from app.main import gym_app
 from app.models.user import User, UserProfile, Follow
-from app.models.workout import Workout
-from app.models.exercise import Exercise
-from app.core.security import get_password_hash, create_access_token
-
+from uuid import uuid4
+from app.core.supabase_client import supabase_admin, supabase
 # Using SQlite in-memory for fast testing
 TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
 
-@pytest_asyncio.fixture(scope="session")
+@pytest_asyncio.fixture(scope="function")
 async def test_engine():
     """This is Database test engine creation"""
     engine = create_async_engine(TEST_DB_URL, echo=True) # turn echo off after test are stable
@@ -45,46 +43,41 @@ async def test_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
 
 
 @pytest_asyncio.fixture
-async def test_client(test_session) -> AsyncGenerator[AsyncClient, None]:
-    """This is HTTP client test fixture"""
-
-    async def override_get_db():
-        yield test_session
-
-    gym_app.dependency_overrides[get_db] = override_get_db
-
-    async with (AsyncClient(
-            transport=ASGITransport(app=gym_app),
-            base_url="http://test")
-    as client):
-        yield client
-
-    gym_app.dependency_overrides.clear()
-
-@pytest_asyncio.fixture
 async def test_user(test_session) -> User:
-    """This is test user fixture"""
-    user = User(
-        email="test@example.com",
-        username="testuser",
-        hashed_password=get_password_hash("Password123$")
-)
-    test_session.add(user)
-    await test_session.flush() #giving the user an id to save in the test db
+    """Create test user in both Supabase and local DB"""
+    # Create user in Supabase Auth
+    test_email = f"test-{uuid4()}@example.com"
+    auth_response = supabase_admin.auth.admin.create_user({
+        "email": test_email,
+        "password": "Password123$",
+        "email_confirm": True
+    })
 
-    # Create a profile for the user
+    user = User(
+        id=auth_response.user.id,
+        email=test_email,
+    )
+    test_session.add(user)
+    await test_session.flush()
+
     profile = UserProfile(
         user_id=user.id,
-        gym_name="Test Gym"
+        full_name="Test User"
     )
     test_session.add(profile)
-    await test_session.commit() # seals the changes perm to the db before the fixture returns and ends the current transaction
-    await test_session.refresh(user) # Make sure the user object you return to the test is up-to-date and ready to use.
+    await test_session.commit()
+    await test_session.refresh(user)
 
     return user
 
+
 @pytest_asyncio.fixture
 async def auth_headers(test_user: User) -> dict[str, str]:
-    """This is test user authentication headers fixture"""
-    access_token = create_access_token(data={"sub": test_user.email})
-    return {"Authorization": f"Bearer {access_token}"}
+    """Get real Supabase auth token"""
+    # Sign in to get real token
+    auth_response = supabase.auth.sign_in_with_password({
+        "email": test_user.email,
+        "password": "Password123$"
+    })
+
+    return {"Authorization": f"Bearer {auth_response.session.access_token}"}

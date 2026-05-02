@@ -1,38 +1,364 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, SafeAreaView, KeyboardAvoidingView, Platform, Alert } from "react-native";
+import React, { useState, useEffect, useCallback, memo, useMemo, useRef } from "react";
+import { View, Text, TextInput, Pressable, StyleSheet, FlatList, KeyboardAvoidingView, Platform, Alert } from "react-native";
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Image } from "expo-image";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Modal from "react-native-modal";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { colors, layout, typography, spacing } from "../lib/theme";
+import { discardWorkoutLog, getExerciseHistory } from "../lib/workoutApi";
+import { useWorkoutStore } from "../stores/workoutStore";
+import RestTimer from "./_components/RestTimer";
 
-const EXERCISE_LIST = [
-  { category: "Chest", name: "Bench Press" },
-  { category: "Chest", name: "Incline Dumbbell Press" },
-  { category: "Chest", name: "Push-ups" },
-  { category: "Chest", name: "Cable Crossover" },
-  { category: "Back", name: "Deadlift" },
-  { category: "Back", name: "Pull-ups" },
-  { category: "Back", name: "Barbell Row" },
-  { category: "Back", name: "Lat Pulldown" },
-  { category: "Legs", name: "Barbell Squat" },
-  { category: "Legs", name: "Leg Press" },
-  { category: "Legs", name: "Lunges" },
-  { category: "Legs", name: "Calf Raises" },
-  { category: "Arms/Shoulders", name: "Overhead Press" },
-  { category: "Arms/Shoulders", name: "Lateral Raises" },
-  { category: "Arms/Shoulders", name: "Bicep Curls" },
-  { category: "Arms/Shoulders", name: "Tricep Extensions" },
-];
+const formatPreviousSet = (set) => {
+  if (!set) return "—";
+  const weight = set.weight_lbs ?? set.weight;
+  const reps = set.reps;
+  if ((weight === null || weight === undefined || weight === "") && !reps) return "—";
+  return `${weight || 0} × ${reps || 0}`;
+};
+
+const hasSetInput = (value) => value !== null && value !== undefined && String(value).trim() !== "";
+
+const normalizeCompletedSet = (set) => {
+  const weightValue = set.weight ?? set.weight_lbs;
+
+  if (!set.completed || !hasSetInput(weightValue) || !hasSetInput(set.reps)) {
+    return null;
+  }
+
+  const reps = Number.parseInt(String(set.reps), 10);
+  const weight_lbs = Number.parseFloat(String(weightValue));
+
+  if (Number.isNaN(reps) || Number.isNaN(weight_lbs)) {
+    return null;
+  }
+
+  return {
+    reps,
+    weight_lbs,
+    completed: true,
+  };
+};
+
+const getExerciseLibraryId = (exercise) => exercise.exercise_id || exercise.library_exercise_id || null;
+
+// Memoized Set Row to prevent re-renders when other inputs change
+const SetRow = memo(({ set, setIndex, exerciseId, exercise, previousSet, handleUpdateSet, handleToggleComplete, handleSetOptions, exerciseIndex, handleInputFocus }) => {
+  const handleWeightChange = useCallback((val) => {
+    const cleaned = val.replace(/[^0-9.]/g, '');
+    const parts = cleaned.split('.');
+    const formatted = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : cleaned;
+    const [whole, decimal] = formatted.split('.');
+    const limitedWhole = whole.slice(0, 4);
+    const limitedFormatted = decimal !== undefined
+      ? `${limitedWhole}.${decimal.slice(0, 2)}`
+      : limitedWhole;
+    if (parseFloat(limitedFormatted) > 9999) return;
+    handleUpdateSet(exerciseId, set.id, 'weight_lbs', limitedFormatted);
+  }, [exerciseId, set.id, handleUpdateSet]);
+
+  const handleRepsChange = useCallback((val) => {
+    const cleaned = val.replace(/[^0-9]/g, '');
+    if (parseInt(cleaned) > 999) return;
+    handleUpdateSet(exerciseId, set.id, 'reps', cleaned);
+  }, [exerciseId, set.id, handleUpdateSet]);
+
+  return (
+    <View style={[styles.setRow, set.completed && styles.setRowCompleted]}>
+      <Pressable style={styles.setIndexButton} onPress={() => handleSetOptions(exerciseId, set.id, set)}>
+        <Text style={[styles.setIndex, set.warmup && styles.setIndexWarmup]}>{set.warmup ? "W" : setIndex + 1}</Text>
+      </Pressable>
+
+      <View style={styles.targetHintContainer}>
+        <Text style={styles.targetHintText}>
+          {formatPreviousSet(previousSet)}
+        </Text>
+      </View>
+
+      <TextInput
+        style={[styles.inputBox, set.completed && styles.inputBoxCompleted]}
+        keyboardType="decimal-pad"
+        maxLength={7}
+        value={set.weight_lbs > 0 ? set.weight_lbs.toString() : ''}
+        onChangeText={handleWeightChange}
+        onFocus={() => handleInputFocus(exerciseIndex)}
+        placeholder="-"
+        placeholderTextColor="#666"
+        editable={!set.completed}
+      />
+      <TextInput
+        style={[styles.inputBox, set.completed && styles.inputBoxCompleted]}
+        keyboardType="number-pad"
+        maxLength={3}
+        value={set.reps > 0 ? set.reps.toString() : ''}
+        onChangeText={handleRepsChange}
+        onFocus={() => handleInputFocus(exerciseIndex)}
+        placeholder="-"
+        placeholderTextColor="#666"
+        editable={!set.completed}
+      />
+      <Pressable 
+        style={[styles.checkButton, set.completed && styles.checkButtonActive]}
+        onPress={() => handleToggleComplete(exerciseId, set.id)}
+      >
+        <Ionicons name="checkmark" size={16} color={set.completed ? "white" : colors.textSecondary} />
+      </Pressable>
+    </View>
+  );
+});
+
+// Memoized Exercise Card
+const ExerciseCard = memo(({ ex, exerciseIndex, exerciseHistory, handleUpdateSet, handleToggleComplete, handleAddSet, handleSetOptions, handleOpenExerciseDetails, handleInputFocus, handleDeleteExercise }) => {
+  const previousSets = exerciseHistory?.[0]?.sets || [];
+  const restTimerTriggerRef = useRef(null);
+
+  const lastSessionLabel = useMemo(() => {
+    if (!previousSets.length) return null;
+    const first = previousSets[0];
+    const weight = first.weight_lbs ?? 0;
+    const reps = first.reps ?? 0;
+    return `Last time: ${previousSets.length}×${reps} @ ${weight} lb`;
+  }, [previousSets]);
+
+  const handleToggleCompleteWithTimer = useCallback((exerciseId, setId) => {
+    const targetSet = ex.sets?.find(s => s.id === setId);
+    const willComplete = targetSet && !targetSet.completed;
+    handleToggleComplete(exerciseId, setId);
+    if (willComplete) restTimerTriggerRef.current?.();
+  }, [ex.sets, handleToggleComplete]);
+
+  return (
+    <View style={styles.exerciseCard}>
+    <View style={styles.exerciseTitleRow}>
+      <Pressable style={styles.exerciseTitlePressable} onPress={() => handleOpenExerciseDetails(ex)}>
+        <Image
+          source={{ uri: ex.gif_url }}
+          style={styles.exerciseThumb}
+          contentFit="cover"
+        />
+        <View style={styles.exerciseTitleTextWrap}>
+          <Text style={styles.exerciseTitle}>{ex.name}</Text>
+          <Text style={styles.exerciseMeta}>Tap for summary, records, and history</Text>
+        </View>
+        <Ionicons name="information-circle-outline" size={20} color={colors.textSecondary} />
+      </Pressable>
+      <RestTimer onSetComplete={restTimerTriggerRef} />
+      <Pressable
+        onPress={() => handleDeleteExercise(ex)}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        style={styles.deleteExerciseBtn}
+      >
+        <Ionicons name="trash-outline" size={18} color="#555" />
+      </Pressable>
+    </View>
+
+    {lastSessionLabel && (
+      <Text style={styles.lastSessionLabel}>{lastSessionLabel}</Text>
+    )}
+
+    {/* Sets Header */}
+    <View style={styles.setRowHeader}>
+      <Text style={styles.setColSet}>SET</Text>
+      <Text style={styles.setColPrevious}>PREVIOUS</Text>
+      <Text style={styles.setColLbs}>LBS</Text>
+      <Text style={styles.setColReps}>REPS</Text>
+      <Text style={styles.setColCheck}>✓</Text>
+    </View>
+
+    {/* Sets Rows */}
+    {ex.sets.map((set, setIndex) => (
+      <SetRow
+        key={set.id}
+        set={set}
+        setIndex={setIndex}
+        exerciseId={ex.id}
+        exercise={ex}
+        previousSet={previousSets[setIndex]}
+        handleUpdateSet={handleUpdateSet}
+        handleToggleComplete={handleToggleCompleteWithTimer}
+        handleSetOptions={handleSetOptions}
+        exerciseIndex={exerciseIndex}
+        handleInputFocus={handleInputFocus}
+      />
+    ))}
+
+    {/* Add Set Button */}
+    <Pressable style={styles.addSetButton} onPress={() => handleAddSet(ex.id)}>
+      <Text style={styles.addSetButtonText}>+ Add Set</Text>
+    </Pressable>
+    </View>
+  );
+});
 
 export default function ActiveWorkout() {
   const [workoutName, setWorkoutName] = useState("New Workout");
-  const [startTime] = useState(Date.now());
+  const [startTime, setStartTime] = useState(Date.now());
   const [timer, setTimer] = useState(0);
-  const [exercises, setExercises] = useState([]);
-  const [isModalVisible, setModalVisible] = useState(false);
-  const [showCancelAlert, setShowCancelAlert] = useState(false);
+  const [currentLogId, setCurrentLogId] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [showEmptyAlert, setShowEmptyAlert] = useState(false);
+  const [exerciseHistoryById, setExerciseHistoryById] = useState({});
+  
+  const flatListRef = useRef(null);
+  const deletingIdsRef = useRef(new Set());
+
+  const {
+    activeLogId,
+    activeWorkoutName,
+    activeWorkoutStartTime,
+    activeRoutineId,
+    exercises,
+    updateSet,
+    toggleSetComplete,
+    addSet,
+    removeSet,
+    removeExercise,
+    toggleWarmupSet,
+    endWorkout,
+    setWorkoutName: setStoreWorkoutName,
+  } = useWorkoutStore();
+
+  const handleInputFocus = useCallback((exerciseIndex) => {
+    flatListRef.current?.scrollToIndex({
+      index: exerciseIndex,
+      animated: true,
+      viewOffset: 100,
+    });
+  }, []);
+
+  const getStartTimeMs = useCallback((value) => {
+    if (!value) return Date.now();
+    const parsedTime = new Date(value).getTime();
+    return Number.isNaN(parsedTime) ? Date.now() : parsedTime;
+  }, []);
+
+  const handleWorkoutNameChange = useCallback((name) => {
+    setWorkoutName(name);
+    setStoreWorkoutName(name);
+  }, [setStoreWorkoutName]);
+
+  const handleUpdateSet = useCallback((exerciseId, setId, field, value) => {
+    // Convert 'weight' from old UI to 'weight_lbs' if necessary
+    const targetField = field === 'weight' ? 'weight_lbs' : field;
+    updateSet(exerciseId, setId, targetField, value);
+  }, [updateSet]);
+
+  const handleToggleComplete = useCallback((exerciseId, setId) => {
+    toggleSetComplete(exerciseId, setId);
+  }, [toggleSetComplete]);
+
+  const handleSetOptions = useCallback((exerciseId, setId, set) => {
+    Alert.alert("Set Options", "Choose an action for this set.", [
+      {
+        text: set?.warmup ? "Remove Warmup Label" : "Mark as Warmup",
+        onPress: () => toggleWarmupSet(exerciseId, setId),
+      },
+      {
+        text: "Remove Set",
+        style: "destructive",
+        onPress: () => removeSet(exerciseId, setId),
+      },
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+    ]);
+  }, [removeSet, toggleWarmupSet]);
+
+  const handleDeleteExercise = useCallback((ex) => {
+    if (deletingIdsRef.current.has(ex.id)) return;
+    deletingIdsRef.current.add(ex.id);
+    Alert.alert(
+      'Remove Exercise',
+      `Remove ${ex.name} from this workout?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+          onPress: () => deletingIdsRef.current.delete(ex.id),
+        },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: () => {
+            removeExercise(ex.id);
+            deletingIdsRef.current.delete(ex.id);
+          },
+        },
+      ]
+    );
+  }, [removeExercise, activeLogId]);
+
+  const handleOpenExerciseDetails = useCallback((exercise) => {
+    router.push({
+      pathname: "/exercise-detail",
+      params: {
+        exerciseId: exercise.exercise_id || exercise.id,
+        name: exercise.name,
+        category: exercise.category || "",
+        target: exercise.target || "",
+        equipment: exercise.equipment || "",
+        gifUrl: exercise.gif_url || "",
+        instructions: exercise.instructions || "",
+        secondaryMuscles: exercise.secondary_muscles || "",
+      },
+    });
+  }, []);
+
+  const handleAddSet = useCallback((exerciseId) => {
+    addSet(exerciseId);
+  }, [addSet]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const exerciseIds = [...new Set(exercises.map(ex => ex.exercise_id).filter(Boolean))];
+    const missingExerciseIds = exerciseIds.filter(id => !Object.prototype.hasOwnProperty.call(exerciseHistoryById, id));
+
+    if (missingExerciseIds.length === 0) return undefined;
+
+    const loadExerciseHistory = async () => {
+      const historyEntries = await Promise.all(missingExerciseIds.map(async (exerciseId) => {
+        try {
+          const history = await getExerciseHistory(exerciseId);
+          return [exerciseId, history];
+        } catch (error) {
+          // 404 = no history yet — expected for new exercises, not an error
+          if (error.status !== 404) {
+            console.warn("Failed to load exercise history:", error.message);
+          }
+          return [exerciseId, null];
+        }
+      }));
+
+      if (isMounted) {
+        setExerciseHistoryById(prev => ({
+          ...prev,
+          ...Object.fromEntries(historyEntries),
+        }));
+      }
+    };
+
+    loadExerciseHistory();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [exercises]);
+
+  useEffect(() => {
+    if (!activeLogId) return;
+    setCurrentLogId(activeLogId);
+    if (activeWorkoutName) setWorkoutName(activeWorkoutName);
+    if (activeWorkoutStartTime) setStartTime(getStartTimeMs(activeWorkoutStartTime));
+  }, [activeLogId, activeWorkoutName, activeWorkoutStartTime, getStartTimeMs]);
+
+  const handleOpenModal = () => {
+    router.push({
+      pathname: '/exercise-search',
+      params: { context: 'active-workout' }
+    });
+  };
 
   // Timer logic
   useEffect(() => {
@@ -47,110 +373,60 @@ export default function ActiveWorkout() {
     const s = (seconds % 60).toString().padStart(2, "0");
     return `${m}:${s}`;
   };
-
-  const handleAddExercise = (exerciseName) => {
-    const newExercise = {
-      id: Date.now().toString(),
-      name: exerciseName,
-      sets: [
-        { id: Date.now().toString() + "-1", weight: "", reps: "", completed: false }
-      ]
-    };
-    setExercises([...exercises, newExercise]);
-    setModalVisible(false);
-  };
-
-  const handleAddSet = (exerciseId) => {
-    setExercises(exercises.map(ex => {
-      if (ex.id === exerciseId) {
-        const lastSet = ex.sets[ex.sets.length - 1];
-        return {
-          ...ex,
-          sets: [...ex.sets, { 
-            id: Date.now().toString(), 
-            weight: lastSet ? lastSet.weight : "", 
-            reps: lastSet ? lastSet.reps : "", 
-            completed: false 
-          }]
-        };
-      }
-      return ex;
-    }));
-  };
-
-  const handleUpdateSet = (exerciseId, setId, field, value) => {
-    setExercises(exercises.map(ex => {
-      if (ex.id === exerciseId) {
-        return {
-          ...ex,
-          sets: ex.sets.map(set => set.id === setId ? { ...set, [field]: value } : set)
-        };
-      }
-      return ex;
-    }));
-  };
-
-  const handleToggleComplete = (exerciseId, setId) => {
-    setExercises(exercises.map(ex => {
-      if (ex.id === exerciseId) {
-        return {
-          ...ex,
-          sets: ex.sets.map(set => set.id === setId ? { ...set, completed: !set.completed } : set)
-        };
-      }
-      return ex;
-    }));
-  };
-
-  const handleFinish = async () => {
-    // Filter out uncompleted sets
+  const handleFinish = () => {
     const completedExercises = exercises.map(ex => ({
       ...ex,
-      sets: ex.sets.filter(s => s.completed && s.weight && s.reps)
+      sets: ex.sets.map(normalizeCompletedSet).filter(Boolean)
     })).filter(ex => ex.sets.length > 0);
 
-    if (completedExercises.length === 0) {
+    if (completedExercises.length === 0 || !currentLogId) {
       setShowEmptyAlert(true);
       return;
     }
 
-    const newWorkout = {
-      id: Date.now().toString(),
-      name: workoutName,
-      date: new Date().toISOString(),
-      duration: timer, // in seconds
-      exercises: completedExercises
-    };
-
-    try {
-      const savedWorkoutsJSON = await AsyncStorage.getItem("@gym_app_workouts");
-      const savedWorkouts = savedWorkoutsJSON ? JSON.parse(savedWorkoutsJSON) : [];
-      savedWorkouts.unshift(newWorkout); // Add to top
-      await AsyncStorage.setItem("@gym_app_workouts", JSON.stringify(savedWorkouts));
-      router.back();
-    } catch (e) {
-      Alert.alert("Error", "Failed to save workout.");
-    }
+    router.push('/save-workout');
   };
 
-  const handleCancel = () => {
-    setShowCancelAlert(true);
+  const handleMinimize = () => {
+    router.replace("/(tabs)/workouts");
+  };
+
+  const handleDiscardWorkout = async () => {
+    const logIdToDiscard = currentLogId || activeLogId;
+
+    setIsLoading(true);
+    try {
+      if (logIdToDiscard) await discardWorkoutLog(logIdToDiscard);
+      setShowEmptyAlert(false);
+      endWorkout();
+      await useWorkoutStore.persist.clearStorage();
+      router.replace("/(tabs)/workouts");
+    } catch (e) {
+      console.error("Failed to discard workout:", e.message);
+      Alert.alert("Error", "Failed to discard workout. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView style={styles.keyboardView} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+      >
         
         {/* Header */}
         <View style={styles.header}>
-          <Pressable onPress={handleCancel} style={styles.headerButton}>
-            <Text style={styles.headerButtonText}>Cancel</Text>
+          <Pressable onPress={handleMinimize} style={styles.minimizeButton} accessibilityLabel="Minimize workout">
+            <Ionicons name="chevron-down" size={24} color={colors.primary} />
           </Pressable>
           <View style={styles.headerCenter}>
             <TextInput
               style={styles.workoutNameInput}
               value={workoutName}
-              onChangeText={setWorkoutName}
+              onChangeText={handleWorkoutNameChange}
               placeholder="Workout Name"
               placeholderTextColor={colors.textTertiary}
             />
@@ -162,115 +438,50 @@ export default function ActiveWorkout() {
         </View>
 
         {/* Exercises List */}
-        <ScrollView style={styles.exercisesScroll} contentContainerStyle={styles.exercisesContent}>
-          {exercises.map((ex, exIndex) => (
-            <View key={ex.id} style={styles.exerciseCard}>
-              <Text style={styles.exerciseTitle}>{ex.name}</Text>
-
-              {/* Sets Header */}
-              <View style={styles.setRowHeader}>
-                <Text style={styles.setColSet}>Set</Text>
-                <Text style={styles.setColLbs}>lbs</Text>
-                <Text style={styles.setColReps}>Reps</Text>
-                <Text style={styles.setColCheck}>✓</Text>
-              </View>
-
-              {/* Sets Rows */}
-              {ex.sets.map((set, setIndex) => (
-                <View key={set.id} style={[styles.setRow, set.completed && styles.setRowCompleted]}>
-                  <Text style={styles.setIndex}>{setIndex + 1}</Text>
-                  <TextInput
-                    style={[styles.inputBox, set.completed && styles.inputBoxCompleted]}
-                    keyboardType="numeric"
-                    value={set.weight}
-                    onChangeText={(val) => handleUpdateSet(ex.id, set.id, "weight", val)}
-                    placeholder="-"
-                    editable={!set.completed}
-                  />
-                  <TextInput
-                    style={[styles.inputBox, set.completed && styles.inputBoxCompleted]}
-                    keyboardType="numeric"
-                    value={set.reps}
-                    onChangeText={(val) => handleUpdateSet(ex.id, set.id, "reps", val)}
-                    placeholder="-"
-                    editable={!set.completed}
-                  />
-                  <Pressable 
-                    style={[styles.checkButton, set.completed && styles.checkButtonActive]}
-                    onPress={() => handleToggleComplete(ex.id, set.id)}
-                  >
-                    <Ionicons name="checkmark" size={16} color={set.completed ? "white" : colors.textSecondary} />
-                  </Pressable>
-                </View>
-              ))}
-
-              {/* Add Set Button */}
-              <Pressable style={styles.addSetButton} onPress={() => handleAddSet(ex.id)}>
-                <Text style={styles.addSetButtonText}>+ Add Set</Text>
+        <FlatList
+          ref={flatListRef}
+          style={styles.exercisesScroll}
+          contentContainerStyle={styles.exercisesContent}
+          data={exercises}
+          keyExtractor={(item) => item.id}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          renderItem={({ item, index }) => (
+            <ExerciseCard
+              ex={item}
+              exerciseIndex={index}
+              exerciseHistory={exerciseHistoryById[item.exercise_id]}
+              handleUpdateSet={handleUpdateSet}
+              handleToggleComplete={handleToggleComplete}
+              handleAddSet={handleAddSet}
+              handleSetOptions={handleSetOptions}
+              handleOpenExerciseDetails={handleOpenExerciseDetails}
+              handleInputFocus={handleInputFocus}
+              handleDeleteExercise={handleDeleteExercise}
+            />
+          )}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Ionicons name="barbell-outline" size={48} color="#333" />
+              <Text style={styles.emptyTitle}>No exercises yet</Text>
+              <Text style={styles.emptySubtitle}>Tap "Add Exercise" to get started</Text>
+            </View>
+          }
+          ListFooterComponent={
+            <View style={styles.footerControls}>
+              <Pressable
+                style={[styles.addExerciseButton, !currentLogId && styles.addExerciseButtonDisabled]}
+                onPress={handleOpenModal}
+                disabled={!currentLogId}
+              >
+                <Ionicons name="add" size={20} color={colors.primary} />
+                <Text style={styles.addExerciseButtonText}>Add Exercise</Text>
               </Pressable>
             </View>
-          ))}
-
-          {/* Add Exercise Button */}
-          <Pressable style={styles.addExerciseButton} onPress={() => setModalVisible(true)}>
-            <Ionicons name="add" size={20} color={colors.primary} />
-            <Text style={styles.addExerciseButtonText}>Add Exercise</Text>
-          </Pressable>
-        </ScrollView>
+          }
+        />
       </KeyboardAvoidingView>
-
-      {/* Exercise Selector Modal */}
-      <Modal
-        isVisible={isModalVisible}
-        onSwipeComplete={() => setModalVisible(false)}
-        swipeDirection="down"
-        onBackdropPress={() => setModalVisible(false)}
-        style={styles.bottomModal}
-        avoidKeyboard
-      >
-        <View style={styles.modalContent}>
-          <View style={styles.dragHandle} />
-          <Text style={styles.modalHeader}>Select Exercise</Text>
-          <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
-            {EXERCISE_LIST.map((item, idx) => (
-              <Pressable 
-                key={idx} 
-                style={styles.modalExerciseRow}
-                onPress={() => handleAddExercise(item.name)}
-              >
-                <Text style={styles.modalExerciseName}>{item.name}</Text>
-                <Text style={styles.modalExerciseCategory}>{item.category}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-        </View>
-      </Modal>
-
-      {/* Cancel Workout Alert Modal */}
-      <Modal
-        isVisible={showCancelAlert}
-        backdropOpacity={0.6}
-        animationIn="fadeIn"
-        animationOut="fadeOut"
-        useNativeDriver={true}
-        onBackdropPress={() => setShowCancelAlert(false)}
-      >
-        <View style={styles.alertBox}>
-          <Text style={styles.alertTitle}>Cancel Workout</Text>
-          <Text style={styles.alertMessage}>Are you sure you want to cancel? This workout will not be saved.</Text>
-          <View style={styles.alertButtonRow}>
-            <Pressable style={styles.alertCancelBtn} onPress={() => setShowCancelAlert(false)}>
-              <Text style={styles.alertCancelBtnText}>Keep Going</Text>
-            </Pressable>
-            <Pressable style={styles.alertDestructiveBtn} onPress={() => {
-              setShowCancelAlert(false);
-              router.back();
-            }}>
-              <Text style={styles.alertDestructiveBtnText}>Discard</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
 
       {/* Empty Workout Alert Modal */}
       <Modal
@@ -288,10 +499,7 @@ export default function ActiveWorkout() {
             <Pressable style={styles.alertCancelBtn} onPress={() => setShowEmptyAlert(false)}>
               <Text style={styles.alertCancelBtnText}>Cancel</Text>
             </Pressable>
-            <Pressable style={styles.alertDestructiveBtn} onPress={() => {
-              setShowEmptyAlert(false);
-              router.back();
-            }}>
+            <Pressable style={styles.alertDestructiveBtn} onPress={handleDiscardWorkout} disabled={isLoading}>
               <Text style={styles.alertDestructiveBtnText}>Discard</Text>
             </Pressable>
           </View>
@@ -318,13 +526,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.divider,
   },
-  headerButton: {
+  minimizeButton: {
     padding: spacing.xs,
-  },
-  headerButtonText: {
-    color: colors.primary,
-    fontSize: 16,
-    fontWeight: "500",
+    minWidth: 48,
+    alignItems: "flex-start",
   },
   finishButton: {
     backgroundColor: colors.primary,
@@ -357,7 +562,7 @@ const styles = StyleSheet.create({
   },
   exercisesContent: {
     padding: layout.screenPadding,
-    paddingBottom: 40,
+    paddingBottom: 200,
   },
   exerciseCard: {
     backgroundColor: colors.surface,
@@ -367,21 +572,47 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  exerciseTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: spacing.sm,
+    gap: 8,
+  },
+  exerciseTitlePressable: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  exerciseTitleTextWrap: {
+    flex: 1,
+    paddingRight: spacing.sm,
+  },
   exerciseTitle: {
     fontSize: 18,
     fontWeight: "bold",
     color: colors.primary,
-    marginBottom: spacing.sm,
+  },
+  exerciseMeta: {
+    fontSize: 11,
+    color: colors.textTertiary,
+    marginTop: 2,
+  },
+  lastSessionLabel: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    paddingHorizontal: 12,
+    paddingBottom: 6,
   },
   setRowHeader: {
     flexDirection: "row",
     marginBottom: spacing.xs,
     paddingHorizontal: spacing.sm,
   },
-  setColSet: { flex: 1, fontSize: 12, color: colors.textTertiary, fontWeight: "bold", textAlign: "center" },
-  setColLbs: { flex: 2, fontSize: 12, color: colors.textTertiary, fontWeight: "bold", textAlign: "center" },
-  setColReps: { flex: 2, fontSize: 12, color: colors.textTertiary, fontWeight: "bold", textAlign: "center" },
-  setColCheck: { flex: 1, fontSize: 12, color: colors.textTertiary, fontWeight: "bold", textAlign: "center" },
+  setColSet: { flex: 0.9, fontSize: 11, color: colors.textTertiary, fontWeight: "bold", textAlign: "center" },
+  setColPrevious: { flex: 1.7, fontSize: 11, color: colors.textTertiary, fontWeight: "bold", textAlign: "center" },
+  setColLbs: { flex: 1.4, fontSize: 11, color: colors.textTertiary, fontWeight: "bold", textAlign: "center" },
+  setColReps: { flex: 1.4, fontSize: 11, color: colors.textTertiary, fontWeight: "bold", textAlign: "center" },
+  setColCheck: { flex: 0.9, fontSize: 11, color: colors.textTertiary, fontWeight: "bold", textAlign: "center" },
   
   setRow: {
     flexDirection: "row",
@@ -391,31 +622,48 @@ const styles = StyleSheet.create({
   setRowCompleted: {
     opacity: 0.6,
   },
+  setIndexButton: {
+    flex: 0.9,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 30,
+  },
   setIndex: {
-    flex: 1,
     textAlign: "center",
     fontSize: 14,
     fontWeight: "bold",
     color: colors.textSecondary,
   },
-  inputBox: {
-    flex: 2,
-    backgroundColor: colors.background,
+  setIndexWarmup: {
+    color: colors.warning || colors.primary,
+  },
+  targetHintContainer: {
+    flex: 1.7,
+    alignItems: "center",
+    justifyContent: "center",
     marginHorizontal: spacing.xs,
-    borderRadius: 6,
-    paddingVertical: 6,
+  },
+  targetHintText: {
+    textAlign: "center",
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  inputBox: {
+    flex: 1.4,
+    backgroundColor: "#1a1a1a",
+    marginHorizontal: spacing.xs,
+    borderRadius: 8,
+    paddingVertical: 10,
     textAlign: "center",
     fontSize: 16,
-    color: colors.text,
-    borderWidth: 1,
-    borderColor: colors.border,
+    color: "#fff",
   },
   inputBoxCompleted: {
     backgroundColor: "transparent",
     borderColor: "transparent",
   },
   checkButton: {
-    flex: 1,
+    flex: 0.9,
     alignItems: "center",
     justifyContent: "center",
     height: 30,
@@ -436,16 +684,52 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "bold",
   },
+  deleteExerciseBtn: {
+    padding: spacing.xs,
+    marginLeft: spacing.xs,
+  },
+  exerciseThumb: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    backgroundColor: '#1a1a1a',
+    marginRight: 10,
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 80,
+  },
+
+  emptyTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    color: '#666',
+    fontSize: 14,
+  },
+  footerControls: {
+    gap: spacing.md,
+  },
   addExerciseButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 16,
-    backgroundColor: "rgba(0, 123, 255, 0.1)", // Primary color with low opacity
+    backgroundColor: "rgba(0, 123, 255, 0.1)",
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.primary,
     marginTop: spacing.md,
+  },
+  addExerciseButtonDisabled: {
+    opacity: 0.5,
+    backgroundColor: colors.border,
+    borderColor: colors.border,
   },
   addExerciseButtonText: {
     color: colors.primary,
@@ -497,6 +781,59 @@ const styles = StyleSheet.create({
   modalExerciseCategory: {
     fontSize: 12,
     color: colors.textSecondary,
+  },
+  finishSheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    paddingBottom: 36,
+  },
+  finishSheetHandle: {
+    width: 40,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: colors.border,
+    alignSelf: 'center',
+    marginBottom: 20,
+  },
+  finishSheetTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: colors.text,
+    marginBottom: 16,
+  },
+  finishTitleInput: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: '#fff',
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  saveBtnStyle: {
+    backgroundColor: colors.primary,
+    borderRadius: 10,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  saveBtnTextStyle: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  cancelBtnStyle: {
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  cancelBtnTextStyle: {
+    color: colors.textSecondary,
+    fontSize: 15,
   },
   alertBox: {
     backgroundColor: colors.surface,
