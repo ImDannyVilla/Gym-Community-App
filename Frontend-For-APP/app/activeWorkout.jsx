@@ -6,7 +6,7 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Modal from "react-native-modal";
 import { colors, layout, typography, spacing } from "../lib/theme";
-import { startWorkout, deleteWorkoutLog, getExerciseHistory } from "../lib/workoutApi";
+import { deleteWorkoutLog, getExerciseHistory } from "../lib/workoutApi";
 import { useWorkoutStore } from "../stores/workoutStore";
 import RestTimer from "./_components/RestTimer";
 
@@ -216,7 +216,6 @@ export default function ActiveWorkout() {
     removeExercise,
     toggleWarmupSet,
     endWorkout,
-    startWorkout: storeStartWorkout,
     setWorkoutName: setStoreWorkoutName,
   } = useWorkoutStore();
 
@@ -348,41 +347,10 @@ export default function ActiveWorkout() {
   }, [exercises]);
 
   useEffect(() => {
-    let isMounted = true;
-    
-    const initWorkout = async () => {
-      // If we already have a log ID from workouts.jsx, just use it
-      if (activeLogId) {
-        if (isMounted) {
-          setCurrentLogId(activeLogId);
-          if (activeWorkoutName) setWorkoutName(activeWorkoutName);
-          if (activeWorkoutStartTime) setStartTime(getStartTimeMs(activeWorkoutStartTime));
-        }
-        return;
-      }
-
-      try {
-        const log = await startWorkout(workoutName);
-        if (isMounted) {
-          const workoutStartTime = log.started_at || Date.now();
-          setCurrentLogId(log.id);
-          setWorkoutName(log.name);
-          setStartTime(getStartTimeMs(workoutStartTime));
-          storeStartWorkout(log, workoutStartTime);
-        }
-      } catch (e) {
-        console.error("Failed to start workout:", e.message);
-        if (isMounted) {
-          Alert.alert("Error", "Failed to start workout session. Please try again.");
-        }
-      }
-    };
-
-    initWorkout();
-    
-    return () => {
-      isMounted = false;
-    };
+    if (!activeLogId) return;
+    setCurrentLogId(activeLogId);
+    if (activeWorkoutName) setWorkoutName(activeWorkoutName);
+    if (activeWorkoutStartTime) setStartTime(getStartTimeMs(activeWorkoutStartTime));
   }, [activeLogId, activeWorkoutName, activeWorkoutStartTime, getStartTimeMs]);
 
   const handleOpenModal = () => {
