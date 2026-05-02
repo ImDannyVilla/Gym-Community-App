@@ -14,6 +14,7 @@ from app.schemas.workout_log import (
     WorkoutLogCreate, WorkoutLogUpdate,
     WorkoutLogResponse,
     WorkoutLogExerciseCreate,
+    WorkoutLogFinalize,
     PublicFeedPost,
     PublicWorkoutLogResponse,
 )
@@ -462,6 +463,83 @@ async def add_exercise_to_log(
         .where(WorkoutLog.id == log_id)
     )
     return result.scalars().first()
+
+@router.post("/{log_id}/finalize", response_model=WorkoutLogResponse)
+async def finalize_workout_log(
+    log_id: UUID,
+    data: WorkoutLogFinalize,
+    db: AsyncSessionDep,
+    current_user: CurrentUser,
+):
+    """
+    Atomically write the full completed workout in one transaction.
+    Replaces any existing exercises on the log (delete-then-insert) so retries
+    are idempotent. Recomputes the user streak in the same commit.
+    """
+    result = await db.execute(
+        select(WorkoutLog)
+        .options(selectinload(WorkoutLog.exercises))
+        .where(WorkoutLog.id == log_id)
+        .where(WorkoutLog.user_id == current_user.id)
+    )
+    log = result.scalars().first()
+    if not log:
+        raise HTTPException(status_code=404, detail="Workout log not found")
+
+    if data.name is not None:
+        log.name = data.name
+    if data.is_public is not None:
+        log.is_public = data.is_public
+    if data.completed_at is not None:
+        log.completed_at = data.completed_at
+    if data.duration is not None:
+        log.duration = data.duration
+    if data.caption is not None:
+        log.caption = data.caption
+    if data.media_url is not None:
+        log.media_url = data.media_url
+    if data.media_type is not None:
+        log.media_type = data.media_type
+
+    for existing in list(log.exercises):
+        await db.delete(existing)
+    await db.flush()
+
+    for ex_data in data.exercises:
+        exercise = WorkoutLogExercise(
+            id=uuid4(),
+            workout_log_id=log_id,
+            exercise_id=ex_data.exercise_id,
+            name=ex_data.name,
+            category=ex_data.category,
+            target=ex_data.target,
+            equipment=ex_data.equipment,
+            gif_url=ex_data.gif_url,
+            order=ex_data.order,
+            target_sets=ex_data.target_sets,
+            target_reps_min=ex_data.target_reps_min,
+            target_reps_max=ex_data.target_reps_max,
+            target_weight_lbs=ex_data.target_weight_lbs,
+        )
+        db.add(exercise)
+        await db.flush()
+
+        for set_data in ex_data.sets:
+            db.add(WorkoutLogSet(
+                id=uuid4(),
+                workout_log_exercise_id=exercise.id,
+                set_number=set_data.set_number,
+                reps=set_data.reps,
+                weight_lbs=set_data.weight_lbs,
+                completed=set_data.completed,
+            ))
+
+    await db.flush()
+    await update_user_streak(db, current_user.id)
+    await db.commit()
+
+    return await load_workout_log_response(db, log_id, current_user.id)
+
 
 @router.delete("/{log_id}/exercises/{exercise_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_exercise_from_log(

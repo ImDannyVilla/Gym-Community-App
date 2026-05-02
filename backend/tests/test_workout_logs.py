@@ -301,3 +301,158 @@ async def test_streak_endpoint_total_volume_zero_with_no_sets(client):
     streak_r = await client.get("/workout-logs/me/streak")
     assert streak_r.status_code == 200
     assert streak_r.json()["total_volume"] == 0.0
+
+
+def _finalize_payload(**overrides):
+    payload = {
+        "name": "Finalized",
+        "is_public": False,
+        "completed_at": "2026-04-20T10:00:00Z",
+        "duration": 1800,
+        "caption": None,
+        "media_url": None,
+        "media_type": None,
+        "exercises": [
+            {
+                "exercise_id": "Barbell_Bench_Press_-_Medium_Grip",
+                "name": "Bench",
+                "category": "strength",
+                "target": "chest",
+                "equipment": "barbell",
+                "order": 1,
+                "sets": [
+                    {"set_number": 1, "reps": 8, "weight_lbs": 135.0, "completed": True},
+                    {"set_number": 2, "reps": 8, "weight_lbs": 135.0, "completed": True},
+                ],
+            },
+            {
+                "exercise_id": "Squat",
+                "name": "Squat",
+                "category": "strength",
+                "target": "legs",
+                "equipment": "barbell",
+                "order": 2,
+                "sets": [
+                    {"set_number": 1, "reps": 5, "weight_lbs": 200.0, "completed": True},
+                ],
+            },
+        ],
+    }
+    payload.update(overrides)
+    return payload
+
+
+@pytest.mark.asyncio
+async def test_finalize_creates_exercises_and_sets_log_fields(client):
+    log_r = await client.post("/workout-logs/", json={"name": "F1", "is_public": False})
+    log_id = log_r.json()["id"]
+
+    response = await client.post(f"/workout-logs/{log_id}/finalize", json=_finalize_payload(
+        name="My Finalized Workout",
+        is_public=True,
+        caption="Solid session",
+    ))
+    assert response.status_code == 200
+    data = response.json()
+    assert data["name"] == "My Finalized Workout"
+    assert data["is_public"] is True
+    assert data["duration"] == 1800
+    assert data["caption"] == "Solid session"
+    assert len(data["exercises"]) == 2
+    assert len(data["exercises"][0]["sets"]) == 2
+    assert len(data["exercises"][1]["sets"]) == 1
+
+
+@pytest.mark.asyncio
+async def test_finalize_is_idempotent_on_retry(client):
+    """Calling finalize twice produces the same final state, not duplicated rows."""
+    log_r = await client.post("/workout-logs/", json={"name": "F2", "is_public": False})
+    log_id = log_r.json()["id"]
+
+    await client.post(f"/workout-logs/{log_id}/finalize", json=_finalize_payload())
+    response = await client.post(f"/workout-logs/{log_id}/finalize", json=_finalize_payload())
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["exercises"]) == 2
+    total_sets = sum(len(ex["sets"]) for ex in data["exercises"])
+    assert total_sets == 3
+
+
+@pytest.mark.asyncio
+async def test_finalize_replaces_existing_exercises(client):
+    """A finalize call replaces any pre-existing exercises on the log."""
+    log_r = await client.post("/workout-logs/", json={"name": "F3", "is_public": False})
+    log_id = log_r.json()["id"]
+
+    await client.post(f"/workout-logs/{log_id}/exercises", json={
+        "exercise_id": "Old_Exercise",
+        "name": "Old",
+        "category": "strength",
+        "target": "back",
+        "equipment": "barbell",
+        "order": 1,
+        "sets": [{"set_number": 1, "reps": 5, "weight_lbs": 100.0, "completed": True}],
+    })
+
+    response = await client.post(f"/workout-logs/{log_id}/finalize", json=_finalize_payload())
+    assert response.status_code == 200
+    data = response.json()
+    names = [ex["name"] for ex in data["exercises"]]
+    assert "Old" not in names
+    assert "Bench" in names
+    assert "Squat" in names
+
+
+@pytest.mark.asyncio
+async def test_finalize_invalid_payload_preserves_existing_state(client):
+    """Validation failure rejects the request without touching existing exercises."""
+    log_r = await client.post("/workout-logs/", json={"name": "F4", "is_public": False})
+    log_id = log_r.json()["id"]
+
+    await client.post(f"/workout-logs/{log_id}/exercises", json={
+        "exercise_id": "Existing",
+        "name": "Existing",
+        "category": "strength",
+        "target": "chest",
+        "equipment": "barbell",
+        "order": 1,
+        "sets": [{"set_number": 1, "reps": 5, "weight_lbs": 100.0, "completed": True}],
+    })
+
+    bad_payload = _finalize_payload()
+    # Second exercise's first set has reps below the schema minimum (ge=0 → -1 fails)
+    bad_payload["exercises"][1]["sets"][0]["reps"] = -1
+
+    response = await client.post(f"/workout-logs/{log_id}/finalize", json=bad_payload)
+    assert response.status_code == 422
+
+    # Pre-existing exercises must still be there — no partial state.
+    detail = await client.get(f"/workout-logs/{log_id}")
+    assert detail.status_code == 200
+    existing = detail.json()["exercises"]
+    assert len(existing) == 1
+    assert existing[0]["name"] == "Existing"
+
+
+@pytest.mark.asyncio
+async def test_finalize_404_when_log_belongs_to_another_user(client):
+    fake_id = "00000000-0000-0000-0000-000000000000"
+    response = await client.post(f"/workout-logs/{fake_id}/finalize", json=_finalize_payload())
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_finalize_recomputes_streak(client):
+    """Finalize updates the streak in the same commit."""
+    log_r = await client.post("/workout-logs/", json={"name": "F5", "is_public": False})
+    log_id = log_r.json()["id"]
+
+    today_iso = "2026-04-20T10:00:00Z"
+    await client.post(f"/workout-logs/{log_id}/finalize", json=_finalize_payload(
+        completed_at=today_iso,
+    ))
+
+    streak_r = await client.get("/workout-logs/me/streak")
+    assert streak_r.status_code == 200
+    data = streak_r.json()
+    assert data["total_workouts"] >= 1

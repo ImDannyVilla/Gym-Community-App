@@ -75,6 +75,18 @@ class WorkoutLogUpdate(BaseModel):
     media_type: Optional[str] = Field(None, max_length=50)
     caption: Optional[str] = Field(None, max_length=1000)
 
+
+class WorkoutLogFinalize(BaseModel):
+    """Atomic finalize payload — full log fields plus the complete exercise list."""
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    is_public: Optional[bool] = None
+    completed_at: Optional[datetime] = None
+    duration: Optional[int] = Field(None, ge=0)
+    media_url: Optional[str] = None
+    media_type: Optional[str] = Field(None, max_length=50)
+    caption: Optional[str] = Field(None, max_length=1000)
+    exercises: List[WorkoutLogExerciseCreate]
+
 class WorkoutLogSummary(BaseModel):
     """List view — no exercises"""
     id: UUID

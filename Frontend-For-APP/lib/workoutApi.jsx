@@ -105,6 +105,15 @@ export async function addExerciseToLog(logId, exerciseData) {
   });
 }
 
+export async function finalizeWorkout(logId, payload) {
+  const authHeader = await getAuthHeader();
+  return fetchWithAuth(`/workout-logs/${logId}/finalize`, {
+    method: "POST",
+    headers: authHeader,
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function deleteExerciseFromLog(logId, exerciseId) {
   return fetchWithAuth(`/workout-logs/${logId}/exercises/${exerciseId}`, {
     method: 'DELETE',

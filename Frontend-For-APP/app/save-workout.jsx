@@ -9,7 +9,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { colors, spacing, layout } from '../lib/theme';
-import { addExerciseToLog, updateWorkoutLog } from '../lib/workoutApi';
+import { finalizeWorkout } from '../lib/workoutApi';
 import { uploadWorkoutMedia } from '../lib/supabaseStorage';
 import { getMyProfile } from '../lib/socialApi';
 import { saveToCache, CACHE_KEYS } from '../lib/localCache';
@@ -135,10 +135,16 @@ export default function SaveWorkout() {
         new Date().getMinutes(),
       ).toISOString();
 
-      for (const ex of completedExercises) {
+      let mediaUrl = null;
+      if (photoUri) {
+        const profile = await getMyProfile();
+        mediaUrl = await uploadWorkoutMedia(photoUri, String(profile.id), logId);
+      }
+
+      const finalizeExercises = completedExercises.map((ex) => {
         const exerciseLibraryId = getExerciseLibraryId(ex);
         if (!exerciseLibraryId) throw new Error(`Missing exercise id for ${ex.name || 'exercise'}`);
-        await addExerciseToLog(logId, {
+        return {
           exercise_id: exerciseLibraryId,
           name: ex.name,
           gif_url: ex.gif_url || null,
@@ -156,16 +162,10 @@ export default function SaveWorkout() {
             weight_lbs: s.weight_lbs,
             completed: s.completed,
           })),
-        });
-      }
+        };
+      });
 
-      let mediaUrl = null;
-      if (photoUri) {
-        const profile = await getMyProfile();
-        mediaUrl = await uploadWorkoutMedia(photoUri, String(profile.id), logId);
-      }
-
-      await updateWorkoutLog(logId, {
+      await finalizeWorkout(logId, {
         name: title.trim() || defaultTitle,
         completed_at: completedAt,
         duration: elapsedSeconds,
@@ -173,6 +173,7 @@ export default function SaveWorkout() {
         caption: description.trim() || null,
         media_url: mediaUrl,
         media_type: mediaUrl ? 'photo' : null,
+        exercises: finalizeExercises,
       });
 
       endWorkout();
