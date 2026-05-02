@@ -96,6 +96,16 @@ export async function deleteWorkoutLog(logId) {
   });
 }
 
+export async function discardWorkoutLog(logId) {
+  try {
+    await deleteWorkoutLog(logId);
+    return { ok: true };
+  } catch (e) {
+    if (e?.status === 404) return { ok: true };
+    throw e;
+  }
+}
+
 export async function addExerciseToLog(logId, exerciseData) {
   const authHeader = await getAuthHeader();
   return fetchWithAuth(`/workout-logs/${logId}/exercises`, {

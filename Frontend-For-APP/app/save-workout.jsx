@@ -9,7 +9,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { colors, spacing, layout } from '../lib/theme';
-import { finalizeWorkout } from '../lib/workoutApi';
+import { finalizeWorkout, discardWorkoutLog } from '../lib/workoutApi';
 import { uploadWorkoutMedia } from '../lib/supabaseStorage';
 import { getMyProfile } from '../lib/socialApi';
 import { saveToCache, CACHE_KEYS } from '../lib/localCache';
@@ -203,13 +203,14 @@ export default function SaveWorkout() {
           text: 'Discard',
           style: 'destructive',
           onPress: async () => {
-            const { deleteWorkoutLog } = await import('../lib/workoutApi');
             try {
-              if (activeLogId) await deleteWorkoutLog(activeLogId).catch(() => {});
-            } finally {
+              if (activeLogId) await discardWorkoutLog(activeLogId);
               endWorkout();
               await useWorkoutStore.persist.clearStorage();
               router.replace('/(tabs)/workouts');
+            } catch (e) {
+              console.error('Failed to discard workout:', e.message);
+              Alert.alert('Error', 'Failed to discard workout. Please try again.');
             }
           },
         },
