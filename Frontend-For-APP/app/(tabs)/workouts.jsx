@@ -79,11 +79,7 @@ export default function WorkoutsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      const { isActive, cachedRoutines, needsProfileRefresh: refresh } = useWorkoutStore.getState();
-      if (isActive) {
-        router.replace('/activeWorkout');
-        return;
-      }
+      const { cachedRoutines, needsProfileRefresh: refresh } = useWorkoutStore.getState();
       if (cachedRoutines.length === 0 || refresh) {
         fetchData();
       }
