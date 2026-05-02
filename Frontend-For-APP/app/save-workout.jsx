@@ -177,6 +177,13 @@ export default function SaveWorkout() {
       });
 
       endWorkout();
+      // Invalidate in-memory caches so the next focus on profile/workouts
+      // doesn't render stale graphs before the fresh fetch returns.
+      useWorkoutStore.setState({
+        cachedWorkoutLogs: [],
+        cachedDayStreak: 0,
+        cachedStats: { totalWorkouts: 0, setsDone: 0, dayStreak: 0 },
+      });
       await useWorkoutStore.persist.clearStorage();
 
       await Promise.all([
