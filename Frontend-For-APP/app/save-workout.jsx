@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import {
   View, Text, TextInput, Pressable, StyleSheet,
   ScrollView, Alert, Platform, ActionSheetIOS, ActivityIndicator, Modal,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -233,6 +234,11 @@ export default function SaveWorkout() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      <KeyboardAvoidingView
+        style={styles.flex1}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={0}
+      >
       {/* Header */}
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
@@ -254,6 +260,7 @@ export default function SaveWorkout() {
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
         showsVerticalScrollIndicator={false}
       >
         {/* 1. Title */}
@@ -347,6 +354,7 @@ export default function SaveWorkout() {
           <Text style={styles.discardBtnText}>Discard Workout</Text>
         </Pressable>
       </ScrollView>
+      </KeyboardAvoidingView>
 
       {/* Date picker modal */}
       <Modal
@@ -395,6 +403,7 @@ export default function SaveWorkout() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
+  flex1: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
