@@ -31,7 +31,7 @@ dist/
 .DS_Store
 Thumbs.db
 
-# uv
+# uv (done)
 .uv/
 uv.lock  # Optional: some teams commit this, some don't
 
