@@ -160,7 +160,7 @@ export default function SaveWorkout() {
       }
 
       let mediaUrl = null;
-      if (photoUri && isPublic) {
+      if (photoUri) {
         const profile = await getMyProfile();
         mediaUrl = await uploadWorkoutMedia(photoUri, String(profile.id), logId);
       }
