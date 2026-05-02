@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import { discardWorkoutLog } from '../lib/workoutApi';
 
 const hasStartedWorkout = (exercises = []) => (
   exercises.some(ex => ex.sets?.some(set => set.started || set.completed))
@@ -187,10 +188,21 @@ export const useWorkoutStore = create(persist((set, get) => ({
   onRehydrateStorage: () => (state) => {
     if (!state) return;
     state.setHasHydrated(true);
+    const purgeStaleLog = (logId) => {
+      if (!logId) return;
+      // Best-effort backend cleanup so abandoned WorkoutLog rows don't
+      // accumulate indefinitely. The user isn't around to retry — errors
+      // are intentionally swallowed.
+      discardWorkoutLog(logId).catch(() => {});
+    };
     if (state.isActive && state.activeWorkoutStartTime) {
       const age = Date.now() - new Date(state.activeWorkoutStartTime).getTime();
-      if (age > 12 * 60 * 60 * 1000) state.endWorkout();
+      if (age > 12 * 60 * 60 * 1000) {
+        purgeStaleLog(state.activeLogId);
+        state.endWorkout();
+      }
     } else if (state.isActive && !state.activeWorkoutStartTime) {
+      purgeStaleLog(state.activeLogId);
       state.endWorkout();
     }
   },
