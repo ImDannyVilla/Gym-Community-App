@@ -477,10 +477,21 @@ const loadProfileData = async (hasCache = false) => {
         return days;
     }, []);
 
+    // Bucket key in the user's local TZ. Using toISOString().slice(0,10) here
+    // would bucket by UTC date, which silently drops evening workouts in
+    // negative-UTC TZs (their UTC date is "tomorrow") and shifts everything
+    // a day in positive-UTC TZs.
+    const localDateKey = (d) => {
+        const yr = d.getFullYear();
+        const mo = String(d.getMonth() + 1).padStart(2, '0');
+        const dy = String(d.getDate()).padStart(2, '0');
+        return `${yr}-${mo}-${dy}`;
+    };
+
     const volumeData = useMemo(() => last14Days.map(day => {
-        const ds = day.toISOString().slice(0, 10);
+        const ds = localDateKey(day);
         const vol = completedWorkouts
-            .filter(log => log.completed_at && new Date(log.completed_at).toISOString().slice(0, 10) === ds)
+            .filter(log => log.completed_at && localDateKey(new Date(log.completed_at)) === ds)
             .reduce((t, log) => t + (log.exercises || []).reduce((et, ex) =>
                 et + (ex.sets || []).filter(s => s.completed).reduce((st, s) =>
                     st + (s.weight_lbs || 0) * (s.reps || 0), 0), 0), 0);
@@ -494,9 +505,9 @@ const loadProfileData = async (hasCache = false) => {
     }), [completedWorkouts, last14Days]);
 
     const repsData = useMemo(() => last14Days.map(day => {
-        const ds = day.toISOString().slice(0, 10);
+        const ds = localDateKey(day);
         const reps = completedWorkouts
-            .filter(log => log.completed_at && new Date(log.completed_at).toISOString().slice(0, 10) === ds)
+            .filter(log => log.completed_at && localDateKey(new Date(log.completed_at)) === ds)
             .reduce((t, log) => t + (log.exercises || []).reduce((et, ex) =>
                 et + (ex.sets || []).filter(s => s.completed).reduce((st, s) =>
                     st + (s.reps || 0), 0), 0), 0);
