@@ -456,3 +456,50 @@ async def test_finalize_recomputes_streak(client):
     assert streak_r.status_code == 200
     data = streak_r.json()
     assert data["total_workouts"] >= 1
+
+
+@pytest.mark.asyncio
+async def test_finalize_backfilled_date_derives_consistent_started_at(client):
+    """started_at = completed_at - duration when both are supplied."""
+    from datetime import datetime, timezone, timedelta
+
+    log_r = await client.post("/workout-logs/", json={"name": "Backfill", "is_public": False})
+    log_id = log_r.json()["id"]
+
+    completed_at = "2026-04-19T10:00:00Z"
+    duration = 3600
+    response = await client.post(f"/workout-logs/{log_id}/finalize", json=_finalize_payload(
+        completed_at=completed_at,
+        duration=duration,
+    ))
+    assert response.status_code == 200
+    data = response.json()
+
+    expected_started = datetime(2026, 4, 19, 9, 0, 0, tzinfo=timezone.utc)
+    expected_completed = datetime(2026, 4, 19, 10, 0, 0, tzinfo=timezone.utc)
+    actual_started = datetime.fromisoformat(data["started_at"].replace("Z", "+00:00"))
+    actual_completed = datetime.fromisoformat(data["completed_at"].replace("Z", "+00:00"))
+
+    assert actual_started == expected_started
+    assert actual_completed == expected_completed
+    assert actual_completed - actual_started == timedelta(seconds=duration)
+
+
+@pytest.mark.asyncio
+async def test_finalize_without_duration_leaves_started_at_untouched(client):
+    """If duration is missing, started_at keeps its server-default (log creation time)."""
+    from datetime import datetime
+
+    log_r = await client.post("/workout-logs/", json={"name": "No Duration", "is_public": False})
+    log_id = log_r.json()["id"]
+    pre_started_at = log_r.json()["started_at"]
+
+    payload = _finalize_payload(completed_at="2026-04-19T10:00:00Z")
+    payload.pop("duration", None)
+    response = await client.post(f"/workout-logs/{log_id}/finalize", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+
+    pre = datetime.fromisoformat(pre_started_at.replace("Z", "+00:00"))
+    post = datetime.fromisoformat(data["started_at"].replace("Z", "+00:00"))
+    assert pre == post

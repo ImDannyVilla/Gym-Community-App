@@ -501,6 +501,11 @@ async def finalize_workout_log(
     if data.media_type is not None:
         log.media_type = data.media_type
 
+    # Derive started_at from completed_at - duration when both are provided so
+    # backfilled workouts don't end up with completed_at < started_at.
+    if data.completed_at is not None and data.duration is not None:
+        log.started_at = data.completed_at - timedelta(seconds=data.duration)
+
     for existing in list(log.exercises):
         await db.delete(existing)
     await db.flush()
