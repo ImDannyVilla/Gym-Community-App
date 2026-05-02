@@ -4,7 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, layout, spacing } from "../../lib/theme";
-import { getMyRoutines, startWorkout, getWorkoutStreak, deleteWorkoutLog, getRoutine, deleteRoutine, getSeededWorkouts } from "../../lib/workoutApi";
+import { getMyRoutines, startWorkout, getWorkoutStreak, discardWorkoutLog, getRoutine, deleteRoutine, getSeededWorkouts } from "../../lib/workoutApi";
 import { loadFromCache, saveToCache, CACHE_KEYS } from "../../lib/localCache";
 import { getMyProfile } from "../../lib/socialApi";
 import { useWorkoutStore } from "../../stores/workoutStore";
@@ -146,13 +146,7 @@ export default function WorkoutsScreen() {
   };
 
   const discardActiveWorkout = async () => {
-    if (activeLogId) {
-      try {
-        await deleteWorkoutLog(activeLogId);
-      } catch (e) {
-        if (e.status !== 404) throw e;
-      }
-    }
+    if (activeLogId) await discardWorkoutLog(activeLogId);
     endWorkout();
   };
 

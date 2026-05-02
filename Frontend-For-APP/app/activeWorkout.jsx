@@ -6,7 +6,7 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Modal from "react-native-modal";
 import { colors, layout, typography, spacing } from "../lib/theme";
-import { deleteWorkoutLog, getExerciseHistory } from "../lib/workoutApi";
+import { discardWorkoutLog, getExerciseHistory } from "../lib/workoutApi";
 import { useWorkoutStore } from "../stores/workoutStore";
 import RestTimer from "./_components/RestTimer";
 
@@ -396,22 +396,12 @@ export default function ActiveWorkout() {
 
     setIsLoading(true);
     try {
-      if (logIdToDiscard) {
-        await deleteWorkoutLog(logIdToDiscard);
-      }
+      if (logIdToDiscard) await discardWorkoutLog(logIdToDiscard);
       setShowEmptyAlert(false);
       endWorkout();
       await useWorkoutStore.persist.clearStorage();
       router.replace("/(tabs)/workouts");
     } catch (e) {
-      if (e.status === 404) {
-        setShowEmptyAlert(false);
-        endWorkout();
-        await useWorkoutStore.persist.clearStorage();
-        router.replace("/(tabs)/workouts");
-        return;
-      }
-
       console.error("Failed to discard workout:", e.message);
       Alert.alert("Error", "Failed to discard workout. Please try again.");
     } finally {
