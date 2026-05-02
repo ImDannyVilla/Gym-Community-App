@@ -83,7 +83,7 @@ export default function Layout() {
           <Stack.Screen name="user-search" />
           <Stack.Screen name="user-profile" />
         </Stack>
-        {isWorkoutActive && isAuthenticated && !isActiveWorkoutScreen && <ActiveWorkoutMiniWidget />}
+        {isWorkoutActive && isAuthenticated && !isActiveWorkoutScreen && !isSaveWorkoutScreen && !isWorkoutCompleteScreen && <ActiveWorkoutMiniWidget />}
         {isAuthenticated && !isActiveWorkoutScreen && !isWorkoutSummaryScreen && !isWorkoutLogDetailScreen && !isPostWorkoutShareScreen && !isSaveWorkoutScreen && !isWorkoutCompleteScreen && <BottomNav />}
       </View>
     </SafeAreaProvider>

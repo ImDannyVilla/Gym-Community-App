@@ -188,7 +188,7 @@ export const useWorkoutStore = create(persist((set, get) => ({
     if (!state) return;
     state.setHasHydrated(true);
     if (state.isActive && state.activeWorkoutStartTime) {
-      const age = Date.now() - Number(state.activeWorkoutStartTime);
+      const age = Date.now() - new Date(state.activeWorkoutStartTime).getTime();
       if (age > 12 * 60 * 60 * 1000) state.endWorkout();
     } else if (state.isActive && !state.activeWorkoutStartTime) {
       state.endWorkout();

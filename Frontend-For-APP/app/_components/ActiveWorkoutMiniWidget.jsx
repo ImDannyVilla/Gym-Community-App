@@ -20,7 +20,7 @@ export default function ActiveWorkoutMiniWidget() {
   const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
-    const start = Number(activeWorkoutStartTime) || Date.now();
+    const start = new Date(activeWorkoutStartTime).getTime() || Date.now();
     const tick = () => setElapsed(Math.floor((Date.now() - start) / 1000));
     tick();
     const id = setInterval(tick, 1000);
