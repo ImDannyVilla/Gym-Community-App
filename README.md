@@ -1,4 +1,4 @@
-# Angles App
+# Angle's Dumbbells
 
 Personal workout tracking app — log workouts, track progress, and hit personal records.
 
