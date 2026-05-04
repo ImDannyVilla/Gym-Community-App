@@ -164,14 +164,20 @@ async def get_my_workout_logs(
 @router.get("/me/streak")
 async def get_my_workout_streak(
     db: AsyncSessionDep,
-    current_user: CurrentUser
+    current_user: CurrentUser,
+    tz_offset_minutes: int = 0,
 ):
-    """Get workout streak stats including workouts this week, total workouts, and sets."""
+    """Get workout streak stats including workouts this week, total workouts, and sets.
+
+    `tz_offset_minutes` is the client's offset from UTC (matches `-Date.getTimezoneOffset()`
+    in JS — e.g. PDT sends -420). Streak buckets are computed in the client's local TZ so
+    an evening workout doesn't roll into "tomorrow UTC" and silently break the streak.
+    """
     # Calculate workouts this week
     today = datetime.now(timezone.utc)
     start_of_week = today - timedelta(days=today.weekday())
     start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
-    
+
     # Workouts this week
     result = await db.execute(
         select(func.count(WorkoutLog.id))
@@ -179,7 +185,7 @@ async def get_my_workout_streak(
         .where(WorkoutLog.completed_at >= start_of_week)
     )
     workouts_this_week = result.scalar() or 0
-    
+
     # Total workouts
     total_result = await db.execute(
         select(func.count(WorkoutLog.id))
@@ -187,7 +193,7 @@ async def get_my_workout_streak(
         .where(WorkoutLog.completed_at.isnot(None))
     )
     total_workouts = total_result.scalar() or 0
-    
+
     # Total sets done
     sets_result = await db.execute(
         select(func.count(WorkoutLogSet.id))
@@ -197,7 +203,7 @@ async def get_my_workout_streak(
         .where(WorkoutLogSet.completed == True)
     )
     total_sets = sets_result.scalar() or 0
-    
+
     # Total volume lifted (weight_lbs * reps summed across all completed sets)
     volume_result = await db.execute(
         select(func.sum(WorkoutLogSet.weight_lbs * WorkoutLogSet.reps))
@@ -208,12 +214,30 @@ async def get_my_workout_streak(
     )
     total_volume = float(volume_result.scalar() or 0)
 
-    # Fetch day streak from profile
-    profile_result = await db.execute(
-        select(UserProfile).where(UserProfile.user_id == current_user.id)
+    # Recompute day streak in the client's local TZ (the persisted profile.day_streak
+    # is computed in UTC at save time and can't reflect the user's actual day boundary).
+    timestamps_result = await db.execute(
+        select(WorkoutLog.completed_at)
+        .where(WorkoutLog.user_id == current_user.id)
+        .where(WorkoutLog.completed_at.isnot(None))
     )
-    profile = profile_result.scalars().first()
-    day_streak = profile.day_streak if profile else 0
+    local_dates = sorted({
+        ((ts if ts.tzinfo else ts.replace(tzinfo=timezone.utc))
+         + timedelta(minutes=tz_offset_minutes)).date()
+        for (ts,) in timestamps_result.all()
+    }, reverse=True)
+
+    today_local = (datetime.now(timezone.utc) + timedelta(minutes=tz_offset_minutes)).date()
+    day_streak = 0
+    if local_dates and local_dates[0] in (today_local, today_local - timedelta(days=1)):
+        day_streak = 1
+        expected = local_dates[0] - timedelta(days=1)
+        for d in local_dates[1:]:
+            if d == expected:
+                day_streak += 1
+                expected -= timedelta(days=1)
+            elif d < expected:
+                break
 
     return {
         "workouts_this_week": workouts_this_week,
