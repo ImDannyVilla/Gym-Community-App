@@ -6,12 +6,20 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, layout } from '../lib/theme';
 import { getWorkoutLog } from '../lib/workoutApi';
 
+const formatDuration = (seconds) => {
+  if (!seconds) return null;
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+};
+
 export default function WorkoutComplete() {
   const { logId } = useLocalSearchParams();
   const [stats, setStats] = useState(null);
 
   useEffect(() => {
-    if (!logId) { setStats({ exercises: 0, sets: 0, volume: 0 }); return; }
+    if (!logId) { setStats({ exercises: 0, sets: 0, volume: 0, duration: null }); return; }
     getWorkoutLog(logId)
       .then(log => {
         const exerciseList = log.exercises ?? [];
@@ -25,9 +33,9 @@ export default function WorkoutComplete() {
             }
           }
         }
-        setStats({ exercises: exerciseList.length, sets, volume: Math.round(volume) });
+        setStats({ exercises: exerciseList.length, sets, volume: Math.round(volume), duration: log.duration ?? null });
       })
-      .catch(() => setStats({ exercises: 0, sets: 0, volume: 0 }));
+      .catch(() => setStats({ exercises: 0, sets: 0, volume: 0, duration: null }));
   }, [logId]);
 
   return (
@@ -41,6 +49,15 @@ export default function WorkoutComplete() {
           <ActivityIndicator color={colors.primary} size="large" />
         ) : (
           <View style={styles.statsCard}>
+            {stats.duration ? (
+              <>
+                <Text style={styles.stat}>
+                  <Text style={styles.statNumber}>{formatDuration(stats.duration)}</Text>
+                  {' '}duration
+                </Text>
+                <View style={styles.divider} />
+              </>
+            ) : null}
             <Text style={styles.stat}>
               <Text style={styles.statNumber}>{stats.exercises}</Text>
               {' '}exercise{stats.exercises !== 1 ? 's' : ''} performed
