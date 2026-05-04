@@ -58,7 +58,14 @@ export async function getWorkoutLogs() {
 
 export async function getWorkoutStreak() {
   const authHeader = await getAuthHeader();
-  return fetchWithAuth("/workout-logs/me/streak", { headers: authHeader });
+  // Send the device's offset so the backend buckets workouts by local date.
+  // Date.getTimezoneOffset() is signed opposite of the actual UTC offset, so negate it
+  // (PDT → 420 → we send -420, matching "minutes east of UTC").
+  const tzOffsetMinutes = -new Date().getTimezoneOffset();
+  return fetchWithAuth(
+    `/workout-logs/me/streak?tz_offset_minutes=${tzOffsetMinutes}`,
+    { headers: authHeader },
+  );
 }
 
 export async function startWorkout(name, routineId = null, isPublic = false) {
