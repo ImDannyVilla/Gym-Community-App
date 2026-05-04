@@ -175,11 +175,6 @@ export default function UserProfile() {
           <WorkoutPostCard
             post={item}
             currentUserId={currentUserId}
-            isFollowing={isFollowing}
-            onFollowChange={(_, nowFollowing) => {
-              setIsFollowing(nowFollowing);
-              setFollowersCount(c => c + (nowFollowing ? 1 : -1));
-            }}
           />
         )}
         ListHeaderComponent={renderHeader}

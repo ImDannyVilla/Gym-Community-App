@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, layout } from '../../lib/theme';
-import { getPublicFeed, getFollowing, getMyProfile } from '../../lib/socialApi';
+import { getPublicFeed, getMyProfile } from '../../lib/socialApi';
 import WorkoutPostCard from '../_components/WorkoutPostCard';
 
 const PAGE_SIZE = 20;
@@ -18,7 +18,6 @@ export default function Community() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-  const [followingIds, setFollowingIds] = useState(new Set());
   const [currentUserId, setCurrentUserId] = useState(null);
   const isFetchingMore = useRef(false);
 
@@ -30,12 +29,7 @@ export default function Community() {
         getPublicFeed(0, PAGE_SIZE),
       ]);
 
-      const userId = String(profile.id);
-      setCurrentUserId(userId);
-
-      const following = await getFollowing(userId).catch(() => []);
-      setFollowingIds(new Set(following.map(u => String(u.id))));
-
+      setCurrentUserId(String(profile.id));
       setPosts(feed);
       setHasMore(feed.length === PAGE_SIZE);
     } catch (err) {
@@ -69,21 +63,10 @@ export default function Community() {
     }
   };
 
-  const handleFollowChange = (userId, nowFollowing) => {
-    setFollowingIds(prev => {
-      const next = new Set(prev);
-      if (nowFollowing) next.add(String(userId));
-      else next.delete(String(userId));
-      return next;
-    });
-  };
-
   const renderItem = ({ item }) => (
     <WorkoutPostCard
       post={item}
       currentUserId={currentUserId}
-      isFollowing={followingIds.has(String(item.user_id))}
-      onFollowChange={handleFollowChange}
     />
   );
 

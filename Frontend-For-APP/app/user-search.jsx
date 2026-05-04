@@ -8,28 +8,9 @@ import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, layout } from '../lib/theme';
-import { searchUsers, followUser, unfollowUser } from '../lib/socialApi';
+import { searchUsers } from '../lib/socialApi';
 
-function UserRow({ user, onFollowChange }) {
-  const [isFollowing, setIsFollowing] = useState(user.is_following ?? false);
-  const [loading, setLoading] = useState(false);
-
-  const handleFollow = async () => {
-    if (loading) return;
-    const prev = isFollowing;
-    setIsFollowing(!prev);
-    setLoading(true);
-    try {
-      if (prev) await unfollowUser(user.id);
-      else await followUser(user.id);
-      onFollowChange?.(user.id, !prev);
-    } catch (err) {
-      setIsFollowing(prev);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+function UserRow({ user }) {
   return (
     <Pressable
       style={styles.userRow}
@@ -48,17 +29,7 @@ function UserRow({ user, onFollowChange }) {
           <Text style={styles.fullName}>{user.profile.full_name}</Text>
         ) : null}
       </View>
-      <Pressable
-        style={[styles.followBtn, isFollowing && styles.followBtnActive]}
-        onPress={handleFollow}
-        disabled={loading}
-      >
-        {loading
-          ? <ActivityIndicator size="small" color={isFollowing ? colors.textSecondary : colors.text} />
-          : <Text style={[styles.followBtnText, isFollowing && styles.followBtnTextActive]}>
-              {isFollowing ? 'Following' : 'Follow'}
-            </Text>}
-      </Pressable>
+      <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
     </Pressable>
   );
 }
@@ -164,21 +135,6 @@ const styles = StyleSheet.create({
   userInfo: { flex: 1 },
   username: { fontSize: 15, fontWeight: '600', color: colors.text },
   fullName: { fontSize: 13, color: colors.textSecondary, marginTop: 1 },
-  followBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
-    backgroundColor: colors.primary,
-    minWidth: 80,
-    alignItems: 'center',
-  },
-  followBtnActive: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  followBtnText: { fontSize: 13, fontWeight: '700', color: colors.text },
-  followBtnTextActive: { color: colors.textSecondary },
   emptyState: { paddingTop: 40, alignItems: 'center' },
   emptyText: { color: colors.textSecondary, fontSize: 14 },
 });

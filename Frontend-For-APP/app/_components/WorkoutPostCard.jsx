@@ -4,7 +4,6 @@ import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, layout } from '../../lib/theme';
-import { followUser, unfollowUser } from '../../lib/socialApi';
 import { copyWorkoutLogAsRoutine } from '../../lib/workoutApi';
 import { useWorkoutStore } from '../../stores/workoutStore';
 import { saveToCache, CACHE_KEYS } from '../../lib/localCache';
@@ -28,36 +27,12 @@ const formatTimeAgo = (isoString) => {
   return new Date(isoString).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 };
 
-export default function WorkoutPostCard({ post, currentUserId, isFollowing: initialIsFollowing, onFollowChange, onPress, showAuthor = true }) {
-  const [isFollowing, setIsFollowing] = useState(initialIsFollowing);
-  const [followLoading, setFollowLoading] = useState(false);
+export default function WorkoutPostCard({ post, currentUserId, onPress, showAuthor = true }) {
   const [saveLoading, setSaveLoading] = useState(false);
   const [saved, setSaved] = useState(false);
   const setCachedRoutines = useWorkoutStore(state => state.setCachedRoutines);
 
   const isOwnPost = currentUserId && String(post.user_id) === String(currentUserId);
-
-  const handleFollowToggle = async () => {
-    if (isOwnPost || followLoading) return;
-    const prev = isFollowing;
-    setIsFollowing(!prev);
-    setFollowLoading(true);
-    try {
-      if (prev) {
-        await unfollowUser(post.user_id);
-      } else {
-        await followUser(post.user_id);
-      }
-      onFollowChange?.(post.user_id, !prev);
-    } catch (err) {
-      setIsFollowing(prev);
-      if (!err.message?.includes('409') && !err.message?.toLowerCase().includes('already following')) {
-        Alert.alert('Error', err.message || 'Could not update follow status.');
-      }
-    } finally {
-      setFollowLoading(false);
-    }
-  };
 
   const handleSaveToLibrary = async () => {
     if (saveLoading || saved) return;
@@ -94,20 +69,6 @@ export default function WorkoutPostCard({ post, currentUserId, isFollowing: init
             {post.full_name ? <Text style={styles.fullName}>{post.full_name}</Text> : null}
           </View>
         </Pressable>
-
-        {!isOwnPost && (
-          <Pressable
-            style={[styles.followBtn, isFollowing && styles.followBtnActive]}
-            onPress={handleFollowToggle}
-            disabled={followLoading}
-          >
-            {followLoading
-              ? <ActivityIndicator size="small" color={isFollowing ? colors.textSecondary : colors.text} />
-              : <Text style={[styles.followBtnText, isFollowing && styles.followBtnTextActive]}>
-                  {isFollowing ? 'Following' : 'Follow'}
-                </Text>}
-          </Pressable>
-        )}
       </View>}
 
       {/* Tappable card body: media + workout info */}
@@ -182,19 +143,6 @@ const styles = StyleSheet.create({
   avatarPlaceholder: { alignItems: 'center', justifyContent: 'center' },
   username: { fontSize: 14, fontWeight: '700', color: colors.text },
   fullName: { fontSize: 12, color: colors.textSecondary },
-  followBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    backgroundColor: colors.primary,
-  },
-  followBtnActive: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  followBtnText: { fontSize: 13, fontWeight: '700', color: colors.text },
-  followBtnTextActive: { color: colors.textSecondary },
   media: { width: '100%', height: 220 },
   cardBody: { padding: spacing.md, paddingTop: 10 },
   workoutName: { fontSize: 16, fontWeight: '700', color: colors.text, marginBottom: 6 },
