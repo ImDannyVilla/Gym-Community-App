@@ -67,7 +67,7 @@ export default function SaveWorkout() {
 
   const elapsedSeconds = useMemo(() => {
     if (!activeWorkoutStartTime) return 0;
-    return Math.floor((Date.now() - Number(activeWorkoutStartTime)) / 1000);
+    return Math.floor((Date.now() - new Date(activeWorkoutStartTime).getTime()) / 1000);
   }, [activeWorkoutStartTime]);
 
   const stats = useMemo(() => {
