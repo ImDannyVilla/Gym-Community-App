@@ -107,8 +107,7 @@ async def save_seeded_workout_as_routine(
             equipment=None,
             order=ex.order,
             target_sets=ex.sets,
-            target_reps_min=ex.reps if ex.reps else 8,
-            target_reps_max=ex.reps if ex.reps else 12,
+            target_reps=ex.reps if ex.reps else 10,
             target_weight_lbs=None,
             notes=ex.notes,
         )

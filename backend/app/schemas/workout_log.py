@@ -34,8 +34,7 @@ class WorkoutLogExerciseCreate(BaseModel):
     gif_url: Optional[str] = None
     order: int = Field(ge=0)
     target_sets: Optional[int] = None
-    target_reps_min: Optional[int] = None
-    target_reps_max: Optional[int] = None
+    target_reps: Optional[int] = None
     target_weight_lbs: Optional[float] = None
     sets: List[WorkoutLogSetCreate] = []
 
@@ -50,8 +49,7 @@ class WorkoutLogExerciseResponse(BaseModel):
     gif_url: Optional[str] = None
     order: int
     target_sets: Optional[int] = None
-    target_reps_min: Optional[int] = None
-    target_reps_max: Optional[int] = None
+    target_reps: Optional[int] = None
     target_weight_lbs: Optional[float] = None
     sets: List[WorkoutLogSetResponse] = []
 

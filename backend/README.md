@@ -587,8 +587,7 @@ Routines are pre-planned workout templates that users create and reuse.
       "equipment": "barbell",
       "order": 1,
       "target_sets": 4,
-      "target_reps_min": 8,
-      "target_reps_max": 12,
+      "target_reps": 10,
       "target_weight_lbs": 185,
       "notes": "Focus on form"
     },
@@ -601,8 +600,7 @@ Routines are pre-planned workout templates that users create and reuse.
       "equipment": "dumbbell",
       "order": 2,
       "target_sets": 3,
-      "target_reps_min": 10,
-      "target_reps_max": 12,
+      "target_reps": 10,
       "target_weight_lbs": 50,
       "notes": null
     }
@@ -631,8 +629,7 @@ Routines are pre-planned workout templates that users create and reuse.
       "equipment": "barbell",
       "order": 1,
       "target_sets": 4,
-      "target_reps_min": 8,
-      "target_reps_max": 12,
+      "target_reps": 10,
       "target_weight_lbs": 185,
       "notes": "Focus on form"
     }
@@ -725,8 +722,7 @@ Routines are pre-planned workout templates that users create and reuse.
       "name": "Tricep Pushdown",
       "order": 3,
       "target_sets": 3,
-      "target_reps_min": 12,
-      "target_reps_max": 15,
+      "target_reps": 12,
       "target_weight_lbs": 60
     }
   ]
@@ -810,8 +806,7 @@ Pre-built workouts created by admins for users to browse and use.
       "exercise_library_id": "uuid",
       "order": 1,
       "target_sets": 4,
-      "target_reps_min": 8,
-      "target_reps_max": 12,
+      "target_reps": 10,
       "rest_seconds": 90,
       "notes": "Warm up first",
       "exercise_library": {

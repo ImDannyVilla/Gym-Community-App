@@ -58,8 +58,7 @@ class WorkoutLogExercise(Base):
 
     order: Mapped[int] = mapped_column(Integer)
     target_sets: Mapped[Optional[int]] = mapped_column(Integer)
-    target_reps_min: Mapped[Optional[int]] = mapped_column(Integer)
-    target_reps_max: Mapped[Optional[int]] = mapped_column(Integer)
+    target_reps: Mapped[Optional[int]] = mapped_column(Integer)
     target_weight_lbs: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
 
     workout_logs: Mapped["WorkoutLog"] = relationship(

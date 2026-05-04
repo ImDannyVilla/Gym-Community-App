@@ -55,8 +55,7 @@ class RoutineExercise(Base):
 
     # Target values (goals)
     target_sets: Mapped[int]
-    target_reps_min: Mapped[Optional[int]] #8-12
-    target_reps_max: Mapped[Optional[int]]
+    target_reps: Mapped[Optional[int]]
     target_weight_lbs: Mapped[Optional[int]] #may add kg option...
     notes: Mapped[Optional[str]]
 

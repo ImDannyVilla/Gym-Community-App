@@ -69,7 +69,7 @@ export const useWorkoutStore = create(persist((set, get) => ({
       sets: Array.from({ length: setCount }, (_, i) => ({
         id: `${exerciseInstanceId}-${i}`,
         set_number: i + 1,
-        reps: isActiveWorkoutAdd ? "" : exerciseWithConfig.target_reps_max || "",
+        reps: isActiveWorkoutAdd ? "" : exerciseWithConfig.target_reps || "",
         weight_lbs: isActiveWorkoutAdd ? "" : exerciseWithConfig.target_weight_lbs || "",
         completed: false,
         warmup: false,

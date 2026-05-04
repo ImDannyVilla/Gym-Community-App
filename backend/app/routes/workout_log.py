@@ -458,8 +458,7 @@ async def add_exercise_to_log(
         gif_url=data.gif_url,
         order=data.order,
         target_sets=data.target_sets,
-        target_reps_min=data.target_reps_min,
-        target_reps_max=data.target_reps_max,
+        target_reps=data.target_reps,
         target_weight_lbs=data.target_weight_lbs,
     )
     db.add(exercise)
@@ -546,8 +545,8 @@ async def finalize_workout_log(
             gif_url=ex_data.gif_url,
             order=ex_data.order,
             target_sets=ex_data.target_sets,
-            target_reps_min=ex_data.target_reps_min,
-            target_reps_max=ex_data.target_reps_max,
+            target_reps=ex_data.target_reps,
+    
             target_weight_lbs=ex_data.target_weight_lbs,
         )
         db.add(exercise)
@@ -649,8 +648,7 @@ async def save_log_as_routine(
             equipment=ex.equipment,
             order=ex.order,
             target_sets=len(ex.sets) if ex.sets else 3,
-            target_reps_min=last_set.reps if last_set else None,
-            target_reps_max=last_set.reps if last_set else None,
+            target_reps=last_set.reps if last_set else None,
             target_weight_lbs=int(last_set.weight_lbs) if last_set else None,
             notes=None,
         )

@@ -15,8 +15,7 @@ class RoutineExerciseCreate(BaseModel):
     equipment: Optional[str] = None
     order: int
     target_sets: int
-    target_reps_min: Optional[int] = None
-    target_reps_max: Optional[int] = None
+    target_reps: Optional[int] = None
     target_weight_lbs: Optional[int] = None
     notes: Optional[str] = None
 
@@ -31,8 +30,7 @@ class RoutineExerciseResponse(BaseModel):
     equipment: Optional[str] = None
     order: int
     target_sets: int
-    target_reps_min: Optional[int] = None
-    target_reps_max: Optional[int] = None
+    target_reps: Optional[int] = None
     target_weight_lbs: Optional[int] = None
     notes: Optional[str] = None
 

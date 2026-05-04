@@ -30,8 +30,7 @@ SAMPLE_EXERCISES = [
         "equipment": "barbell",
         "order": 1,
         "target_sets": 4,
-        "target_reps_min": 6,
-        "target_reps_max": 8,
+        "target_reps": 6,
     },
     {
         "exercise_id": "Incline_Dumbbell_Press",
@@ -41,8 +40,7 @@ SAMPLE_EXERCISES = [
         "equipment": "dumbbell",
         "order": 2,
         "target_sets": 3,
-        "target_reps_min": 10,
-        "target_reps_max": 12,
+        "target_reps": 10,
     }
 ]
 

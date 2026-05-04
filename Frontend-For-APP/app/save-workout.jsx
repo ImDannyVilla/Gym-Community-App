@@ -154,8 +154,7 @@ export default function SaveWorkout() {
           equipment: ex.equipment,
           order: exercises.findIndex(e => e.id === ex.id),
           target_sets: ex.target_sets,
-          target_reps_min: ex.target_reps_min,
-          target_reps_max: ex.target_reps_max,
+          target_reps: ex.target_reps,
           target_weight_lbs: ex.target_weight_lbs,
           sets: ex.sets.map((s, i) => ({
             set_number: i + 1,

@@ -123,12 +123,12 @@ async def test_save_routine_preserves_sets_and_weights(client, completed_log):
 
     bench = next(e for e in data["exercises"] if e["exercise_id"] == "Barbell_Bench_Press")
     assert bench["target_sets"] == 3
-    assert bench["target_reps_min"] == 6   # last set reps
+    assert bench["target_reps"] == 6   # last set reps
     assert bench["target_weight_lbs"] == 145  # last set weight
 
     incline = next(e for e in data["exercises"] if e["exercise_id"] == "Incline_Dumbbell_Press")
     assert incline["target_sets"] == 3
-    assert incline["target_reps_min"] == 8
+    assert incline["target_reps"] == 8
     assert incline["target_weight_lbs"] == 65
 
 

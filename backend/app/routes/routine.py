@@ -44,8 +44,7 @@ async def create_routine(
             equipment=ex_data.equipment,
             order=ex_data.order,
             target_sets=ex_data.target_sets,
-            target_reps_min=ex_data.target_reps_min,
-            target_reps_max=ex_data.target_reps_max,
+            target_reps=ex_data.target_reps,
             target_weight_lbs=ex_data.target_weight_lbs,
             notes=ex_data.notes,
         )
@@ -139,8 +138,7 @@ async def update_routine(
                 equipment=ex_data.equipment,
                 order=ex_data.order,
                 target_sets=ex_data.target_sets,
-                target_reps_min=ex_data.target_reps_min,
-                target_reps_max=ex_data.target_reps_max,
+                target_reps=ex_data.target_reps,
                 target_weight_lbs=ex_data.target_weight_lbs,
                 notes=ex_data.notes,
             ))
@@ -204,8 +202,7 @@ async def add_exercise_to_routine(
             equipment=ex_data.equipment,
             order=ex_data.order,
             target_sets=ex_data.target_sets,
-            target_reps_min=ex_data.target_reps_min,
-            target_reps_max=ex_data.target_reps_max,
+            target_reps=ex_data.target_reps,
             target_weight_lbs=ex_data.target_weight_lbs,
             notes=ex_data.notes,
         )
@@ -271,8 +268,7 @@ async def copy_workout_log_as_routine(
             equipment=ex.equipment,
             order=ex.order,
             target_sets=len(ex.sets) if ex.sets else 3,
-            target_reps_min=last_set.reps if last_set else None,
-            target_reps_max=last_set.reps if last_set else None,
+            target_reps=last_set.reps if last_set else None,
             target_weight_lbs=int(last_set.weight_lbs) if last_set else None,
             notes=None,
         )

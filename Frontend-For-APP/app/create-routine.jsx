@@ -54,8 +54,7 @@ export default function CreateRoutineScreen() {
         target: ex.target,
         equipment: ex.equipment,
         target_sets: ex.target_sets,
-        target_reps_min: ex.target_reps_min,
-        target_reps_max: ex.target_reps_max,
+        target_reps: ex.target_reps,
         target_weight_lbs: ex.target_weight_lbs,
         notes: ex.notes,
       }));
@@ -103,8 +102,7 @@ export default function CreateRoutineScreen() {
             equipment: ex.equipment,
             order: index + 1,
             target_sets: ex.target_sets || 3,
-            target_reps_min: ex.target_reps_min || 8,
-            target_reps_max: ex.target_reps_max || 12,
+            target_reps: ex.target_reps || 10,
             target_weight_lbs: ex.target_weight_lbs || null,
             notes: ex.notes || null,
           })),
@@ -132,8 +130,7 @@ export default function CreateRoutineScreen() {
           equipment: ex.equipment,
           order: index + 1,
           target_sets: ex.target_sets || 3,
-          target_reps_min: ex.target_reps_min || 8,
-          target_reps_max: ex.target_reps_max || 12,
+          target_reps: ex.target_reps || 10,
           target_weight_lbs: ex.target_weight_lbs || null,
           notes: ex.notes || null,
         }));
@@ -245,9 +242,7 @@ export default function CreateRoutineScreen() {
         data={exercises}
         keyExtractor={(item, index) => `${item.exercise_id}-${index}`}
         renderItem={({ item, index }) => {
-          const repsDisplay = item.target_reps_min === item.target_reps_max
-            ? `${item.target_reps_min} reps`
-            : `${item.target_reps_min}-${item.target_reps_max} reps`;
+          const repsDisplay = `${item.target_reps} reps`;
           
           return (
             <TouchableOpacity

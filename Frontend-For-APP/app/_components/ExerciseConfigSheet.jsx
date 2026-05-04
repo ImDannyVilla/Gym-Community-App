@@ -22,33 +22,21 @@ const REST_OPTIONS = [
 export default function ExerciseConfigSheet({ exercise, visible, onClose, onAdd, context, isEditing = false }) {
   const [sets, setSets] = useState(exercise?.target_sets ?? 3);
   const [weightLbs, setWeightLbs] = useState(exercise?.target_weight_lbs?.toString() ?? '');
-  const [repsMin, setRepsMin] = useState(exercise?.target_reps_min?.toString() ?? '8');
-  const [repsMax, setRepsMax] = useState(exercise?.target_reps_max?.toString() ?? '12');
+  const [reps, setReps] = useState(exercise?.target_reps?.toString() ?? '10');
   const [restSeconds, setRestSeconds] = useState(exercise?.rest_seconds ?? null);
-  const [repType, setRepType] = useState(
-    exercise?.target_reps_min === exercise?.target_reps_max ? 'exact' : 'range'
-  );
 
-  // Reset when exercise changes (important for edit mode)
   useEffect(() => {
     if (exercise) {
       setSets(exercise.target_sets ?? 3);
       setWeightLbs(exercise.target_weight_lbs?.toString() ?? '');
-      setRepsMin(exercise.target_reps_min?.toString() ?? '8');
-      setRepsMax(exercise.target_reps_max?.toString() ?? '12');
+      setReps(exercise.target_reps?.toString() ?? '10');
       setRestSeconds(exercise.rest_seconds ?? null);
-      setRepType(
-        exercise.target_reps_min === exercise.target_reps_max ? 'exact' : 'range'
-      );
     }
   }, [exercise]);
 
   if (!exercise) return null;
 
   const handleAdd = () => {
-    const repsMinValue = parseInt(repsMin) || 8;
-    const repsMaxValue = repType === 'exact' ? repsMinValue : (parseInt(repsMax) || 12);
-    
     onAdd({
       exercise_id: exercise.exercise_id,
       name: exercise.name,
@@ -57,20 +45,16 @@ export default function ExerciseConfigSheet({ exercise, visible, onClose, onAdd,
       target: exercise.target,
       equipment: exercise.equipment,
       target_sets: sets,
-      target_reps_min: repsMinValue,
-      target_reps_max: repsMaxValue,
+      target_reps: parseInt(reps) || 10,
       target_weight_lbs: weightLbs ? parseInt(weightLbs) : null,
       notes: restSeconds ? `Rest ${restSeconds}s` : null,
-      rest_seconds: restSeconds,  // store for display
+      rest_seconds: restSeconds,
     });
-    
-    // Reset state
+
     setSets(3);
     setWeightLbs('');
-    setRepsMin('8');
-    setRepsMax('12');
+    setReps('10');
     setRestSeconds(null);
-    setRepType('range');
     onClose();
   };
 
@@ -133,63 +117,18 @@ export default function ExerciseConfigSheet({ exercise, visible, onClose, onAdd,
           {/* Reps */}
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>Reps</Text>
-            {/* Toggle between range and exact */}
-            <View style={styles.repToggle}>
-              <TouchableOpacity
-                style={[styles.repToggleBtn, repType === 'range' && styles.repToggleActive]}
-                onPress={() => setRepType('range')}
-              >
-                <Text style={[styles.repToggleText, repType === 'range' && styles.repToggleTextActive]}>
-                  Range
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.repToggleBtn, repType === 'exact' && styles.repToggleActive]}
-                onPress={() => setRepType('exact')}
-              >
-                <Text style={[styles.repToggleText, repType === 'exact' && styles.repToggleTextActive]}>
-                  Exact
-                </Text>
-              </TouchableOpacity>
+            <View style={styles.repRangeRow}>
+              <TextInput
+                style={styles.repInput}
+                value={reps}
+                onChangeText={setReps}
+                keyboardType="number-pad"
+                placeholder="10"
+                placeholderTextColor="#666"
+                maxLength={3}
+              />
+              <Text style={styles.repUnit}>reps</Text>
             </View>
-
-            {repType === 'range' ? (
-              <View style={styles.repRangeRow}>
-                <TextInput
-                  style={styles.repInput}
-                  value={repsMin}
-                  onChangeText={setRepsMin}
-                  keyboardType="number-pad"
-                  placeholder="8"
-                  placeholderTextColor="#666"
-                  maxLength={3}
-                />
-                <Text style={styles.repRangeDash}>—</Text>
-                <TextInput
-                  style={styles.repInput}
-                  value={repsMax}
-                  onChangeText={setRepsMax}
-                  keyboardType="number-pad"
-                  placeholder="12"
-                  placeholderTextColor="#666"
-                  maxLength={3}
-                />
-                <Text style={styles.repUnit}>reps</Text>
-              </View>
-            ) : (
-              <View style={styles.repRangeRow}>
-                <TextInput
-                  style={styles.repInput}
-                  value={repsMin}
-                  onChangeText={setRepsMin}
-                  keyboardType="number-pad"
-                  placeholder="10"
-                  placeholderTextColor="#666"
-                  maxLength={3}
-                />
-                <Text style={styles.repUnit}>reps</Text>
-              </View>
-            )}
           </View>
 
           {/* Weight */}
@@ -336,30 +275,6 @@ const styles = StyleSheet.create({
     minWidth: 40,
     textAlign: 'center',
   },
-  repToggle: {
-    flexDirection: 'row',
-    backgroundColor: '#1a1a1a',
-    borderRadius: 8,
-    padding: 3,
-    alignSelf: 'flex-start',
-    marginBottom: 12,
-  },
-  repToggleBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  repToggleActive: {
-    backgroundColor: colors.primary,
-  },
-  repToggleText: {
-    color: '#666',
-    fontSize: 14,
-  },
-  repToggleTextActive: {
-    color: '#fff',
-    fontWeight: '600',
-  },
   repRangeRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -374,10 +289,6 @@ const styles = StyleSheet.create({
     padding: 12,
     width: 70,
     textAlign: 'center',
-  },
-  repRangeDash: {
-    color: '#666',
-    fontSize: 20,
   },
   repUnit: {
     color: '#666',
